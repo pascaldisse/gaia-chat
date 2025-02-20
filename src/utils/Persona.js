@@ -1,6 +1,7 @@
 export class Persona {
     constructor({ 
       name = 'Assistant',
+      image = '',
       systemPrompt = 'You are a helpful assistant',
       model = 'llama3-70b',
       initiative = 5,
@@ -17,6 +18,7 @@ export class Persona {
     }) {
       this.id = Date.now().toString();
       this.name = name;
+      this.image = image;
       this.systemPrompt = systemPrompt;
       this.model = model;
       this.initiative = initiative;

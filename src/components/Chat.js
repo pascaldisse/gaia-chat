@@ -302,8 +302,35 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     setIsLoading(false);
   };
 
+  const handleRemovePersona = (personaId) => {
+    setActivePersonas(prev => 
+      prev.filter(p => p.id !== personaId)
+    );
+  };
+
   return (
     <div className="chat-container">
+      <div className="active-personas">
+        <h4>Active Personas</h4>
+        <div className="persona-list">
+          {activePersonas.map(persona => (
+            <div key={persona.id} className="persona-item">
+              <img 
+                src={persona.image || '/default-avatar.png'} 
+                alt={persona.name}
+                className="persona-avatar"
+              />
+              <span>{persona.name}</span>
+              <button 
+                className="remove-persona"
+                onClick={() => handleRemovePersona(persona.id)}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="messages">
         {currentChat.map(message => (
           <Message 
