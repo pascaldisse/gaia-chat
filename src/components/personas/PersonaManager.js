@@ -64,6 +64,11 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
     }
   };
 
+  const handleRestoreDefault = async () => {
+    const defaultGaia = new Persona(GAIA_CONFIG);
+    setCurrentPersona(defaultGaia);
+  };
+
   return (
     <>
       <div className="persona-manager-modal">
@@ -140,6 +145,14 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
             </button>
           </div>
           <div className="modal-footer">
+            {currentPersona.id === DEFAULT_PERSONA_ID && (
+              <button 
+                className="restore-default-button"
+                onClick={handleRestoreDefault}
+              >
+                Restore Default
+              </button>
+            )}
             {currentPersona.id !== DEFAULT_PERSONA_ID && (
               <button 
                 className="delete-button"
@@ -179,6 +192,15 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {currentPersona.id === DEFAULT_PERSONA_ID && (
+        <button 
+          className="restore-default-button"
+          onClick={handleRestoreDefault}
+        >
+          Restore Default Settings
+        </button>
       )}
     </>
   );
