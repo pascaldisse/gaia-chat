@@ -16,7 +16,8 @@ const Sidebar = ({
   selectedChatId,
   setSelectedChatId,
   createNewChat,
-  onEditPersona
+  onEditPersona,
+  onDeletePersona
 }) => {
   const getChatTitle = (chat) => {
     const firstMessage = chat.messages[0]?.content;
@@ -57,11 +58,18 @@ const Sidebar = ({
             <div 
               key={persona.id}
               className={`persona-item ${selectedPersonaId === persona.id ? 'selected' : ''}`}
-              onClick={() => onEditPersona(persona)}
+              onClick={() => persona.isDefault ? null : onEditPersona(persona)}
             >
-              <div className="persona-title">{persona.name}</div>
-              <div className="persona-prompt">
-                {persona.systemPrompt.substring(0, 30)}...
+              <img 
+                src={persona.image || '/default-avatar.png'} 
+                alt={persona.name}
+                className="persona-avatar"
+              />
+              <div className="persona-info">
+                <div className="persona-title">{persona.name}</div>
+                <div className="persona-prompt">
+                  {persona.systemPrompt.substring(0, 30)}...
+                </div>
               </div>
             </div>
           ))}

@@ -67,10 +67,12 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
           <button className="close-button" onClick={onClose}>×</button>
           <h2>{persona ? 'Edit Persona' : 'New Persona'}</h2>
           <div className="persona-editor">
-            <input 
+            <input
+              type="text"
               value={currentPersona.name}
               onChange={(e) => setCurrentPersona({ ...currentPersona, name: e.target.value })}
               placeholder="Persona Name"
+              disabled={currentPersona.isDefault}
             />
             
             <div className="image-upload-section">

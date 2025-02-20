@@ -5,6 +5,7 @@ import '../styles/Chat.css';
 import ChatInput from './ChatInput';
 import { RPGSystem } from '../utils/RPGSystem';
 import { Persona } from '../utils/Persona';
+import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 
 const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -323,6 +324,13 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       setIsCancelled(false);
     };
   }, []);
+
+  useEffect(() => {
+    const defaultGaia = personas.find(p => p.id === DEFAULT_PERSONA_ID);
+    if (defaultGaia) {
+      setActivePersonas(prev => [...new Set([defaultGaia, ...prev])]);
+    }
+  }, [personas]);
 
   return (
     <div className="chat-container">
