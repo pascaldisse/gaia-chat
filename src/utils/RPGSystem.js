@@ -25,7 +25,7 @@ export class RPGSystem {
   
       return {
         ...rolls,
-        shouldRespond: context.mentionedPersonaIds?.includes(persona.id) || rolls.talkativeness.total >= 10,
+        shouldRespond: rolls.talkativeness.total >= persona.talkativeness,
         responsePriority: initiativeRoll.total,
         assertiveness: this.getAssertivenessLevel(rolls.confidence.total),
         questionDepth: this.getQuestionDepth(rolls.curiosity),
@@ -35,7 +35,7 @@ export class RPGSystem {
   
     static rollAttribute(persona, attribute, context) {
       const baseRoll = this.rollD20();
-      const modifier = this.getModifier(persona[attribute]);
+      const modifier = Math.floor(persona[attribute] / 4);
       let contextBonus = 0;
   
       // Context bonuses based on attribute type

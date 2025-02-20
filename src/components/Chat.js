@@ -217,11 +217,10 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       const updatedPersonas = updateActivePersonas(message, activePersonas);
       setActivePersonas(updatedPersonas);
 
-      // If no personas are mentioned, use GAIA as the default responder
-      const defaultGaia = personas.find(p => p.id === DEFAULT_PERSONA_ID);
+      // Use all active personas as response candidates when no one is mentioned
       const responseCandidates = mentionedPersonas.length > 0 
         ? [...new Set([...updatedPersonas, ...mentionedPersonas])]
-        : [defaultGaia];
+        : activePersonas;
 
       const context = analyzeMessageContext(message);
       
