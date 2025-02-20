@@ -30,6 +30,14 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
 
   useEffect(scrollToBottom, [currentChat]);
 
+  const getMentionedPersonas = (message) => {
+    const matches = message.match(/@(\w+)/g) || [];
+    return matches
+      .map(match => match.substring(1)) // Remove @ symbol
+      .map(name => personas.find(p => p.name.toLowerCase() === name.toLowerCase()))
+      .filter(Boolean);
+  };
+
   const handleSubmit = async (message) => {
     if (!message.trim()) return;
 
@@ -44,14 +52,21 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
     setIsLoading(true);
 
     try {
+      // Get the last mentioned persona's settings
+      const mentionedPersonas = getMentionedPersonas(message);
+      const activePersona = mentionedPersonas[mentionedPersonas.length - 1];
+      
+      const effectiveSystemPrompt = activePersona?.systemPrompt || systemPrompt;
+      const effectiveModel = activePersona?.model || model;
+
       const messages = [];
-      if (systemPrompt) {
-        messages.push({ role: "system", content: systemPrompt });
+      if (effectiveSystemPrompt) {
+        messages.push({ role: "system", content: effectiveSystemPrompt });
       }
       messages.push({ role: "user", content: message });
 
       const requestBody = {
-        model: model,
+        model: effectiveModel,
         messages: messages,
         stream: true
       };
@@ -158,18 +173,34 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
     setIsLoading(true);
 
     try {
+      const mentionedPersonas = getMentionedPersonas(userMessage.content);
+      const activePersona = mentionedPersonas[mentionedPersonas.length - 1];
+      
+      const effectiveSystemPrompt = activePersona?.systemPrompt || systemPrompt;
+      const effectiveModel = activePersona?.model || model;
+
       const messages = [];
-      if (systemPrompt) {
-        messages.push({ role: "system", content: systemPrompt });
+      if (effectiveSystemPrompt) {
+        messages.push({ role: "system", content: effectiveSystemPrompt });
       }
       messages.push({ role: "user", content: userMessage.content });
 
       const requestBody = {
-        model: model,
+        model: effectiveModel,
         messages: messages,
         stream: true
       };
 
+      addDebugLog('REQUEST', {
+        url: API_URL,
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: requestBody
+      });
+
+      // Create and store the AbortController in the ref
       controllerRef.current = new AbortController();
       const signal = controllerRef.current.signal;
 
