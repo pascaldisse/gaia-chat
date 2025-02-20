@@ -15,5 +15,5 @@ export const GAIA_CONFIG = {
   empathy: 7,
   creativity: 6,
   logic: 8,
-  image: 'https://your-default-gaia-image-url.com/gaia.jpg' // Replace with actual image URL
+  image: '/assets/personas/gaia-default.jpeg' 
 };
