@@ -61,6 +61,13 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
           setShowSuggestions(false);
           break;
       }
+    } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (inputValue.trim()) {
+        onSendMessage(inputValue);
+        setInputValue('');
+        setShowSuggestions(false);
+      }
     }
   };
 
