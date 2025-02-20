@@ -154,10 +154,6 @@ function App() {
     <div className="app">
       <Sidebar 
         setCurrentChat={setCurrentChat} 
-        model={model} 
-        setModel={setModel}
-        systemPrompt={systemPrompt}
-        setSystemPrompt={setSystemPrompt}
         chatHistory={chatHistory}
         selectedChatId={selectedChatId}
         setSelectedChatId={setSelectedChatId}
