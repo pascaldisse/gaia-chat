@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,7 +13,9 @@
 
 .modal-content {
   position: relative;
-  background-color: white;
+  background-color: #36393f;
+  border: 1px solid #202225;
+  color: #dcddde;
   border-radius: 12px;
   padding: 24px;
   width: 500px;
@@ -28,6 +30,10 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
+  color: #dcddde;
+  &:hover {
+    color: #fff;
+  }
 }
 
 .modal-footer {
@@ -38,11 +44,14 @@
 
 .save-button {
   padding: 8px 16px;
-  background-color: #10a37f;
+  background-color: #5865f2;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  &:hover {
+    background-color: #4752c4;
+  }
 }
 
 .persona-editor {
@@ -56,9 +65,15 @@
 .persona-editor select,
 .persona-editor textarea {
   padding: 8px;
-  border: 1px solid #d1d5db;
+  background-color: #40444b;
+  border: 1px solid #202225;
   border-radius: 4px;
   font-size: 14px;
+  color: #dcddde;
+  &:focus {
+    border-color: #5865f2;
+    box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.3);
+  }
 }
 
 .persona-editor textarea {
@@ -131,11 +146,16 @@
 
 .source-button {
   padding: 6px 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #202225;
   border-radius: 4px;
-  background: #f9fafb;
+  background-color: #40444b;
   cursor: pointer;
   flex: 1;
+  color: #dcddde;
+  &.active {
+    background-color: #5865f2;
+    border-color: #4752c4;
+  }
 }
 
 .image-preview {
@@ -144,7 +164,7 @@
   height: 100px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #202225;
   position: relative;
 }
 
