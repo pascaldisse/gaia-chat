@@ -1,6 +1,7 @@
 .message {
     margin-bottom: 20px;
     max-width: 80%;
+    position: relative;
   }
   
   .message.user {
@@ -61,5 +62,27 @@
   .user .copy-button {
     color: #10a37f;
     border-color: #10a37f;
+  }
+  
+  .persona-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .persona-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .persona-name {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #666;
   }
   

@@ -3,7 +3,9 @@ import '../styles/Message.css';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import ReactMarkdown from 'react-markdown';
 
-const Message = ({ message, onRegenerate }) => {
+const Message = ({ message, onRegenerate, personas }) => {
+  const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
+
   const renderContent = () => {
     if (message.content.startsWith('<think>') && message.content.endsWith('</think>')) {
       const thinkContent = message.content.slice(7, -8);
@@ -14,6 +16,12 @@ const Message = ({ message, onRegenerate }) => {
 
   return (
     <div className={`message ${message.isUser ? 'user' : 'assistant'}`}>
+      {persona && (
+        <div className="persona-header">
+          {persona.image && <img src={persona.image} alt={persona.name} className="persona-avatar" />}
+          <span className="persona-name">{persona.name}</span>
+        </div>
+      )}
       <div className="message-content">
         {renderContent()}
       </div>

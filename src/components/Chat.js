@@ -127,7 +127,8 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
       setCurrentChat(prev => [...prev, {
         id: messageId,
         content: '',
-        isUser: false
+        isUser: false,
+        personaId: activePersona?.id
       }]);
 
       while (true) {
@@ -247,7 +248,8 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
       setCurrentChat(prev => [...prev, {
         id: messageId,
         content: '',
-        isUser: false
+        isUser: false,
+        personaId: activePersona?.id
       }]);
 
       while (true) {
@@ -304,6 +306,7 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
             key={message.id} 
             message={message} 
             onRegenerate={handleRegenerate}
+            personas={personas}
           />
         ))}
         <div ref={messagesEndRef} />
