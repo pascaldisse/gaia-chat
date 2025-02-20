@@ -20,6 +20,7 @@ function App() {
   const [selectedPersonaId, setSelectedPersonaId] = useState(null);
   const [showPersonaManager, setShowPersonaManager] = useState(false);
   const [editingPersona, setEditingPersona] = useState(null);
+  const [activePersonas, setActivePersonas] = useState([]);
 
   // Load chat history from database
   useEffect(() => {
@@ -53,6 +54,7 @@ function App() {
           messages: currentChat,
           systemPrompt,
           model,
+          activePersonas: activePersonas.map(p => p.id),
           createdAt: chatHistory.find(c => c.id === selectedChatId)?.createdAt || Date.now(),
           timestamp: Date.now(),
           title: currentChat[0]?.content?.slice(0, 30) + '...' || 'New Chat'
@@ -71,7 +73,7 @@ function App() {
     // Debounce the save operation
     const timeoutId = setTimeout(saveChat, 100);
     return () => clearTimeout(timeoutId);
-  }, [currentChat, selectedChatId, systemPrompt, model, chatHistory]);
+  }, [currentChat, selectedChatId, systemPrompt, model, chatHistory, activePersonas]);
 
   // Add useEffect for loading personas
   useEffect(() => {

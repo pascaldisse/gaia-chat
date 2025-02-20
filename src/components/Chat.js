@@ -9,6 +9,7 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
   const [debugLog, setDebugLog] = useState([]);
   const messagesEndRef = useRef(null);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [activePersonas, setActivePersonas] = useState([]);
 
   // Create a ref for the AbortController
   const controllerRef = useRef(null);
@@ -38,6 +39,14 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
       .filter(Boolean);
   };
 
+  const updateActivePersonas = (message, currentPersonas) => {
+    const mentionedPersonas = getMentionedPersonas(message);
+    const newPersonas = mentionedPersonas.filter(p => 
+      !currentPersonas.some(ap => ap.id === p.id)
+    );
+    return [...currentPersonas, ...newPersonas];
+  };
+
   const handleSubmit = async (message) => {
     if (!message.trim()) return;
 
@@ -46,6 +55,10 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
       content: message,
       isUser: true
     };
+
+    // Update active personas
+    const updatedPersonas = updateActivePersonas(message, activePersonas);
+    setActivePersonas(updatedPersonas);
 
     // Single state update for user message
     setCurrentChat(prev => [...prev, newMessage]);

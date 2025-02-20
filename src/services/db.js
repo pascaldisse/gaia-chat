@@ -65,3 +65,16 @@ export const personaDB = {
     await db.delete(PERSONA_STORE, id);
   }
 };
+
+// In the chat schema
+const chatSchema = {
+  id: { type: 'number', primary: true },
+  messages: { type: 'array' },
+  systemPrompt: { type: 'string' },
+  model: { type: 'string' },
+  createdAt: { type: 'number' },
+  timestamp: { type: 'number' },
+  title: { type: 'string' },
+  activePersonas: { type: 'array' } // Array of persona IDs
+};
+
