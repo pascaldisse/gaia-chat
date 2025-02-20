@@ -30,5 +30,10 @@ export class Persona {
       this.patience = patience;
       this.skepticism = skepticism;
       this.optimism = optimism;
+      this.lastActive = Date.now();
+    }
+
+    markActive() {
+      this.lastActive = Date.now();
     }
   }

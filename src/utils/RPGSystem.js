@@ -12,8 +12,9 @@ export class RPGSystem {
         throw new Error('No persona provided for RPG calculation');
       }
   
+      const initiativeRoll = this.rollAttribute(persona, 'initiative', context);
       const rolls = {
-        initiative: this.rollAttribute(persona, 'initiative', context),
+        initiative: initiativeRoll,
         talkativeness: this.rollAttribute(persona, 'talkativeness', context),
         confidence: this.rollAttribute(persona, 'confidence', context),
         curiosity: this.rollAttribute(persona, 'curiosity', context),
@@ -25,6 +26,7 @@ export class RPGSystem {
       return {
         ...rolls,
         shouldRespond: rolls.talkativeness.total >= 10,
+        responsePriority: initiativeRoll.total,
         assertiveness: this.getAssertivenessLevel(rolls.confidence.total),
         questionDepth: this.getQuestionDepth(rolls.curiosity),
         emotionalTone: this.getEmotionalTone(rolls.empathy.total)
