@@ -95,7 +95,11 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
   };
 
   const generatePersonaResponse = async (persona, triggerMessage, outcome) => {
+    let messageId = Date.now();
     try {
+      // Create new AbortController for this request
+      controllerRef.current = new AbortController();
+      
       const context = {
         ...analyzeMessageContext(triggerMessage.content),
         isResponseToPersona: !triggerMessage.isUser
@@ -133,14 +137,14 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
             { role: "user", content: triggerMessage.content }
           ],
           stream: true
-        })
+        }),
+        signal: controllerRef.current.signal // Add the abort signal
       });
 
       if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let messageId = Date.now();
       let assistantMessage = '';
 
       setCurrentChat(prev => [...prev, {
@@ -181,6 +185,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       persona.markActive();
     } catch (error) {
       console.error('Error generating response:', error);
+      if (error.name === 'AbortError') {
+        setCurrentChat(prev => prev.filter(msg => msg.id !== messageId));
+      }
       addDebugLog('ERROR', error.message);
     }
   };
@@ -307,6 +314,15 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       prev.filter(p => p.id !== personaId)
     );
   };
+
+  useEffect(() => {
+    return () => {
+      if (controllerRef.current) {
+        controllerRef.current.abort();
+      }
+      setIsCancelled(false);
+    };
+  }, []);
 
   return (
     <div className="chat-container">
