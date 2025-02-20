@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MODELS } from '../../config';
 import Persona from '../../models/Persona';
 import { personaDB } from '../../services/db';
+import '../../styles/personas/PersonaManager.css';
 
 const PersonaManager = ({ persona, onPersonaUpdate, onClose }) => {
   const [currentPersona, setCurrentPersona] = useState(
@@ -26,21 +27,22 @@ const PersonaManager = ({ persona, onPersonaUpdate, onClose }) => {
   return (
     <div className="persona-manager-modal">
       <div className="modal-content">
+        <button className="close-button" onClick={onClose}>×</button>
         <h2>{persona ? 'Edit Persona' : 'New Persona'}</h2>
         <div className="persona-editor">
           <input 
             value={currentPersona.name}
-            onChange={(e) => setCurrentPersona({...currentPersona, name: e.target.value})}
+            onChange={(e) => setCurrentPersona({ ...currentPersona, name: e.target.value })}
             placeholder="Persona Name"
           />
           <input 
             value={currentPersona.image}
-            onChange={(e) => setCurrentPersona({...currentPersona, image: e.target.value})}
+            onChange={(e) => setCurrentPersona({ ...currentPersona, image: e.target.value })}
             placeholder="Image URL"
           />
           <select
             value={currentPersona.model}
-            onChange={(e) => setCurrentPersona({...currentPersona, model: e.target.value})}
+            onChange={(e) => setCurrentPersona({ ...currentPersona, model: e.target.value })}
           >
             {Object.entries(MODELS).map(([key, value]) => (
               <option key={key} value={value}>{key}</option>
@@ -48,14 +50,13 @@ const PersonaManager = ({ persona, onPersonaUpdate, onClose }) => {
           </select>
           <textarea
             value={currentPersona.systemPrompt}
-            onChange={(e) => setCurrentPersona({...currentPersona, systemPrompt: e.target.value})}
+            onChange={(e) => setCurrentPersona({ ...currentPersona, systemPrompt: e.target.value })}
             placeholder="System Prompt"
             rows={6}
           />
         </div>
-        <div className="modal-actions">
-          <button onClick={onClose}>Cancel</button>
-          <button onClick={handleSave}>Save</button>
+        <div className="modal-footer">
+          <button className="save-button" onClick={handleSave}>Save</button>
         </div>
       </div>
     </div>
