@@ -95,6 +95,7 @@
   .log-entry.RESPONSE { border-left: 4px solid #4CAF50; }
   .log-entry.ERROR { border-left: 4px solid #f44336; }
   .log-entry.CHUNK { border-left: 4px solid #9C27B0; }
+  .log-entry.RPG_OUTCOME { border-left: 4px solid #FF9800; }
   
   pre {
     white-space: pre-wrap;
@@ -132,5 +133,11 @@
   
   .cancel-button:hover {
     background-color: #c82333;
+  }
+  
+  .dice-result {
+    margin-left: 10px;
+    font-weight: normal;
+    color: #FF9800;
   }
   

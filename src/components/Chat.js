@@ -3,6 +3,8 @@ import Message from './Message';
 import { API_URL, API_KEY, MODELS } from '../config';
 import '../styles/Chat.css';
 import ChatInput from './ChatInput';
+import { RPGSystem } from '../utils/RPGSystem';
+import { Persona } from '../utils/Persona';
 
 const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,6 +13,7 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
   const [isCancelled, setIsCancelled] = useState(false);
   const [activePersonas, setActivePersonas] = useState([]);
   const [showDebugLog, setShowDebugLog] = useState(false);
+  const [rpgOutcomes, setRpgOutcomes] = useState({});
 
   // Create a ref for the AbortController
   const controllerRef = useRef(null);
@@ -48,6 +51,49 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
     return [...currentPersonas, ...newPersonas];
   };
 
+  const analyzeMessageContext = (message) => {
+    // Basic context analysis - can be expanded based on needs
+    return {
+      topicAlignment: message.toLowerCase().includes('ai') || message.toLowerCase().includes('artificial intelligence'),
+      unfamiliarTopic: message.toLowerCase().includes('quantum physics') // Example of an unfamiliar topic
+    };
+  };
+
+  const generateRpgInstructions = (outcome) => {
+    const instructions = [];
+    
+    // Assertiveness
+    if (outcome.assertiveness === 'hesitant') {
+      instructions.push('Respond with hesitation, using phrases like "Maybe" or "Perhaps"');
+    } else if (outcome.assertiveness === 'assertive') {
+      instructions.push('Respond assertively and confidently');
+    }
+
+    // Emotional tone
+    if (outcome.emotionalTone === 'detached') {
+      instructions.push('Maintain a logical, detached tone');
+    } else if (outcome.emotionalTone === 'empathetic') {
+      instructions.push('Respond with empathy and emotional understanding');
+    }
+
+    // Curiosity
+    if (outcome.questionDepth === 'deep') {
+      instructions.push('Ask a thoughtful, insightful question');
+    }
+
+    // Creativity
+    if (outcome.creativity.total >= 15) {
+      instructions.push('Include creative metaphors or analogies');
+    }
+
+    // Humor
+    if (outcome.humor.total >= 12) {
+      instructions.push('Include a joke or witty remark');
+    }
+
+    return instructions.join('\n');
+  };
+
   const handleSubmit = async (message) => {
     if (!message.trim()) return;
 
@@ -68,14 +114,34 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
     try {
       // Get the last mentioned persona's settings
       const mentionedPersonas = getMentionedPersonas(message);
-      const activePersona = mentionedPersonas[mentionedPersonas.length - 1];
-      
+      let activePersona = mentionedPersonas[mentionedPersonas.length - 1];
+      if (!activePersona) {
+        activePersona = new Persona({  // Use default persona
+          name: 'Assistant',
+          systemPrompt: 'You are a helpful assistant',
+          model: MODELS.LLAMA3_70B
+        });
+      }
+
       const effectiveSystemPrompt = activePersona?.systemPrompt || systemPrompt;
       const effectiveModel = activePersona?.model || model;
 
+      const context = analyzeMessageContext(message);
+      const outcome = RPGSystem.calculateOutcome(activePersona, context);
+      setRpgOutcomes(outcome);
+      addDebugLog('RPG_OUTCOME', outcome);
+
+      if (!outcome.shouldRespond) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Modify system prompt based on RPG outcome
+      const modulatedPrompt = `${effectiveSystemPrompt}\n${generateRpgInstructions(outcome)}`;
+
       const messages = [];
-      if (effectiveSystemPrompt) {
-        messages.push({ role: "system", content: effectiveSystemPrompt });
+      if (modulatedPrompt) {
+        messages.push({ role: "system", content: modulatedPrompt });
       }
       messages.push({ role: "user", content: message });
 
@@ -189,14 +255,34 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
 
     try {
       const mentionedPersonas = getMentionedPersonas(userMessage.content);
-      const activePersona = mentionedPersonas[mentionedPersonas.length - 1];
+      let activePersona = mentionedPersonas[mentionedPersonas.length - 1];
+      if (!activePersona) {
+        activePersona = new Persona({  // Use default persona
+          name: 'Assistant',
+          systemPrompt: 'You are a helpful assistant',
+          model: MODELS.LLAMA3_70B
+        });
+      }
       
       const effectiveSystemPrompt = activePersona?.systemPrompt || systemPrompt;
       const effectiveModel = activePersona?.model || model;
 
+      const context = analyzeMessageContext(userMessage.content); // Implement topic analysis
+      const outcome = RPGSystem.calculateOutcome(activePersona, context);
+      setRpgOutcomes(outcome);
+      addDebugLog('RPG_OUTCOME', outcome);
+
+      if (!outcome.shouldRespond) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Modify system prompt based on RPG outcome
+      const modulatedPrompt = `${effectiveSystemPrompt}\n${generateRpgInstructions(outcome)}`;
+
       const messages = [];
-      if (effectiveSystemPrompt) {
-        messages.push({ role: "system", content: effectiveSystemPrompt });
+      if (modulatedPrompt) {
+        messages.push({ role: "system", content: modulatedPrompt });
       }
       messages.push({ role: "user", content: userMessage.content });
 
@@ -322,6 +408,9 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
               <div key={index} className={`log-entry ${log.type}`}>
                 <div className="log-header">
                   [{log.timestamp}] {log.type}
+                  {log.type === 'RPG_OUTCOME' && (
+                    <span className="dice-result">🎲 {log.data.match(/"total": (\d+)/)[1]}</span>
+                  )}
                 </div>
                 <pre>{log.data}</pre>
               </div>
