@@ -4,6 +4,8 @@ import Persona from '../../models/Persona';
 import { personaDB } from '../../services/db';
 import PersonaAttributesEditor from './PersonaAttributesEditor';
 import '../../styles/personas/PersonaManager.css';
+import { DEFAULT_PERSONA_ID } from '../../config/defaultPersona';
+import { GAIA_CONFIG } from '../../config/defaultPersona';
 
 const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   const [currentPersona, setCurrentPersona] = useState(
@@ -22,8 +24,10 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   const handleSave = async () => {
     const updatedPersona = new Persona({
       ...currentPersona,
+      name: currentPersona.id === DEFAULT_PERSONA_ID ? GAIA_CONFIG.name : currentPersona.name,
       updatedAt: Date.now()
     });
+    
     await onPersonaUpdate(updatedPersona);
     onClose();
   };
@@ -70,9 +74,9 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
             <input
               type="text"
               value={currentPersona.name}
-              onChange={(e) => setCurrentPersona({ ...currentPersona, name: e.target.value })}
+              onChange={(e) => setCurrentPersona(prev => ({...prev, name: e.target.value}))}
+              disabled={currentPersona.id === DEFAULT_PERSONA_ID}
               placeholder="Persona Name"
-              disabled={currentPersona.isDefault}
             />
             
             <div className="image-upload-section">
@@ -115,7 +119,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
 
             <select
               value={currentPersona.model}
-              onChange={(e) => setCurrentPersona({ ...currentPersona, model: e.target.value })}
+              onChange={(e) => setCurrentPersona(prev => ({...prev, model: e.target.value}))}
             >
               {Object.entries(MODELS).map(([key, value]) => (
                 <option key={key} value={value}>{key}</option>
@@ -126,6 +130,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
               onChange={(e) => setCurrentPersona({ ...currentPersona, systemPrompt: e.target.value })}
               placeholder="System Prompt"
               rows={6}
+              disabled={currentPersona.id === DEFAULT_PERSONA_ID ? false : false}
             />
             <button 
               className="edit-attributes-button"
@@ -135,7 +140,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
             </button>
           </div>
           <div className="modal-footer">
-            {persona && (
+            {currentPersona.id !== DEFAULT_PERSONA_ID && (
               <button 
                 className="delete-button"
                 onClick={() => setShowDeleteConfirm(true)}

@@ -9,7 +9,7 @@ import { MODELS } from './config';
 import { personaDB } from './services/db';
 import Persona from './models/Persona';
 import PersonaManager from './components/personas/PersonaManager';
-import { GAIA_CONFIG } from './config/defaultPersona';
+import { GAIA_CONFIG, DEFAULT_PERSONA_ID } from './config/defaultPersona';
 
 function App() {
   const [currentChat, setCurrentChat] = useState([]);
@@ -80,8 +80,19 @@ function App() {
   useEffect(() => {
     const loadPersonas = async () => {
       const loaded = await personaDB.getAllPersonas();
-      const defaultGaia = new Persona(GAIA_CONFIG);
-      setPersonas([defaultGaia, ...loaded]);
+      
+      // Check if GAIA already exists in the database
+      const existingGaia = loaded.find(p => p.id === DEFAULT_PERSONA_ID);
+      
+      // If GAIA doesn't exist, create it from config
+      if (!existingGaia) {
+        const defaultGaia = new Persona(GAIA_CONFIG);
+        await personaDB.savePersona(defaultGaia);
+        setPersonas([defaultGaia, ...loaded]);
+      } else {
+        // Use the database version of GAIA
+        setPersonas(loaded);
+      }
     };
     loadPersonas();
   }, []);
@@ -127,9 +138,13 @@ function App() {
 
   const handleEditPersona = async (updatedPersona) => {
     try {
+      // Save the updated persona
       await personaDB.savePersona(updatedPersona);
+      
+      // Update the personas state
       const updatedPersonas = await personaDB.getAllPersonas();
       setPersonas(updatedPersonas);
+      
       setEditingPersona(null);
     } catch (error) {
       console.error('Error updating persona:', error);
