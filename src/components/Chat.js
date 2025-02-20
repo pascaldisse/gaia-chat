@@ -10,6 +10,7 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
   const messagesEndRef = useRef(null);
   const [isCancelled, setIsCancelled] = useState(false);
   const [activePersonas, setActivePersonas] = useState([]);
+  const [showDebugLog, setShowDebugLog] = useState(false);
 
   // Create a ref for the AbortController
   const controllerRef = useRef(null);
@@ -312,20 +313,29 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
         <div ref={messagesEndRef} />
       </div>
       
-      <div className="debug-panel">
-        <h3>Debug Information</h3>
-        <button onClick={() => setDebugLog([])}>Clear Logs</button>
-        <div className="debug-logs">
-          {debugLog.map((log, index) => (
-            <div key={index} className={`log-entry ${log.type}`}>
-              <div className="log-header">
-                [{log.timestamp}] {log.type}
+      {showDebugLog && (
+        <div className="debug-panel">
+          <h3>Debug Information</h3>
+          <button onClick={() => setDebugLog([])}>Clear Logs</button>
+          <div className="debug-logs">
+            {debugLog.map((log, index) => (
+              <div key={index} className={`log-entry ${log.type}`}>
+                <div className="log-header">
+                  [{log.timestamp}] {log.type}
+                </div>
+                <pre>{log.data}</pre>
               </div>
-              <pre>{log.data}</pre>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      <button 
+        className="debug-toggle"
+        onClick={() => setShowDebugLog(!showDebugLog)}
+      >
+        {showDebugLog ? 'Hide Debug' : 'Show Debug'}
+      </button>
 
       <ChatInput 
         personas={personas}
