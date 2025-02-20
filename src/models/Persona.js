@@ -5,7 +5,8 @@ export default class Persona {
       systemPrompt,
       model,
       exampleDialogue = [],
-      knowledgeFiles = []
+      knowledgeFiles = [],
+      image = ''
     }) {
       this.id = id || Date.now();
       this.name = name;
@@ -13,6 +14,7 @@ export default class Persona {
       this.model = model;
       this.exampleDialogue = exampleDialogue;
       this.knowledgeFiles = knowledgeFiles;
+      this.image = image;
       this.createdAt = Date.now();
       this.updatedAt = Date.now();
     }

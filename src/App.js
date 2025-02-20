@@ -19,6 +19,7 @@ function App() {
   const [personas, setPersonas] = useState([]);
   const [selectedPersonaId, setSelectedPersonaId] = useState(null);
   const [showPersonaManager, setShowPersonaManager] = useState(false);
+  const [editingPersona, setEditingPersona] = useState(null);
 
   // Load chat history from database
   useEffect(() => {
@@ -120,6 +121,17 @@ function App() {
     }
   };
 
+  const handleEditPersona = async (updatedPersona) => {
+    try {
+      await personaDB.savePersona(updatedPersona);
+      const updatedPersonas = await personaDB.getAllPersonas();
+      setPersonas(updatedPersonas);
+      setEditingPersona(null);
+    } catch (error) {
+      console.error('Error updating persona:', error);
+    }
+  };
+
   return (
     <div className="app">
       <Sidebar 
@@ -136,6 +148,7 @@ function App() {
         selectedPersonaId={selectedPersonaId}
         setSelectedPersonaId={setSelectedPersonaId}
         createNewPersona={createNewPersona}
+        onEditPersona={setEditingPersona}
       />
       <Chat 
         currentChat={currentChat} 
@@ -143,10 +156,11 @@ function App() {
         model={model}
         systemPrompt={systemPrompt}
       />
-      {showPersonaManager && (
+      {editingPersona && (
         <PersonaManager 
-          onPersonaUpdate={setPersonas}
-          onClose={() => setShowPersonaManager(false)}
+          persona={editingPersona}
+          onPersonaUpdate={handleEditPersona}
+          onClose={() => setEditingPersona(null)}
         />
       )}
     </div>

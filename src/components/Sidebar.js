@@ -15,7 +15,8 @@ const Sidebar = ({
   chatHistory,
   selectedChatId,
   setSelectedChatId,
-  createNewChat
+  createNewChat,
+  onEditPersona
 }) => {
   const getChatTitle = (chat) => {
     const firstMessage = chat.messages[0]?.content;
@@ -56,7 +57,7 @@ const Sidebar = ({
             <div 
               key={persona.id}
               className={`persona-item ${selectedPersonaId === persona.id ? 'selected' : ''}`}
-              onClick={() => setSelectedPersonaId(persona.id)}
+              onClick={() => onEditPersona(persona)}
             >
               <div className="persona-title">{persona.name}</div>
               <div className="persona-prompt">
