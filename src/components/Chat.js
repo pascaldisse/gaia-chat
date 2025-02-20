@@ -221,7 +221,19 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       // Filter and sort responders by initiative
       const responders = responseQueue
         .filter(({ outcome }) => outcome.shouldRespond)
-        .sort((a, b) => b.outcome.responsePriority - a.outcome.responsePriority);
+        .sort((a, b) => {
+          const aIsMentioned = context.mentionedPersonaIds?.includes(a.persona.id);
+          const bIsMentioned = context.mentionedPersonaIds?.includes(b.persona.id);
+          
+          // If both are mentioned or neither, sort by initiative
+          if (aIsMentioned === bIsMentioned) {
+            return b.outcome.responsePriority - a.outcome.responsePriority;
+          }
+          // If only a is mentioned, a comes first
+          if (aIsMentioned) return -1;
+          // If only b is mentioned, b comes first
+          return 1;
+        });
 
       // Generate responses in order
       for (const { persona, outcome } of responders) {
