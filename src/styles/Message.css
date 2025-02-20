@@ -88,3 +88,8 @@
     color: #666;
   }
   
+  /* Add this new style for GAIA's avatar */
+  .message .persona-header img[alt="GAIA"] {
+    border-color: #00868b; /* Dark turquoise color */
+    border-width: 3px;
+  }

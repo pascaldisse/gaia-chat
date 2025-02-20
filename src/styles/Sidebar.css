@@ -144,6 +144,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    color: #dcddde;
   }
   
   .persona-avatar {
@@ -179,5 +180,24 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  
+  .gaia-persona {
+    border: 2px solid #4752c4;
+    background-color: #2b2d3c; /* Darker background color */
+  }
+  
+  .gaia-persona .persona-avatar {
+    border-color: #4752c4;
+    border-width: 2px;
+  }
+  
+  .gaia-persona:hover {
+    background-color: #32344a; /* Slightly lighter on hover */
+  }
+  
+  .gaia-persona.selected {
+    background-color: #383b56; /* Even darker blue when selected */
+    border-color: #4752c4;
   }
   

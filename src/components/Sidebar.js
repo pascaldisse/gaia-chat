@@ -1,6 +1,7 @@
 import React from 'react';
 import { MODELS } from '../config';
 import '../styles/Sidebar.css';
+import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 
 const Sidebar = ({ 
   personas,
@@ -48,25 +49,31 @@ const Sidebar = ({
           </button>
         </div>
         <div className="persona-list">
-          {personas.map(persona => (
-            <div 
-              key={persona.id}
-              className={`persona-item ${selectedPersonaId === persona.id ? 'selected' : ''}`}
-              onClick={() => persona.isDefault ? null : onEditPersona(persona)}
-            >
-              <img 
-                src={persona.image || '/default-avatar.png'} 
-                alt={persona.name}
-                className="persona-avatar"
-              />
-              <div className="persona-info">
-                <div className="persona-title">{persona.name}</div>
-                <div className="persona-prompt">
-                  {persona.systemPrompt.substring(0, 30)}...
+          {personas
+            .sort((a, b) => {
+              if (a.id === DEFAULT_PERSONA_ID) return -1;
+              if (b.id === DEFAULT_PERSONA_ID) return 1;
+              return 0;
+            })
+            .map(persona => (
+              <div 
+                key={persona.id}
+                className={`persona-item ${selectedPersonaId === persona.id ? 'selected' : ''} ${persona.id === DEFAULT_PERSONA_ID ? 'gaia-persona' : ''}`}
+                onClick={() => persona.isDefault ? null : onEditPersona(persona)}
+              >
+                <img 
+                  src={persona.image || '/default-avatar.png'} 
+                  alt={persona.name}
+                  className="persona-avatar"
+                />
+                <div className="persona-info">
+                  <div className="persona-title">{persona.name}</div>
+                  <div className="persona-prompt">
+                    {persona.systemPrompt.substring(0, 30)}...
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
