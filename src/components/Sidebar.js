@@ -2,9 +2,53 @@ import React from 'react';
 import { MODELS } from '../config';
 import '../styles/Sidebar.css';
 
-const Sidebar = ({ setCurrentChat, model, setModel, systemPrompt, setSystemPrompt }) => {
+const Sidebar = ({ 
+  setCurrentChat, 
+  model, 
+  setModel, 
+  systemPrompt, 
+  setSystemPrompt,
+  chatHistory,
+  selectedChatId,
+  setSelectedChatId,
+  createNewChat
+}) => {
+  const getChatTitle = (chat) => {
+    const firstMessage = chat.messages[0]?.content;
+    return firstMessage ? firstMessage.slice(0, 30) + '...' : 'New Chat';
+  };
+
+  const handleChatSelect = (chat) => {
+    setSelectedChatId(chat.id);
+    setCurrentChat(chat.messages);
+    setSystemPrompt(chat.systemPrompt);
+    setModel(chat.model);
+  };
+
   return (
     <div className="sidebar">
+      <button 
+        className="new-chat-btn"
+        onClick={createNewChat}
+      >
+        + New Chat
+      </button>
+
+      <div className="chat-history">
+        {chatHistory.map(chat => (
+          <div 
+            key={chat.id}
+            className={`chat-item ${selectedChatId === chat.id ? 'selected' : ''}`}
+            onClick={() => handleChatSelect(chat)}
+          >
+            <div className="chat-title">{getChatTitle(chat)}</div>
+            <div className="chat-timestamp">
+              {new Date(chat.timestamp).toLocaleDateString()}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="sidebar-section">
         <h3>Model</h3>
         <select 
@@ -28,13 +72,6 @@ const Sidebar = ({ setCurrentChat, model, setModel, systemPrompt, setSystemPromp
           className="system-prompt-input"
         />
       </div>
-
-      <button 
-        className="new-chat-btn"
-        onClick={() => setCurrentChat([])}
-      >
-        New Chat
-      </button>
     </div>
   );
 };
