@@ -10,6 +10,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onClose }) => {
     persona || new Persona({ name: '', systemPrompt: '', model: MODELS.LLAMA3_70B })
   );
   const [showAttributesEditor, setShowAttributesEditor] = useState(false);
+  const [imageSource, setImageSource] = useState('url'); // 'url' or 'file'
 
   useEffect(() => {
     if (persona) {
@@ -34,6 +35,30 @@ const PersonaManager = ({ persona, onPersonaUpdate, onClose }) => {
     setShowAttributesEditor(false);
   };
 
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        alert('Please upload a JPEG, PNG or WebP image');
+        return;
+      }
+
+      try {
+        // Convert the file to base64
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setCurrentPersona(prev => ({
+            ...prev,
+            image: e.target.result
+          }));
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Error processing image:', error);
+      }
+    }
+  };
+
   return (
     <>
       <div className="persona-manager-modal">
@@ -46,11 +71,45 @@ const PersonaManager = ({ persona, onPersonaUpdate, onClose }) => {
               onChange={(e) => setCurrentPersona({ ...currentPersona, name: e.target.value })}
               placeholder="Persona Name"
             />
-            <input 
-              value={currentPersona.image}
-              onChange={(e) => setCurrentPersona({ ...currentPersona, image: e.target.value })}
-              placeholder="Image URL"
-            />
+            
+            <div className="image-upload-section">
+              <div className="image-source-toggle">
+                <button 
+                  className={`source-button ${imageSource === 'url' ? 'active' : ''}`}
+                  onClick={() => setImageSource('url')}
+                >
+                  URL
+                </button>
+                <button 
+                  className={`source-button ${imageSource === 'file' ? 'active' : ''}`}
+                  onClick={() => setImageSource('file')}
+                >
+                  Upload File
+                </button>
+              </div>
+
+              {imageSource === 'url' ? (
+                <input 
+                  value={currentPersona.image}
+                  onChange={(e) => setCurrentPersona({ ...currentPersona, image: e.target.value })}
+                  placeholder="Image URL"
+                />
+              ) : (
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp"
+                  onChange={handleImageUpload}
+                  className="file-input"
+                />
+              )}
+
+              {currentPersona.image && (
+                <div className="image-preview">
+                  <img src={currentPersona.image} alt="Persona" />
+                </div>
+              )}
+            </div>
+
             <select
               value={currentPersona.model}
               onChange={(e) => setCurrentPersona({ ...currentPersona, model: e.target.value })}
