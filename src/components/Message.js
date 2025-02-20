@@ -6,7 +6,8 @@ import ReactMarkdown from 'react-markdown';
 const Message = ({ message, onRegenerate }) => {
   const renderContent = () => {
     if (message.content.startsWith('<think>') && message.content.endsWith('</think>')) {
-      return <div className="thinking">{message.content.slice(7, -8)}</div>;
+      const thinkContent = message.content.slice(7, -8);
+      return <ReactMarkdown>{`*${thinkContent}*`}</ReactMarkdown>;
     }
     return <ReactMarkdown>{message.content}</ReactMarkdown>;
   };

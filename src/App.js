@@ -9,11 +9,23 @@ import { MODELS } from './config';
 function App() {
   const [currentChat, setCurrentChat] = useState([]);
   const [model, setModel] = useState(MODELS.LLAMA3_70B);
+  const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
 
   return (
     <div className="app">
-      <Sidebar setCurrentChat={setCurrentChat} model={model} setModel={setModel} />
-      <Chat currentChat={currentChat} setCurrentChat={setCurrentChat} model={model} />
+      <Sidebar 
+        setCurrentChat={setCurrentChat} 
+        model={model} 
+        setModel={setModel}
+        systemPrompt={systemPrompt}
+        setSystemPrompt={setSystemPrompt}
+      />
+      <Chat 
+        currentChat={currentChat} 
+        setCurrentChat={setCurrentChat} 
+        model={model}
+        systemPrompt={systemPrompt}
+      />
     </div>
   );
 }

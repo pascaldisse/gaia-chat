@@ -3,7 +3,7 @@ import Message from './Message';
 import { API_URL, API_KEY, MODELS } from '../config';
 import '../styles/Chat.css';
 
-const Chat = ({ currentChat, setCurrentChat, model }) => {
+const Chat = ({ currentChat, setCurrentChat, model, systemPrompt }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [debugLog, setDebugLog] = useState([]);
@@ -45,9 +45,15 @@ const Chat = ({ currentChat, setCurrentChat, model }) => {
     setIsLoading(true);
 
     try {
+      const messages = [];
+      if (systemPrompt) {
+        messages.push({ role: "system", content: systemPrompt });
+      }
+      messages.push({ role: "user", content: inputMessage });
+
       const requestBody = {
         model: model,
-        messages: [{ role: "user", content: inputMessage }],
+        messages: messages,
         stream: true
       };
 
@@ -144,20 +150,24 @@ const Chat = ({ currentChat, setCurrentChat, model }) => {
   };
 
   const handleRegenerate = async (message) => {
-    // Find the user message that came before this assistant message
     const messageIndex = currentChat.findIndex(m => m.id === message.id);
     const userMessage = currentChat[messageIndex - 1];
     
     if (!userMessage || !userMessage.isUser) return;
     
-    // Remove all messages after the user message
     setCurrentChat(prev => prev.slice(0, messageIndex));
     setIsLoading(true);
 
     try {
+      const messages = [];
+      if (systemPrompt) {
+        messages.push({ role: "system", content: systemPrompt });
+      }
+      messages.push({ role: "user", content: userMessage.content });
+
       const requestBody = {
         model: model,
-        messages: [{ role: "user", content: userMessage.content }],
+        messages: messages,
         stream: true
       };
 
