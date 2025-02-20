@@ -155,6 +155,7 @@ function App() {
         setCurrentChat={setCurrentChat} 
         model={model}
         systemPrompt={systemPrompt}
+        personas={personas}
       />
       {editingPersona && (
         <PersonaManager 

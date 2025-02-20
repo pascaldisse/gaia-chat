@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import Message from './Message';
 import { API_URL, API_KEY, MODELS } from '../config';
 import '../styles/Chat.css';
+import ChatInput from './ChatInput';
 
-const Chat = ({ currentChat, setCurrentChat, model, systemPrompt }) => {
-  const [inputMessage, setInputMessage] = useState('');
+const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [debugLog, setDebugLog] = useState([]);
   const messagesEndRef = useRef(null);
@@ -30,19 +30,17 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt }) => {
 
   useEffect(scrollToBottom, [currentChat]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!inputMessage.trim()) return;
+  const handleSubmit = async (message) => {
+    if (!message.trim()) return;
 
     const newMessage = {
       id: Date.now(),
-      content: inputMessage,
+      content: message,
       isUser: true
     };
 
     // Single state update for user message
     setCurrentChat(prev => [...prev, newMessage]);
-    setInputMessage('');
     setIsLoading(true);
 
     try {
@@ -50,7 +48,7 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt }) => {
       if (systemPrompt) {
         messages.push({ role: "system", content: systemPrompt });
       }
-      messages.push({ role: "user", content: inputMessage });
+      messages.push({ role: "user", content: message });
 
       const requestBody = {
         model: model,
@@ -282,33 +280,20 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt }) => {
         </div>
       </div>
 
-      <form className="input-area" onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          placeholder="Type your message..."
-          disabled={isLoading}
-        />
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Sending...' : 'Send'}
-        </button>
-        {isLoading && (
-          <button 
-            type="button"
-            className="cancel-button" 
-            onClick={() => {
-              setIsCancelled(true);
-              if (controllerRef.current) {
-                controllerRef.current.abort();
-              }
-            }}>
-            Cancel
-          </button>
-        )}
-      </form>
+      <ChatInput 
+        personas={personas}
+        onSendMessage={handleSubmit}
+        isLoading={isLoading}
+        onCancel={() => {
+          setIsCancelled(true);
+          if (controllerRef.current) {
+            controllerRef.current.abort();
+          }
+        }}
+      />
     </div>
   );
 };
 
 export default Chat;
+
