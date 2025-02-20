@@ -7,12 +7,19 @@ import { RPGSystem } from '../utils/RPGSystem';
 import { Persona } from '../utils/Persona';
 import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 
-const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) => {
+const Chat = ({ 
+  currentChat, 
+  setCurrentChat, 
+  model, 
+  systemPrompt, 
+  personas,
+  activePersonas,
+  setActivePersonas 
+}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [debugLog, setDebugLog] = useState([]);
   const messagesEndRef = useRef(null);
   const [isCancelled, setIsCancelled] = useState(false);
-  const [activePersonas, setActivePersonas] = useState([]);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [rpgOutcomes, setRpgOutcomes] = useState({});
 
@@ -210,11 +217,11 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       const updatedPersonas = updateActivePersonas(message, activePersonas);
       setActivePersonas(updatedPersonas);
 
-      // Always include mentioned personas in response candidates
-      const responseCandidates = [...new Set([
-        ...updatedPersonas,
-        ...mentionedPersonas
-      ])];
+      // If no personas are mentioned, use GAIA as the default responder
+      const defaultGaia = personas.find(p => p.id === DEFAULT_PERSONA_ID);
+      const responseCandidates = mentionedPersonas.length > 0 
+        ? [...new Set([...updatedPersonas, ...mentionedPersonas])]
+        : [defaultGaia];
 
       const context = analyzeMessageContext(message);
       
@@ -230,6 +237,10 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       const responders = responseQueue
         .filter(({ outcome }) => outcome.shouldRespond)
         .sort((a, b) => {
+          // Always prioritize GAIA if present
+          if (a.persona.id === DEFAULT_PERSONA_ID) return -1;
+          if (b.persona.id === DEFAULT_PERSONA_ID) return 1;
+          
           const aIsMentioned = context.mentionedPersonaIds?.includes(a.persona.id);
           const bIsMentioned = context.mentionedPersonaIds?.includes(b.persona.id);
           
@@ -239,26 +250,12 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           }
           // If only a is mentioned, a comes first
           if (aIsMentioned) return -1;
-          // If only b is mentioned, b comes first
           return 1;
         });
 
       // Generate responses in order
       for (const { persona, outcome } of responders) {
         await generatePersonaResponse(persona, newMessage, outcome);
-      }
-
-      // If no one responded, use default assistant
-      if (responders.length === 0) {
-        const defaultPersona = new Persona({
-          name: 'Assistant',
-          systemPrompt: 'You are a helpful assistant',
-          model: MODELS.LLAMA3_70B,
-          talkativeness: 15  // Ensure high enough to usually respond
-        });
-        const defaultOutcome = RPGSystem.calculateOutcome(defaultPersona, context);
-        defaultOutcome.shouldRespond = true; // Force response
-        await generatePersonaResponse(defaultPersona, newMessage, defaultOutcome);
       }
     } catch (error) {
       console.error('Error:', error);

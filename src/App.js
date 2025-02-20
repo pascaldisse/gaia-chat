@@ -30,11 +30,15 @@ function App() {
         const chats = await chatDB.getAllChats();
         const sortedChats = chats.sort((a, b) => b.createdAt - a.createdAt);
         
-        // If there's a selected chat, ensure we have the latest version
         if (selectedChatId) {
           const currentChatFromDB = chats.find(c => c.id === selectedChatId);
           if (currentChatFromDB) {
             setCurrentChat(currentChatFromDB.messages);
+            // Restore active personas from stored IDs
+            const activePersonas = personas.filter(p => 
+              currentChatFromDB.activePersonas?.includes(p.id)
+            );
+            setActivePersonas(activePersonas);
           }
         }
         
@@ -44,7 +48,7 @@ function App() {
       }
     };
     loadChats();
-  }, [selectedChatId]);
+  }, [selectedChatId, personas]);
 
   // Save chat to database when it changes
   useEffect(() => {
@@ -55,7 +59,7 @@ function App() {
           messages: currentChat,
           systemPrompt,
           model,
-          activePersonas: activePersonas.map(p => p.id),
+          activePersonas: activePersonas.map(p => p.id), // Store persona IDs
           createdAt: chatHistory.find(c => c.id === selectedChatId)?.createdAt || Date.now(),
           timestamp: Date.now(),
           title: currentChat[0]?.content?.slice(0, 30) + '...' || 'New Chat'
@@ -98,6 +102,13 @@ function App() {
   }, []);
 
   const createNewChat = async () => {
+    const defaultGaia = personas.find(p => p.id === DEFAULT_PERSONA_ID);
+    
+    if (!defaultGaia) {
+      console.error('GAIA persona not found!');
+      return;
+    }
+
     const newChat = {
       id: Date.now(),
       messages: [],
@@ -105,7 +116,8 @@ function App() {
       model,
       createdAt: Date.now(),
       timestamp: Date.now(),
-      title: 'New Chat'
+      title: 'New Chat',
+      activePersonas: [defaultGaia.id] // Always include GAIA
     };
 
     try {
@@ -114,6 +126,7 @@ function App() {
       setChatHistory(updatedHistory.sort((a, b) => b.createdAt - a.createdAt));
       setSelectedChatId(newChat.id);
       setCurrentChat([]);
+      setActivePersonas([defaultGaia]); // Set GAIA as the only active persona
     } catch (error) {
       console.error('Error creating new chat:', error);
     }
@@ -185,6 +198,8 @@ function App() {
         model={model}
         systemPrompt={systemPrompt}
         personas={personas}
+        activePersonas={activePersonas}
+        setActivePersonas={setActivePersonas}
       />
       {editingPersona && (
         <PersonaManager 
