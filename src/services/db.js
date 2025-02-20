@@ -2,8 +2,9 @@ import { openDB } from 'idb';
 
 // Database configuration
 const DB_NAME = 'chatApp';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const CHAT_STORE = 'chats';
+const PERSONA_STORE = 'personas';
 
 // Create/open the database
 const dbPromise = openDB(DB_NAME, DB_VERSION, {
@@ -11,6 +12,12 @@ const dbPromise = openDB(DB_NAME, DB_VERSION, {
     // Create the object store if it doesn't exist
     if (!db.objectStoreNames.contains(CHAT_STORE)) {
       db.createObjectStore(CHAT_STORE, { keyPath: 'id' });
+    }
+    if (!db.objectStoreNames.contains(PERSONA_STORE)) {
+      db.createObjectStore(PERSONA_STORE, { 
+        keyPath: 'id',
+        autoIncrement: true 
+      });
     }
   },
 });
@@ -39,5 +46,22 @@ export const chatDB = {
   async updateChat(chat) {
     const db = await dbPromise;
     await db.put(CHAT_STORE, chat);
+  }
+};
+
+export const personaDB = {
+  async getAllPersonas() {
+    const db = await dbPromise;
+    return db.getAll(PERSONA_STORE);
+  },
+  
+  async savePersona(persona) {
+    const db = await dbPromise;
+    await db.put(PERSONA_STORE, persona);
+  },
+  
+  async deletePersona(id) {
+    const db = await dbPromise;
+    await db.delete(PERSONA_STORE, id);
   }
 };

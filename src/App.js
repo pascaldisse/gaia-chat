@@ -6,6 +6,9 @@ import './styles/Sidebar.css';
 import './App.css';
 import './styles/Chat.css';
 import { MODELS } from './config';
+import { personaDB } from './services/db';
+import Persona from './models/Persona';
+import PersonaManager from './components/personas/PersonaManager';
 
 function App() {
   const [currentChat, setCurrentChat] = useState([]);
@@ -13,6 +16,9 @@ function App() {
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
   const [chatHistory, setChatHistory] = useState([]);
   const [selectedChatId, setSelectedChatId] = useState(null);
+  const [personas, setPersonas] = useState([]);
+  const [selectedPersonaId, setSelectedPersonaId] = useState(null);
+  const [showPersonaManager, setShowPersonaManager] = useState(false);
 
   // Load chat history from database
   useEffect(() => {
@@ -66,6 +72,15 @@ function App() {
     return () => clearTimeout(timeoutId);
   }, [currentChat, selectedChatId, systemPrompt, model, chatHistory]);
 
+  // Add useEffect for loading personas
+  useEffect(() => {
+    const loadPersonas = async () => {
+      const loaded = await personaDB.getAllPersonas();
+      setPersonas(loaded);
+    };
+    loadPersonas();
+  }, []);
+
   const createNewChat = async () => {
     const newChat = {
       id: Date.now(),
@@ -88,6 +103,23 @@ function App() {
     }
   };
 
+  const createNewPersona = async () => {
+    const newPersona = new Persona({
+      name: 'New Persona',
+      systemPrompt: 'You are a helpful assistant',
+      model: MODELS.LLAMA3_70B
+    });
+    
+    try {
+      await personaDB.savePersona(newPersona);
+      const updatedPersonas = await personaDB.getAllPersonas();
+      setPersonas(updatedPersonas);
+      setSelectedPersonaId(newPersona.id);
+    } catch (error) {
+      console.error('Error creating persona:', error);
+    }
+  };
+
   return (
     <div className="app">
       <Sidebar 
@@ -100,6 +132,10 @@ function App() {
         selectedChatId={selectedChatId}
         setSelectedChatId={setSelectedChatId}
         createNewChat={createNewChat}
+        personas={personas}
+        selectedPersonaId={selectedPersonaId}
+        setSelectedPersonaId={setSelectedPersonaId}
+        createNewPersona={createNewPersona}
       />
       <Chat 
         currentChat={currentChat} 
@@ -107,6 +143,12 @@ function App() {
         model={model}
         systemPrompt={systemPrompt}
       />
+      {showPersonaManager && (
+        <PersonaManager 
+          onPersonaUpdate={setPersonas}
+          onClose={() => setShowPersonaManager(false)}
+        />
+      )}
     </div>
   );
 }

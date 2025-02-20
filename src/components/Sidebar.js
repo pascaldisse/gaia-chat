@@ -3,6 +3,10 @@ import { MODELS } from '../config';
 import '../styles/Sidebar.css';
 
 const Sidebar = ({ 
+  personas,
+  selectedPersonaId,
+  setSelectedPersonaId,
+  createNewPersona,
   setCurrentChat, 
   model, 
   setModel, 
@@ -33,6 +37,35 @@ const Sidebar = ({
       >
         + New Chat
       </button>
+
+      <div className="persona-section">
+        <div className="section-header">
+          <h3>Personas</h3>
+          <button
+            className="new-persona-btn"
+            onClick={() => {
+              setSelectedPersonaId(null);
+              createNewPersona();
+            }}
+          >
+            + New
+          </button>
+        </div>
+        <div className="persona-list">
+          {personas.map(persona => (
+            <div 
+              key={persona.id}
+              className={`persona-item ${selectedPersonaId === persona.id ? 'selected' : ''}`}
+              onClick={() => setSelectedPersonaId(persona.id)}
+            >
+              <div className="persona-title">{persona.name}</div>
+              <div className="persona-prompt">
+                {persona.systemPrompt.substring(0, 30)}...
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="chat-history">
         {chatHistory.map(chat => (
