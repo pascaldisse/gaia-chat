@@ -40,6 +40,7 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt }) => {
       isUser: true
     };
 
+    // Single state update for user message
     setCurrentChat(prev => [...prev, newMessage]);
     setInputMessage('');
     setIsLoading(true);
