@@ -52,10 +52,10 @@ const Chat = ({ currentChat, setCurrentChat, model, systemPrompt, personas }) =>
   };
 
   const analyzeMessageContext = (message) => {
-    // Basic context analysis - can be expanded based on needs
     return {
       topicAlignment: message.toLowerCase().includes('ai') || message.toLowerCase().includes('artificial intelligence'),
-      unfamiliarTopic: message.toLowerCase().includes('quantum physics') // Example of an unfamiliar topic
+      unfamiliarTopic: message.toLowerCase().includes('quantum physics'),
+      mentionedPersonaIds: getMentionedPersonas(message).map(p => p.id)
     };
   };
 
@@ -188,7 +188,6 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   const handleSubmit = async (message) => {
     if (!message.trim()) return;
 
-    // Add user message
     const newMessage = {
       id: Date.now(),
       content: message,
@@ -198,15 +197,22 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     setIsLoading(true);
 
     try {
-      // Get all active personas (including mentioned ones)
+      // Get mentioned personas and update active list
       const mentionedPersonas = getMentionedPersonas(message);
       const updatedPersonas = updateActivePersonas(message, activePersonas);
       setActivePersonas(updatedPersonas);
 
-      // Calculate responses for all active personas
+      // Always include mentioned personas in response candidates
+      const responseCandidates = [...new Set([
+        ...updatedPersonas,
+        ...mentionedPersonas
+      ])];
+
       const context = analyzeMessageContext(message);
+      
+      // Calculate responses for all candidates
       const responseQueue = await Promise.all(
-        updatedPersonas.map(async (persona) => {
+        responseCandidates.map(async (persona) => {
           const outcome = RPGSystem.calculateOutcome(persona, context);
           return { persona, outcome };
         })
@@ -220,6 +226,19 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       // Generate responses in order
       for (const { persona, outcome } of responders) {
         await generatePersonaResponse(persona, newMessage, outcome);
+      }
+
+      // If no one responded, use default assistant
+      if (responders.length === 0) {
+        const defaultPersona = new Persona({
+          name: 'Assistant',
+          systemPrompt: 'You are a helpful assistant',
+          model: MODELS.LLAMA3_70B,
+          talkativeness: 15  // Ensure high enough to usually respond
+        });
+        const defaultOutcome = RPGSystem.calculateOutcome(defaultPersona, context);
+        defaultOutcome.shouldRespond = true; // Force response
+        await generatePersonaResponse(defaultPersona, newMessage, defaultOutcome);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -241,123 +260,24 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     try {
       const mentionedPersonas = getMentionedPersonas(userMessage.content);
       let activePersona = mentionedPersonas[mentionedPersonas.length - 1];
+      
       if (!activePersona) {
-        activePersona = new Persona({  // Use default persona
+        activePersona = new Persona({
           name: 'Assistant',
           systemPrompt: 'You are a helpful assistant',
-          model: MODELS.LLAMA3_70B
+          model: MODELS.LLAMA3_70B,
+          talkativeness: 15
         });
       }
-      
-      const effectiveSystemPrompt = activePersona?.systemPrompt || systemPrompt;
-      const effectiveModel = activePersona?.model || model;
 
-      const context = analyzeMessageContext(userMessage.content); // Implement topic analysis
+      const context = analyzeMessageContext(userMessage.content);
       const outcome = RPGSystem.calculateOutcome(activePersona, context);
       setRpgOutcomes(outcome);
       addDebugLog('RPG_OUTCOME', outcome);
 
-      if (!outcome.shouldRespond) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Modify system prompt based on RPG outcome
-      const modulatedPrompt = `${effectiveSystemPrompt}\n${generateRpgInstructions(outcome)}`;
-
-      const messages = [];
-      if (modulatedPrompt) {
-        messages.push({ role: "system", content: modulatedPrompt });
-      }
-      messages.push({ role: "user", content: userMessage.content });
-
-      const requestBody = {
-        model: effectiveModel,
-        messages: messages,
-        stream: true
-      };
-
-      addDebugLog('REQUEST', {
-        url: API_URL,
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: requestBody
-      });
-
-      // Create and store the AbortController in the ref
-      controllerRef.current = new AbortController();
-      const signal = controllerRef.current.signal;
-
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify(requestBody),
-        signal
-      });
-
-      addDebugLog('RESPONSE_INIT', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        addDebugLog('RESPONSE_ERROR', errorData);
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantMessage = '';
-      let messageId = Date.now();
-
-      setCurrentChat(prev => [...prev, {
-        id: messageId,
-        content: '',
-        isUser: false,
-        personaId: activePersona?.id
-      }]);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value);
-        addDebugLog('CHUNK', { raw: chunk });
-
-        const lines = chunk.split('\n').filter(line => line.trim());
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              addDebugLog('PARSE_SUCCESS', data);
-
-              if (data.choices?.[0]?.delta?.content) {
-                assistantMessage += data.choices[0].delta.content;
-                setCurrentChat(prev => 
-                  prev.map(msg => 
-                    msg.id === messageId 
-                      ? { ...msg, content: assistantMessage } 
-                      : msg
-                  )
-                );
-              }
-            } catch (error) {
-              addDebugLog('PARSE_ERROR', {
-                error: error.message,
-                line: line
-              });
-            }
-          }
-        }
-      }
+      // Force response for regeneration
+      outcome.shouldRespond = true;
+      await generatePersonaResponse(activePersona, userMessage, outcome);
     } catch (error) {
       console.error('Error:', error);
       addDebugLog('ERROR', error.message);

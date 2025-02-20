@@ -25,7 +25,7 @@ export class RPGSystem {
   
       return {
         ...rolls,
-        shouldRespond: rolls.talkativeness.total >= 10,
+        shouldRespond: context.mentionedPersonaIds?.includes(persona.id) || rolls.talkativeness.total >= 10,
         responsePriority: initiativeRoll.total,
         assertiveness: this.getAssertivenessLevel(rolls.confidence.total),
         questionDepth: this.getQuestionDepth(rolls.curiosity),
