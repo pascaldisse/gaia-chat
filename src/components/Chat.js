@@ -328,7 +328,10 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   useEffect(() => {
     const defaultGaia = personas.find(p => p.id === DEFAULT_PERSONA_ID);
     if (defaultGaia) {
-      setActivePersonas(prev => [...new Set([defaultGaia, ...prev])]);
+      setActivePersonas(prev => [
+        ...prev.filter(p => p.id !== DEFAULT_PERSONA_ID), // Remove any existing GAIA
+        defaultGaia // Add fresh GAIA
+      ]);
     }
   }, [personas]);
 
