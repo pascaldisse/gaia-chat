@@ -5,12 +5,13 @@ import { personaDB } from '../../services/db';
 import PersonaAttributesEditor from './PersonaAttributesEditor';
 import '../../styles/personas/PersonaManager.css';
 
-const PersonaManager = ({ persona, onPersonaUpdate, onClose }) => {
+const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   const [currentPersona, setCurrentPersona] = useState(
     persona || new Persona({ name: '', systemPrompt: '', model: MODELS.LLAMA3_70B })
   );
   const [showAttributesEditor, setShowAttributesEditor] = useState(false);
   const [imageSource, setImageSource] = useState('url'); // 'url' or 'file'
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (persona) {
@@ -132,6 +133,14 @@ const PersonaManager = ({ persona, onPersonaUpdate, onClose }) => {
             </button>
           </div>
           <div className="modal-footer">
+            {persona && (
+              <button 
+                className="delete-button"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                Delete
+              </button>
+            )}
             <button className="save-button" onClick={handleSave}>Save</button>
           </div>
         </div>
@@ -143,6 +152,26 @@ const PersonaManager = ({ persona, onPersonaUpdate, onClose }) => {
           onSave={handleAttributesSave}
           onClose={() => setShowAttributesEditor(false)}
         />
+      )}
+
+      {showDeleteConfirm && (
+        <div className="confirm-delete-modal">
+          <div className="confirm-content">
+            <h3>Delete Persona?</h3>
+            <p>Are you sure you want to delete {currentPersona.name}? This action cannot be undone.</p>
+            <div className="modal-footer">
+              <button className="cancel-button" onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </button>
+              <button 
+                className="delete-button"
+                onClick={() => onDelete(currentPersona)}
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

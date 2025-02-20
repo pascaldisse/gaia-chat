@@ -175,3 +175,41 @@
   object-position: center;
 }
 
+.delete-button {
+  background-color: #dc3545;
+  margin-right: auto;
+  &:hover {
+    background-color: #c82333;
+  }
+}
+
+.confirm-delete-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+}
+
+.confirm-content {
+  background-color: #36393f;
+  padding: 24px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  border: 1px solid #202225;
+  color: #dcddde;
+}
+
+.cancel-button {
+  background-color: #6c757d;
+  &:hover {
+    background-color: #5a6268;
+  }
+}
+

@@ -134,6 +134,20 @@ function App() {
     }
   };
 
+  const handleDeletePersona = async (personaToDelete) => {
+    try {
+      await personaDB.deletePersona(personaToDelete.id);
+      const updatedPersonas = await personaDB.getAllPersonas();
+      setPersonas(updatedPersonas);
+      if(selectedPersonaId === personaToDelete.id) {
+        setSelectedPersonaId(null);
+      }
+      setEditingPersona(null);
+    } catch (error) {
+      console.error('Error deleting persona:', error);
+    }
+  };
+
   return (
     <div className="app">
       <Sidebar 
@@ -163,6 +177,7 @@ function App() {
         <PersonaManager 
           persona={editingPersona}
           onPersonaUpdate={handleEditPersona}
+          onDelete={handleDeletePersona}
           onClose={() => setEditingPersona(null)}
         />
       )}
