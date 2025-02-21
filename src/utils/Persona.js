@@ -33,9 +33,20 @@ export class Persona {
       this.skepticism = skepticism;
       this.optimism = optimism;
       this.lastActive = Date.now();
+      this.agentSettings = {
+        maxIterations: 3,
+        toolConfig: {
+          fileSearch: true,
+          imageGeneration: false
+        }
+      };
     }
 
     markActive() {
       this.lastActive = Date.now();
+      this.agentSettings.maxIterations = Math.min(
+        this.curiosity + this.talkativeness, 
+        5
+      );
     }
   }

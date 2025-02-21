@@ -9,6 +9,8 @@ import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 import FilePreview from './FilePreview';
 import { knowledgeDB } from '../services/db';
 import { parseFileContent } from '../utils/FileParser';
+import { PersonaAgent } from "../services/agentService";
+import { createPersonaTools } from "../services/tools";
 
 const Chat = ({ 
   currentChat, 
@@ -215,15 +217,11 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   const handleSubmit = async (message) => {
     if (!message.trim()) return;
 
-    // Check for command
-    if (message.startsWith('/')) {
-      const [command, ...args] = message.slice(1).split(' ');
-      handleCommand(command, args.join(' '));
-      return;
-    }
-
+    // Define messageId at the start
+    const messageId = Date.now();
+    
     const newMessage = {
-      id: Date.now(),
+      id: messageId,
       content: message,
       isUser: true
     };
@@ -231,6 +229,17 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     setIsLoading(true);
 
     try {
+      // Get recent messages for context
+      const recentMessages = currentChat
+        .slice(-5)
+        .map(msg => {
+          const speaker = msg.personaId ? 
+            personas.find(p => p.id === msg.personaId)?.name : 
+            'User';
+          return `${speaker}: ${msg.content}`;
+        })
+        .join('\n');
+
       // Get mentioned personas and update active list
       const mentionedPersonas = getMentionedPersonas(message);
       const updatedPersonas = updateActivePersonas(message, activePersonas);
@@ -271,9 +280,34 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           return 1;
         });
 
-      // Generate responses in order
-      for (const { persona, outcome } of responders) {
-        await generatePersonaResponse(persona, newMessage, outcome);
+      // Initialize agents for responders
+      const respondersWithAgents = responders.map(({ persona, outcome }) => ({
+        persona,
+        outcome,
+        agent: new PersonaAgent(
+          persona,
+          createPersonaTools(this),
+          {
+            handleNewToken: (token) => {
+              setCurrentChat(prev => 
+                prev.map(msg => 
+                  msg.id === messageId 
+                    ? { ...msg, content: msg.content + token }
+                    : msg
+                )
+              );
+            }
+          }
+        )
+      }));
+
+      // Generate responses using agents
+      for (const { persona, outcome, agent } of respondersWithAgents) {
+        await agent.invoke({
+          message: newMessage.content,
+          outcome,
+          history: recentMessages // From lines 129-137
+        });
       }
     } catch (error) {
       console.error('Error:', error);
