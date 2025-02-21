@@ -100,11 +100,23 @@
   .log-entry.CHUNK { border-left: 4px solid #9C27B0; }
   .log-entry.RPG_OUTCOME { border-left: 4px solid #FF9800; }
   
-  pre {
+  .log-entry.IMAGE_REQUEST,
+  .log-entry.IMAGE_RESPONSE,
+  .log-entry.IMAGE_ERROR {
+    background-color: #2d2d2d;
+    border-left: 4px solid #00868b;
+    margin: 8px 0;
+  }
+  
+  .log-entry.IMAGE_ERROR {
+    border-left-color: #ff4444;
+  }
+  
+  .log-entry pre {
     white-space: pre-wrap;
-    word-wrap: break-word;
-    font-size: 12px;
-    margin: 0;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
   }
   
   .copy-button {
@@ -260,6 +272,14 @@
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
+  }
+  
+  .generated-image {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-top: 10px;
+    border: 1px solid #40444b;
+    background: #2f3136;
   }
   
 

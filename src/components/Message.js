@@ -7,10 +7,18 @@ const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
 
   const renderContent = () => {
+    // Handle image content
+    if (message.isCommand && message.content.includes('<img')) {
+      return <div dangerouslySetInnerHTML={{ __html: message.content }} />;
+    }
+    
+    // Handle thinking content
     if (message.content.startsWith('<think>') && message.content.endsWith('</think>')) {
       const thinkContent = message.content.slice(7, -8);
       return <ReactMarkdown>{`*${thinkContent}*`}</ReactMarkdown>;
     }
+    
+    // Default markdown rendering
     return <ReactMarkdown>{message.content}</ReactMarkdown>;
   };
 
@@ -29,7 +37,7 @@ const Message = ({ message, onRegenerate, personas }) => {
         <CopyToClipboard text={message.content}>
           <button className="copy-button">Copy</button>
         </CopyToClipboard>
-        {!message.isUser && (
+        {!message.isUser && !message.isCommand && (
           <button className="regenerate-button" onClick={() => onRegenerate(message)}>
             🔄 Regenerate
           </button>

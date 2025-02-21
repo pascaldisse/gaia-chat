@@ -288,14 +288,92 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   };
 
   const generateImage = async (options) => {
-    setCurrentChat(prev => [...prev, {
-      id: Date.now(),
-      content: `Generating ${options.style} image with ${options.model}: "${options.prompt}"...`,
-      isUser: false,
-      isCommand: true
-    }]);
+    const API_ENDPOINT = "https://api.deepinfra.com/v1/inference";
+    const messageId = Date.now();
 
-    // Add actual API call using options
+    try {
+      // Create persistent message entry first
+      setCurrentChat(prev => [...prev, {
+        id: messageId,
+        content: `Generating ${options.style} image with ${options.model}: "${options.prompt}"...`,
+        isUser: false,
+        isCommand: true,
+        imageData: null
+      }]);
+
+      // Log request data
+      const requestBody = {
+        model: `black-forest-labs/${options.model.replace('flux_', 'FLUX-').replace('schnell', '1-schnell')}`,
+        inputs: {
+          prompt: options.enhancement 
+            ? `8k resolution, professional composition, ${options.style} style, ${options.prompt}`
+            : options.prompt,
+          negative_prompt: options.style === 'realistic' ? 'anime, cartoon, drawing' : '',
+          width: 1024,
+          height: 1024,
+          num_inference_steps: options.model === 'flux_schnell' ? 30 : 50,
+          guidance_scale: 7.5
+        }
+      };
+
+      addDebugLog('IMAGE_REQUEST', {
+        endpoint: API_ENDPOINT,
+        body: requestBody
+      });
+
+      const response = await fetch(API_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        addDebugLog('IMAGE_ERROR', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        throw new Error(`API Error (${response.status}): ${errorData}`);
+      }
+
+      const data = await response.json();
+      
+      // Log the entire response data
+      addDebugLog('IMAGE_RESPONSE', {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        data: data
+      });
+
+      if (!data.images?.[0]) {
+        throw new Error('No image data received from API');
+      }
+
+      const imageBase64 = data.images[0];
+      
+      setCurrentChat(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { 
+              ...msg, 
+              content: `<img src="data:image/png;base64,${imageBase64}" alt="${options.prompt}" class="generated-image"/>`,
+              imageData: imageBase64
+            }
+          : msg
+      ));
+
+    } catch (error) {
+      console.error("Image generation failed:", error);
+      const errorMessage = error.message || 'Network request failed';
+      setCurrentChat(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, content: `Failed to generate image: ${errorMessage}. Please check your API key and network connection.` }
+          : msg
+      ));
+    }
   };
 
   const handleRegenerate = async (message) => {
@@ -364,6 +442,10 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       ]);
     }
   }, [personas]);
+
+  useEffect(() => {
+    console.log('Debug Log updated:', debugLog);
+  }, [debugLog]);
 
   return (
     <div className="chat-container">
@@ -534,4 +616,5 @@ const ImageGenerationModal = ({ onClose, onGenerate, initialPrompt }) => {
 };
 
 export default Chat;
+
 
