@@ -121,6 +121,15 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
     
     // Determine if we're handling a mention or command
     const triggerChar = inputValue[mentionStartIndex];
+    
+    // Handle commands immediately
+    if (triggerChar === '/' && suggestion.name === 'imagine') {
+      onSendMessage(`/imagine `); // Clear input and trigger command
+      setShowSuggestions(false);
+      return;
+    }
+    
+    // Handle mentions normally
     const newValue = triggerChar === '@' 
       ? `${before}@${suggestion.name} ${after}`
       : `${before}/${suggestion.name} ${after}`;

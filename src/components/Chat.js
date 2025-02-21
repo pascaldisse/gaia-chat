@@ -22,6 +22,11 @@ const Chat = ({
   const [isCancelled, setIsCancelled] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [rpgOutcomes, setRpgOutcomes] = useState({});
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [selectedModel, setSelectedModel] = useState('flux_schnell');
+  const [selectedStyle, setSelectedStyle] = useState('realistic');
+  const [useEnhancement, setUseEnhancement] = useState(true);
 
   // Create a ref for the AbortController
   const controllerRef = useRef(null);
@@ -274,22 +279,23 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   const handleCommand = (command, args) => {
     switch(command) {
       case 'imagine':
-        generateImage(args);
+        setImagePrompt(args);
+        setShowImageModal(true);
         break;
       default:
         console.warn(`Unknown command: /${command}`);
     }
   };
 
-  const generateImage = async (prompt) => {
+  const generateImage = async (options) => {
     setCurrentChat(prev => [...prev, {
       id: Date.now(),
-      content: `Generating image for: "${prompt}"...`,
+      content: `Generating ${options.style} image with ${options.model}: "${options.prompt}"...`,
       isUser: false,
       isCommand: true
     }]);
 
-    // Add actual image generation API call here
+    // Add actual API call using options
   };
 
   const handleRegenerate = async (message) => {
@@ -421,9 +427,16 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         {showDebugLog ? 'Hide Debug' : 'Show Debug'}
       </button>
 
-      <ChatInput 
+      <ChatInput
         personas={personas}
-        onSendMessage={handleSubmit}
+        onSendMessage={(message) => {
+          if (message.startsWith('/')) {
+            const [command, ...args] = message.slice(1).split(' ');
+            handleCommand(command, args.join(' '));
+          } else {
+            handleSubmit(message);
+          }
+        }}
         isLoading={isLoading}
         onCancel={() => {
           setIsCancelled(true);
@@ -432,6 +445,90 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           }
         }}
       />
+
+      {showImageModal && (
+        <ImageGenerationModal
+          onClose={() => setShowImageModal(false)}
+          onGenerate={(options) => generateImage(options)}
+          initialPrompt={imagePrompt}
+        />
+      )}
+    </div>
+  );
+};
+
+const ImageGenerationModal = ({ onClose, onGenerate, initialPrompt }) => {
+  const [localPrompt, setLocalPrompt] = useState(initialPrompt);
+  const [localModel, setLocalModel] = useState('flux_schnell');
+  const [localStyle, setLocalStyle] = useState('realistic');
+  const [localEnhancement, setLocalEnhancement] = useState(true);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onGenerate({
+      prompt: localPrompt,
+      model: localModel,
+      style: localStyle,
+      enhancement: localEnhancement
+    });
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="image-generation-modal">
+        <h3>Generate Image</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Prompt</label>
+            <textarea
+              value={localPrompt}
+              onChange={(e) => setLocalPrompt(e.target.value)}
+              required
+              rows="3"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Model</label>
+            <select 
+              value={localModel} 
+              onChange={(e) => setLocalModel(e.target.value)}
+            >
+              <option value="flux_schnell">Flux Schnell</option>
+              <option value="flux_dev">Flux Dev</option>
+              <option value="flux_pro">Flux Pro</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Style</label>
+            <select
+              value={localStyle}
+              onChange={(e) => setLocalStyle(e.target.value)}
+            >
+              <option value="realistic">Realistic</option>
+              <option value="anime">Anime</option>
+            </select>
+          </div>
+
+          <div className="form-group checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={localEnhancement}
+                onChange={(e) => setLocalEnhancement(e.target.checked)}
+              />
+              Prompt Enhancement
+            </label>
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" onClick={onClose}>Cancel</button>
+            <button type="submit">Generate</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
