@@ -55,17 +55,22 @@ Current conversation:
       tools: this.tools,
       maxIterations: 3,
       returnIntermediateSteps: true,
+      callbacks: this.providedCallbacks ? [this.providedCallbacks] : undefined
     });
   }
 
   async invoke(input) {
     return this.executor.invoke({
+      input: input.message,
       persona_name: this.persona.name,
       system_prompt: this.persona.systemPrompt,
       rpg_instructions: this.generateRpgInstructions(input.outcome),
       history: input.history,
-      input: input.message,
       agent_scratchpad: ""
+    }, {
+      callbacks: this.providedCallbacks?.handleNewToken ? [{
+        handleLLMNewToken: this.providedCallbacks.handleNewToken
+      }] : undefined
     });
   }
 

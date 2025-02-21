@@ -298,11 +298,19 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
 
       // Generate responses using agents
       for (const { persona, outcome, agent } of respondersWithAgents) {
-        await agent.invoke({
+        const response = await agent.invoke({
           message: newMessage.content,
           outcome,
-          history: recentMessages // From lines 129-137
+          history: recentMessages
         });
+        
+        // Add the final response to chat
+        setCurrentChat(prev => [...prev, {
+          id: Date.now(),
+          content: response.output,
+          isUser: false,
+          personaId: persona.id
+        }]);
       }
     } catch (error) {
       console.error('Error:', error);
