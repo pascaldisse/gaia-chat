@@ -333,11 +333,16 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
 
       const imageBase64 = data.images[0];
       
+      // Check if the base64 string already includes the data URI prefix
+      const imageSource = imageBase64.startsWith('data:image/') 
+        ? imageBase64 
+        : `data:image/png;base64,${imageBase64}`;
+      
       setCurrentChat(prev => prev.map(msg => 
         msg.id === messageId 
           ? { 
               ...msg, 
-              content: `<img src="data:image/png;base64,${imageBase64}" alt="${options.prompt}" class="generated-image"/>`,
+              content: `<img src="${imageSource}" alt="${options.prompt}" class="generated-image"/>`,
               imageData: imageBase64
             }
           : msg
