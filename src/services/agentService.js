@@ -1,5 +1,5 @@
 import { ChatDeepInfra } from "@langchain/community/chat_models/deepinfra";
-import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
+import { AgentExecutor } from "langchain/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { API_KEY } from "../config";
@@ -36,15 +36,10 @@ Current conversation:
       }] : undefined
     });
 
-    const agent = createToolCallingAgent({
+    return AgentExecutor.fromAgentAndTools({
       llm: chat,
       tools: this.tools,
-      prompt,
-    });
-
-    return AgentExecutor.fromAgentAndTools({
-      agent,
-      tools: this.tools,
+      prompt: prompt,
       maxIterations: 3,
     });
   }
