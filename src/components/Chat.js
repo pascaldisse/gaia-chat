@@ -521,7 +521,7 @@ const ImageModal = ({ onClose, onGenerate, initialPrompt }) => {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [style, setStyle] = useState('realistic');
   const [enhancement, setEnhancement] = useState(true);
-  const [selectedModel, setSelectedModel] = useState(IMAGE_MODELS.SDXL);
+  const [selectedModel, setSelectedModel] = useState(IMAGE_MODELS.FLUX_SCHNELL);
 
   const handleGenerate = () => {
     onGenerate({
@@ -556,9 +556,8 @@ const ImageModal = ({ onClose, onGenerate, initialPrompt }) => {
             value={selectedModel} 
             onChange={(e) => setSelectedModel(e.target.value)}
           >
-            <option value={IMAGE_MODELS.SDXL}>Stable Diffusion XL</option>
             <option value={IMAGE_MODELS.FLUX_SCHNELL}>Flux Schnell (Fast)</option>
-            <option value={IMAGE_MODELS.FLUX_DETAILED}>Flux Detailed</option>
+            <option value={IMAGE_MODELS.FLUX_DEV}>Flux Dev</option>
           </select>
         </label>
         <label>

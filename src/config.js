@@ -9,8 +9,7 @@ export const MODELS = {
 };
 
 export const IMAGE_MODELS = {
-  SDXL: 'stability-ai/sdxl',
-  FLUX_SCHNELL: 'black-forest-labs/FLUX-Schnell',
-  FLUX_DETAILED: 'black-forest-labs/FLUX-Detailed'
+  FLUX_SCHNELL: 'black-forest-labs/FLUX-1-schnell',
+  FLUX_DEV: 'black-forest-labs/FLUX-1-dev'
 };
 
