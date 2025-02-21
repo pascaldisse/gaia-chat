@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Message from './Message';
-import { API_URL, API_KEY, MODELS, IMAGE_MODELS } from '../config';
+import { API_KEY, MODELS, IMAGE_MODELS } from '../config';
 import '../styles/Chat.css';
 import ChatInput from './ChatInput';
 import { RPGSystem } from '../utils/RPGSystem';
@@ -146,7 +146,7 @@ ${recentMessages}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
-      const response = await fetch(API_URL, {
+      const response = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -217,9 +217,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   const handleSubmit = async (message) => {
     if (!message.trim()) return;
 
-    // Define messageId at the start
     const messageId = Date.now();
-    
     const newMessage = {
       id: messageId,
       content: message,
@@ -240,12 +238,12 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         })
         .join('\n');
 
-      // Get mentioned personas and update active list
+      // Update active personas based on mentions
       const mentionedPersonas = getMentionedPersonas(message);
       const updatedPersonas = updateActivePersonas(message, activePersonas);
       setActivePersonas(updatedPersonas);
 
-      // Use all active personas as response candidates when no one is mentioned
+      // Get response candidates
       const responseCandidates = mentionedPersonas.length > 0 
         ? [...new Set([...updatedPersonas, ...mentionedPersonas])]
         : activePersonas;
@@ -260,22 +258,19 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         })
       );
 
-      // Filter and sort responders by initiative
+      // Filter and sort responders
       const responders = responseQueue
         .filter(({ outcome }) => outcome.shouldRespond)
         .sort((a, b) => {
-          // Always prioritize GAIA if present
           if (a.persona.id === DEFAULT_PERSONA_ID) return -1;
           if (b.persona.id === DEFAULT_PERSONA_ID) return 1;
           
           const aIsMentioned = context.mentionedPersonaIds?.includes(a.persona.id);
           const bIsMentioned = context.mentionedPersonaIds?.includes(b.persona.id);
           
-          // If both are mentioned or neither, sort by initiative
           if (aIsMentioned === bIsMentioned) {
             return b.outcome.responsePriority - a.outcome.responsePriority;
           }
-          // If only a is mentioned, a comes first
           if (aIsMentioned) return -1;
           return 1;
         });

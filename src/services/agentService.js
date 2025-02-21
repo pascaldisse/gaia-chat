@@ -1,6 +1,8 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatDeepInfra } from "@langchain/community/chat_models/deepinfra";
 import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { API_KEY } from "../config";
 
 export class PersonaAgent {
   constructor(persona, tools, callbacks) {
@@ -11,61 +13,66 @@ export class PersonaAgent {
   }
 
   createExecutor() {
-    const prompt = ChatPromptTemplate.fromTemplate(`
-      You are {personaName}. {personaPrompt}
-      {rpgInstructions}
-      
-      Current conversation:
-      {history}
-      
-      Respond naturally to the most recent message. Use tools when appropriate.
-      {agent_scratchpad}
-    `);
+    const prompt = ChatPromptTemplate.fromMessages([
+      ["system", `You are {persona_name}. {system_prompt}
 
-    const llm = new ChatOpenAI({
+{rpg_instructions}
+
+Current conversation:
+{history}
+
+{agent_scratchpad}`],
+      ["human", "{input}"]
+    ]);
+
+    const chat = new ChatDeepInfra({
+      apiKey: API_KEY,
       modelName: this.persona.model,
       temperature: this.persona.creativity / 10,
       maxTokens: 1000,
       streaming: true,
+      callbacks: this.providedCallbacks?.handleNewToken ? [{
+        handleLLMNewToken: this.providedCallbacks.handleNewToken
+      }] : undefined
     });
 
     const agent = createToolCallingAgent({
-      llm,
+      llm: chat,
       tools: this.tools,
       prompt,
     });
-
-    const agentExecutorCallbacks = {
-        handleLLMNewToken: (token) => {
-          if (this.providedCallbacks?.handleNewToken) {
-            this.providedCallbacks.handleNewToken(token);
-          }
-        },
-    };
 
     return AgentExecutor.fromAgentAndTools({
       agent,
       tools: this.tools,
       maxIterations: 3,
-      callbacks: agentExecutorCallbacks,
     });
   }
 
   async invoke(input) {
     return this.executor.invoke({
-      personaName: this.persona.name,
-      personaPrompt: this.persona.systemPrompt,
-      rpgInstructions: this.generateRpgInstructions(input.outcome),
+      persona_name: this.persona.name,
+      system_prompt: this.persona.systemPrompt,
+      rpg_instructions: this.generateRpgInstructions(input.outcome),
       history: input.history,
       input: input.message,
       agent_scratchpad: ""
-    }, { callbacks: this.providedCallbacks?.handleLLMNewToken ? {handleLLMNewToken: this.providedCallbacks.handleLLMNewToken} : undefined });
+    });
   }
 
   generateRpgInstructions(outcome) {
     const instructions = [];
     if (outcome.assertiveness === 'hesitant') {
       instructions.push('Respond with hesitation...');
+    }
+    // Add other RPG instructions based on outcome
+    if (outcome.emotionalTone === 'detached') {
+      instructions.push('Maintain a logical, detached tone');
+    } else if (outcome.emotionalTone === 'empathetic') {
+      instructions.push('Respond with empathy and emotional understanding');
+    }
+    if (outcome.questionDepth === 'deep') {
+      instructions.push('Ask a thoughtful, insightful question');
     }
     return instructions.join('\n');
   }
