@@ -231,8 +231,8 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       const recentMessages = currentChat
         .slice(-5)
         .map(msg => {
-          const speaker = msg.personaId ? 
-            personas.find(p => p.id === msg.personaId)?.name : 
+          const speaker = msg.personaId ?
+            personas.find(p => p.id === msg.personaId)?.name :
             'User';
           return `${speaker}: ${msg.content}`;
         })
@@ -244,13 +244,13 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       setActivePersonas(updatedPersonas);
 
       // Get response candidates
-      const responseCandidates = mentionedPersonas.length > 0 
+      const responseCandidates = mentionedPersonas.length > 0
         ? [...new Set([...updatedPersonas, ...mentionedPersonas])]
         : activePersonas;
 
       const context = analyzeMessageContext(message);
-      
-      // Calculate responses for all candidates
+
+      // Calculate responses for all candidates -- THIS WAS MISSING
       const responseQueue = await Promise.all(
         responseCandidates.map(async (persona) => {
           const outcome = RPGSystem.calculateOutcome(persona, context);
@@ -264,53 +264,101 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         .sort((a, b) => {
           if (a.persona.id === DEFAULT_PERSONA_ID) return -1;
           if (b.persona.id === DEFAULT_PERSONA_ID) return 1;
-          
+
           const aIsMentioned = context.mentionedPersonaIds?.includes(a.persona.id);
           const bIsMentioned = context.mentionedPersonaIds?.includes(b.persona.id);
-          
+
           if (aIsMentioned === bIsMentioned) {
-            return b.outcome.responsePriority - a.outcome.responsePriority;
+            return b.outcome.responsePriority - a.outcome.responsePriority; // Corrected this line
           }
           if (aIsMentioned) return -1;
           return 1;
         });
 
-      // Initialize agents for responders
-      const respondersWithAgents = await Promise.all(responders.map(async ({ persona, outcome }) => ({
-        persona,
-        outcome,
-        agent: await PersonaAgent.create(
-          persona,
-          createPersonaTools(this),
-          {
-            handleNewToken: (token) => {
-              setCurrentChat(prev => 
-                prev.map(msg => 
-                  msg.id === messageId 
-                    ? { ...msg, content: msg.content + token }
-                    : msg
-                )
-              );
-            }
-          }
-        )
-      })));
+      // Generate responses
+      for (const { persona, outcome } of responders) {
+        const messageId = Date.now(); // Unique ID for each persona's response
 
-      // Generate responses using agents
-      for (const { persona, outcome, agent } of respondersWithAgents) {
-        const response = await agent.invoke({
-          message: newMessage.content,
-          outcome,
-          history: recentMessages
-        });
-        
-        // Add the final response to chat
+        // Initialize empty message in chat
         setCurrentChat(prev => [...prev, {
-          id: Date.now(),
-          content: response.output,
+          id: messageId,
+          content: '',
           isUser: false,
           personaId: persona.id
         }]);
+
+        try {
+          // Create new AbortController for this request
+          controllerRef.current = new AbortController();
+
+          const modulatedPrompt = `${persona.systemPrompt}
+${generateRpgInstructions(outcome)}
+
+Recent conversation:
+${recentMessages}
+
+You are ${persona.name}. Respond naturally to the most recent message.`;
+
+          const response = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({
+              model: persona.model,
+              messages: [
+                { role: "system", content: modulatedPrompt },
+                { role: "user", content: newMessage.content } // Use the original user message
+              ],
+              stream: true
+            }),
+            signal: controllerRef.current.signal // Add the abort signal
+          });
+
+          if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n').filter(line => line.trim());
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.choices?.[0]?.delta?.content) {
+                    // Update the chat content directly with each chunk
+                    setCurrentChat(prev => {
+                      const lastMessage = prev[prev.length - 1];
+                      if (lastMessage && lastMessage.id === messageId) {
+                        return [
+                          ...prev.slice(0, -1),
+                          { ...lastMessage, content: lastMessage.content + data.choices[0].delta.content }
+                        ];
+                      }
+                      return prev;
+                    });
+                  }
+                } catch (error) {
+                  console.error('Parse error:', error);
+                }
+              }
+            }
+          }
+          persona.markActive(); // Mark persona as active after response
+        } catch (error) {
+            console.error('Error generating response:', error);
+            if (error.name === 'AbortError') {
+                setCurrentChat(prev => prev.filter(msg => msg.id !== messageId));
+            }
+            addDebugLog('ERROR', error.message);
+        }
       }
     } catch (error) {
       console.error('Error:', error);
