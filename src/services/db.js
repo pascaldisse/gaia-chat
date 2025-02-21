@@ -2,14 +2,15 @@ import { openDB } from 'idb';
 
 // Database configuration
 const DB_NAME = 'chatApp';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const CHAT_STORE = 'chats';
 const PERSONA_STORE = 'personas';
+const KNOWLEDGE_STORE = 'knowledge_files';
 
 // Create/open the database
 const dbPromise = openDB(DB_NAME, DB_VERSION, {
-  upgrade(db) {
-    // Create the object store if it doesn't exist
+  upgrade(db, oldVersion) {
+    // Create the object stores if they don't exist
     if (!db.objectStoreNames.contains(CHAT_STORE)) {
       db.createObjectStore(CHAT_STORE, { keyPath: 'id' });
     }
@@ -17,6 +18,12 @@ const dbPromise = openDB(DB_NAME, DB_VERSION, {
       db.createObjectStore(PERSONA_STORE, { 
         keyPath: 'id',
         autoIncrement: true 
+      });
+    }
+    if (!db.objectStoreNames.contains(KNOWLEDGE_STORE)) {
+      db.createObjectStore(KNOWLEDGE_STORE, {
+        keyPath: 'id',
+        autoIncrement: true
       });
     }
   },
@@ -63,6 +70,33 @@ export const personaDB = {
   async deletePersona(id) {
     const db = await dbPromise;
     await db.delete(PERSONA_STORE, id);
+  }
+};
+
+// Add knowledgeDB service
+export const knowledgeDB = {
+  async addFile(file) {
+    const db = await dbPromise;
+    return db.add(KNOWLEDGE_STORE, file);
+  },
+
+  async deleteFile(id) {
+    const db = await dbPromise;
+    return db.delete(KNOWLEDGE_STORE, id);
+  },
+
+  async getFiles(ids) {
+    const db = await dbPromise;
+    const files = await Promise.all(ids.map(id => db.get(KNOWLEDGE_STORE, id)));
+    return files.map(file => ({
+      ...file,
+      parsedText: file.parsedText || '' // Ensure parsedText exists
+    }));
+  },
+
+  async getAllFiles() {
+    const db = await dbPromise;
+    return db.getAll(KNOWLEDGE_STORE);
   }
 };
 

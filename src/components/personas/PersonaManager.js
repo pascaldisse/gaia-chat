@@ -6,6 +6,8 @@ import PersonaAttributesEditor from './PersonaAttributesEditor';
 import '../../styles/personas/PersonaManager.css';
 import { DEFAULT_PERSONA_ID } from '../../config/defaultPersona';
 import { GAIA_CONFIG } from '../../config/defaultPersona';
+import FilePreview from '../FilePreview';
+import { knowledgeDB } from '../../services/db';
 
 const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   const [currentPersona, setCurrentPersona] = useState(
@@ -14,12 +16,21 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   const [showAttributesEditor, setShowAttributesEditor] = useState(false);
   const [imageSource, setImageSource] = useState('url'); // 'url' or 'file'
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [files, setFiles] = useState([]);
 
   useEffect(() => {
     if (persona) {
       setCurrentPersona(persona);
+      loadFiles(persona.knowledgeFiles);
     }
   }, [persona]);
+
+  const loadFiles = async (fileIds) => {
+    if (fileIds?.length > 0) {
+      const files = await knowledgeDB.getFiles(fileIds);
+      setFiles(files);
+    }
+  };
 
   const handleSave = async () => {
     const updatedPersona = new Persona({
@@ -67,6 +78,34 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   const handleRestoreDefault = async () => {
     const defaultGaia = new Persona(GAIA_CONFIG);
     setCurrentPersona(defaultGaia);
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const newFile = {
+      name: file.name,
+      type: file.type,
+      content: await file.arrayBuffer(),
+      uploadedAt: Date.now()
+    };
+
+    const id = await knowledgeDB.addFile(newFile);
+    setCurrentPersona(prev => ({
+      ...prev,
+      knowledgeFiles: [...prev.knowledgeFiles, id]
+    }));
+    setFiles(prev => [...prev, { ...newFile, id }]);
+  };
+
+  const handleFileDelete = async (fileId) => {
+    await knowledgeDB.deleteFile(fileId);
+    setCurrentPersona(prev => ({
+      ...prev,
+      knowledgeFiles: prev.knowledgeFiles.filter(id => id !== fileId)
+    }));
+    setFiles(prev => prev.filter(file => file.id !== fileId));
   };
 
   return (
@@ -143,6 +182,19 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
             >
               Edit Personality Attributes
             </button>
+          </div>
+          <div className="knowledge-section">
+            <h3>Knowledge Base</h3>
+            <input 
+              type="file"
+              onChange={handleFileUpload}
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png"
+            />
+            <div className="file-list">
+              {files.map(file => (
+                <FilePreview key={file.id} fileId={file.id} onDelete={handleFileDelete} />
+              ))}
+            </div>
           </div>
           <div className="modal-footer">
             {currentPersona.id === DEFAULT_PERSONA_ID && (

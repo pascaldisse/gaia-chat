@@ -6,6 +6,9 @@ import ChatInput from './ChatInput';
 import { RPGSystem } from '../utils/RPGSystem';
 import { Persona } from '../utils/Persona';
 import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
+import FilePreview from './FilePreview';
+import { knowledgeDB } from '../services/db';
+import { parseFileContent } from '../utils/FileParser';
 
 const Chat = ({ 
   currentChat, 
@@ -14,7 +17,9 @@ const Chat = ({
   systemPrompt, 
   personas,
   activePersonas,
-  setActivePersonas 
+  setActivePersonas,
+  selectedChatId,
+  chatHistory
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [debugLog, setDebugLog] = useState([]);
@@ -28,6 +33,7 @@ const Chat = ({
   const [selectedStyle, setSelectedStyle] = useState('realistic');
   const [useEnhancement, setUseEnhancement] = useState(true);
   const [imageModel, setImageModel] = useState(IMAGE_MODELS.SDXL);
+  const [chatKnowledgeFiles, setChatKnowledgeFiles] = useState([]);
 
   // Create a ref for the AbortController
   const controllerRef = useRef(null);
@@ -430,6 +436,98 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     console.log('Debug Log updated:', debugLog);
   }, [debugLog]);
 
+  useEffect(() => {
+    if (selectedChatId) {
+      const chat = chatHistory.find(c => c.id === selectedChatId);
+      if (chat?.knowledgeFiles) {
+        loadChatFiles(chat.knowledgeFiles);
+      }
+    }
+  }, [selectedChatId]);
+
+  const loadChatFiles = async (fileIds) => {
+    if (fileIds?.length > 0) {
+      const files = await knowledgeDB.getFiles(fileIds);
+      setChatKnowledgeFiles(files);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      // Convert ArrayBuffer to Base64
+      const arrayBuffer = await file.arrayBuffer();
+      const base64Content = btoa(
+        new Uint8Array(arrayBuffer)
+          .reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+
+      // Parse the content
+      const parsedText = await parseFileContent(arrayBuffer, file.type, file.name);
+
+      const newFile = {
+        name: file.name,
+        type: file.type,
+        content: base64Content, // Store as Base64 string instead of ArrayBuffer
+        parsedText: parsedText,
+        uploadedAt: Date.now()
+      };
+
+      const id = await knowledgeDB.addFile(newFile);
+      setCurrentChat(prev => {
+        const currentChatState = Array.isArray(prev) ? prev : [];
+        return {
+          ...currentChatState,
+          knowledgeFiles: [...(currentChatState.knowledgeFiles || []), id]
+        };
+      });
+      setChatKnowledgeFiles(prev => [...prev, { ...newFile, id }]);
+
+      // Update command message to include parsed text preview
+      const fileMessage = {
+        id: Date.now(),
+        content: `📁 Added file: ${newFile.name}\nParsed content: ${parsedText.substring(0, 200)}...`,
+        isUser: false,
+        isCommand: true,
+        fileData: { id, parsedText }
+      };
+      setCurrentChat(prev => [...(Array.isArray(prev) ? prev : []), fileMessage]);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      // Add error message to chat
+      const errorMessage = {
+        id: Date.now(),
+        content: `❌ Error uploading file: ${file.name}`,
+        isUser: false,
+        isCommand: true
+      };
+      setCurrentChat(prev => [...(Array.isArray(prev) ? prev : []), errorMessage]);
+    }
+  };
+
+  const handleFileDelete = async (fileId) => {
+    const file = chatKnowledgeFiles.find(f => f.id === fileId);
+    if (!file) return;
+
+    await knowledgeDB.deleteFile(fileId);
+    setCurrentChat(prev => ({
+      ...prev,
+      knowledgeFiles: prev.knowledgeFiles.filter(id => id !== fileId)
+    }));
+    setChatKnowledgeFiles(prev => prev.filter(f => f.id !== fileId));
+
+    // Add a command message for the deleted file
+    const deleteMessage = {
+      id: Date.now(),
+      content: `🗑️ Deleted file: ${file.name}`,
+      isUser: false,
+      isCommand: true
+    };
+    setCurrentChat(prev => [...prev, deleteMessage]);
+  };
+
   return (
     <div className="chat-container">
       <div className="active-personas">
@@ -518,6 +616,20 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           initialPrompt={imagePrompt}
         />
       )}
+
+      <div className="knowledge-base">
+        <h4>Chat Knowledge Base</h4>
+        <input 
+          type="file"
+          onChange={handleFileUpload}
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png"
+        />
+        <div className="file-list">
+          {chatKnowledgeFiles.map(file => (
+            <FilePreview key={file.id} fileId={file.id} onDelete={handleFileDelete} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

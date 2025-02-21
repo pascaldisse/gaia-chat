@@ -7,6 +7,18 @@ const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
 
   const renderContent = () => {
+    // Handle file content display
+    if (message.fileData?.parsedText) {
+      return (
+        <div className="file-content-preview">
+          <div className="file-meta">{message.content}</div>
+          <div className="parsed-text">
+            {message.fileData.parsedText.substring(0, 500)}...
+          </div>
+        </div>
+      );
+    }
+    
     // Handle image content
     if (message.isCommand && message.content.includes('<img')) {
       return <div dangerouslySetInnerHTML={{ __html: message.content }} />;

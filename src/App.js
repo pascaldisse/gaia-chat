@@ -33,8 +33,11 @@ function App() {
         if (selectedChatId) {
           const currentChatFromDB = chats.find(c => c.id === selectedChatId);
           if (currentChatFromDB) {
-            setCurrentChat(currentChatFromDB.messages);
-            // Restore active personas from stored IDs
+            setCurrentChat(
+              Array.isArray(currentChatFromDB.messages) 
+                ? currentChatFromDB.messages 
+                : []
+            );
             const activePersonas = personas.filter(p => 
               currentChatFromDB.activePersonas?.includes(p.id)
             );
@@ -53,13 +56,14 @@ function App() {
   // Save chat to database when it changes
   useEffect(() => {
     const saveChat = async () => {
-      if (selectedChatId && currentChat.length > 0) {
+      if (selectedChatId && Array.isArray(currentChat) && currentChat.length > 0) {
         const updatedChat = {
           id: selectedChatId,
           messages: currentChat,
           systemPrompt,
           model,
-          activePersonas: activePersonas.map(p => p.id), // Store persona IDs
+          activePersonas: activePersonas.map(p => p.id),
+          knowledgeFiles: Array.isArray(currentChat.knowledgeFiles) ? currentChat.knowledgeFiles : [],
           createdAt: chatHistory.find(c => c.id === selectedChatId)?.createdAt || Date.now(),
           timestamp: Date.now(),
           title: currentChat[0]?.content?.slice(0, 30) + '...' || 'New Chat'
@@ -75,7 +79,6 @@ function App() {
       }
     };
 
-    // Debounce the save operation
     const timeoutId = setTimeout(saveChat, 100);
     return () => clearTimeout(timeoutId);
   }, [currentChat, selectedChatId, systemPrompt, model, chatHistory, activePersonas]);
@@ -117,7 +120,8 @@ function App() {
       createdAt: Date.now(),
       timestamp: Date.now(),
       title: 'New Chat',
-      activePersonas: [defaultGaia.id] // Always include GAIA
+      activePersonas: [defaultGaia.id], // Always include GAIA
+      knowledgeFiles: [] // Initialize as empty array
     };
 
     try {
@@ -125,7 +129,7 @@ function App() {
       const updatedHistory = await chatDB.getAllChats();
       setChatHistory(updatedHistory.sort((a, b) => b.createdAt - a.createdAt));
       setSelectedChatId(newChat.id);
-      setCurrentChat([]);
+      setCurrentChat([]); // Initialize as empty array
       setActivePersonas([defaultGaia]); // Set GAIA as the only active persona
     } catch (error) {
       console.error('Error creating new chat:', error);
@@ -201,6 +205,8 @@ function App() {
         personas={personas}
         activePersonas={activePersonas}
         setActivePersonas={setActivePersonas}
+        selectedChatId={selectedChatId}
+        chatHistory={chatHistory}
       />
       {editingPersona && (
         <PersonaManager 
