@@ -144,6 +144,7 @@ function App() {
       const updatedPersonas = await personaDB.getAllPersonas();
       setPersonas(updatedPersonas);
       setSelectedPersonaId(newPersona.id);
+      setEditingPersona(newPersona);
     } catch (error) {
       console.error('Error creating persona:', error);
     }
