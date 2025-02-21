@@ -282,4 +282,46 @@
     background: #2f3136;
   }
   
+  .image-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #2f3136;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    z-index: 1000;
+  }
+  
+  .image-modal textarea {
+    width: 100%;
+    min-height: 100px;
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    background: #40444b;
+    color: #fff;
+    border: 1px solid #202225;
+  }
+  
+  .image-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .image-options label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  
 

@@ -7,3 +7,10 @@ export const MODELS = {
   DEEPSEEK_R1: 'deepseek-ai/DeepSeek-R1',
   DBRX: 'databricks/dbrx-instruct'
 };
+
+export const IMAGE_MODELS = {
+  SDXL: 'stability-ai/sdxl',
+  FLUX_SCHNELL: 'black-forest-labs/FLUX-Schnell',
+  FLUX_DETAILED: 'black-forest-labs/FLUX-Detailed'
+};
+

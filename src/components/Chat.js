@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Message from './Message';
-import { API_URL, API_KEY, MODELS } from '../config';
+import { API_URL, API_KEY, MODELS, IMAGE_MODELS } from '../config';
 import '../styles/Chat.css';
 import ChatInput from './ChatInput';
 import { RPGSystem } from '../utils/RPGSystem';
@@ -27,6 +27,7 @@ const Chat = ({
   const [selectedModel, setSelectedModel] = useState('flux_schnell');
   const [selectedStyle, setSelectedStyle] = useState('realistic');
   const [useEnhancement, setUseEnhancement] = useState(true);
+  const [imageModel, setImageModel] = useState(IMAGE_MODELS.SDXL);
 
   // Create a ref for the AbortController
   const controllerRef = useRef(null);
@@ -288,11 +289,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   };
 
   const generateImage = async (options) => {
-    const API_ENDPOINT = "https://api.deepinfra.com/v1/inference";
     const messageId = Date.now();
 
     try {
-      // Create persistent message entry first
       setCurrentChat(prev => [...prev, {
         id: messageId,
         content: `Generating ${options.style} image with ${options.model}: "${options.prompt}"...`,
@@ -301,27 +300,18 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         imageData: null
       }]);
 
-      // Log request data
       const requestBody = {
-        model: `black-forest-labs/${options.model.replace('flux_', 'FLUX-').replace('schnell', '1-schnell')}`,
-        inputs: {
-          prompt: options.enhancement 
-            ? `8k resolution, professional composition, ${options.style} style, ${options.prompt}`
-            : options.prompt,
-          negative_prompt: options.style === 'realistic' ? 'anime, cartoon, drawing' : '',
-          width: 1024,
-          height: 1024,
-          num_inference_steps: options.model === 'flux_schnell' ? 30 : 50,
-          guidance_scale: 7.5
-        }
+        prompt: options.enhancement 
+          ? `8k resolution, professional composition, ${options.style} style, ${options.prompt}`
+          : options.prompt,
+        negative_prompt: options.style === 'realistic' ? 'anime, cartoon, drawing' : '',
+        width: 1024,
+        height: 1024,
+        num_inference_steps: options.model.includes('FLUX') ? 30 : 50,
+        guidance_scale: 7.5
       };
 
-      addDebugLog('IMAGE_REQUEST', {
-        endpoint: API_ENDPOINT,
-        body: requestBody
-      });
-
-      const response = await fetch(API_ENDPOINT, {
+      const response = await fetch(`https://api.deepinfra.com/v1/inference/${options.model}`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${API_KEY}`,
@@ -332,23 +322,11 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
 
       if (!response.ok) {
         const errorData = await response.text();
-        addDebugLog('IMAGE_ERROR', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        });
         throw new Error(`API Error (${response.status}): ${errorData}`);
       }
 
       const data = await response.json();
       
-      // Log the entire response data
-      addDebugLog('IMAGE_RESPONSE', {
-        status: response.status,
-        headers: Object.fromEntries(response.headers.entries()),
-        data: data
-      });
-
       if (!data.images?.[0]) {
         throw new Error('No image data received from API');
       }
@@ -529,7 +507,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       />
 
       {showImageModal && (
-        <ImageGenerationModal
+        <ImageModal
           onClose={() => setShowImageModal(false)}
           onGenerate={(options) => generateImage(options)}
           initialPrompt={imagePrompt}
@@ -539,82 +517,68 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   );
 };
 
-const ImageGenerationModal = ({ onClose, onGenerate, initialPrompt }) => {
-  const [localPrompt, setLocalPrompt] = useState(initialPrompt);
-  const [localModel, setLocalModel] = useState('flux_schnell');
-  const [localStyle, setLocalStyle] = useState('realistic');
-  const [localEnhancement, setLocalEnhancement] = useState(true);
+const ImageModal = ({ onClose, onGenerate, initialPrompt }) => {
+  const [prompt, setPrompt] = useState(initialPrompt);
+  const [style, setStyle] = useState('realistic');
+  const [enhancement, setEnhancement] = useState(true);
+  const [selectedModel, setSelectedModel] = useState(IMAGE_MODELS.SDXL);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleGenerate = () => {
     onGenerate({
-      prompt: localPrompt,
-      model: localModel,
-      style: localStyle,
-      enhancement: localEnhancement
+      prompt,
+      style,
+      enhancement,
+      model: selectedModel
     });
     onClose();
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="image-generation-modal">
-        <h3>Generate Image</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Prompt</label>
-            <textarea
-              value={localPrompt}
-              onChange={(e) => setLocalPrompt(e.target.value)}
-              required
-              rows="3"
-            />
-          </div>
-          
-          <div className="form-group">
-            <label>Model</label>
-            <select 
-              value={localModel} 
-              onChange={(e) => setLocalModel(e.target.value)}
-            >
-              <option value="flux_schnell">Flux Schnell</option>
-              <option value="flux_dev">Flux Dev</option>
-              <option value="flux_pro">Flux Pro</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Style</label>
-            <select
-              value={localStyle}
-              onChange={(e) => setLocalStyle(e.target.value)}
-            >
-              <option value="realistic">Realistic</option>
-              <option value="anime">Anime</option>
-            </select>
-          </div>
-
-          <div className="form-group checkbox-group">
-            <label>
-              <input
-                type="checkbox"
-                checked={localEnhancement}
-                onChange={(e) => setLocalEnhancement(e.target.checked)}
-              />
-              Prompt Enhancement
-            </label>
-          </div>
-
-          <div className="modal-actions">
-            <button type="button" onClick={onClose}>Cancel</button>
-            <button type="submit">Generate</button>
-          </div>
-        </form>
+    <div className="image-modal">
+      <h3>Generate Image</h3>
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="Describe the image you want to generate..."
+      />
+      <div className="image-options">
+        <label>
+          Style:
+          <select value={style} onChange={(e) => setStyle(e.target.value)}>
+            <option value="realistic">Realistic</option>
+            <option value="cartoon">Cartoon</option>
+            <option value="anime">Anime</option>
+          </select>
+        </label>
+        <label>
+          Model:
+          <select 
+            value={selectedModel} 
+            onChange={(e) => setSelectedModel(e.target.value)}
+          >
+            <option value={IMAGE_MODELS.SDXL}>Stable Diffusion XL</option>
+            <option value={IMAGE_MODELS.FLUX_SCHNELL}>Flux Schnell (Fast)</option>
+            <option value={IMAGE_MODELS.FLUX_DETAILED}>Flux Detailed</option>
+          </select>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={enhancement}
+            onChange={(e) => setEnhancement(e.target.checked)}
+          />
+          Enhance Prompt
+        </label>
+      </div>
+      <div className="modal-actions">
+        <button onClick={handleGenerate}>Generate</button>
+        <button onClick={onClose}>Cancel</button>
       </div>
     </div>
   );
 };
 
 export default Chat;
+
 
 
