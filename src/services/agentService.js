@@ -1,18 +1,24 @@
 import { ChatDeepInfra } from "@langchain/community/chat_models/deepinfra";
-import { AgentExecutor } from "langchain/agents";
+import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { API_KEY } from "../config";
 
 export class PersonaAgent {
+  static async create(persona, tools, callbacks) {
+    const agent = new PersonaAgent(persona, tools, callbacks);
+    agent.executor = await agent.createExecutor();
+    return agent;
+  }
+
   constructor(persona, tools, callbacks) {
     this.persona = persona;
     this.tools = tools;
     this.providedCallbacks = callbacks;
-    this.executor = this.createExecutor();
+    this.executor = null; // Will be set by create()
   }
 
-  createExecutor() {
+  async createExecutor() {
     const prompt = ChatPromptTemplate.fromMessages([
       ["system", `You are {persona_name}. {system_prompt}
 
@@ -36,11 +42,19 @@ Current conversation:
       }] : undefined
     });
 
-    return AgentExecutor.fromAgentAndTools({
+    // Create the agent with proper configuration
+    const agent = await createOpenAIFunctionsAgent({
       llm: chat,
       tools: this.tools,
       prompt: prompt,
+    });
+
+    // Return the executor with the configured agent
+    return new AgentExecutor({
+      agent,
+      tools: this.tools,
       maxIterations: 3,
+      returnIntermediateSteps: true,
     });
   }
 

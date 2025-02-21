@@ -276,10 +276,10 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         });
 
       // Initialize agents for responders
-      const respondersWithAgents = responders.map(({ persona, outcome }) => ({
+      const respondersWithAgents = await Promise.all(responders.map(async ({ persona, outcome }) => ({
         persona,
         outcome,
-        agent: new PersonaAgent(
+        agent: await PersonaAgent.create(
           persona,
           createPersonaTools(this),
           {
@@ -294,7 +294,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
             }
           }
         )
-      }));
+      })));
 
       // Generate responses using agents
       for (const { persona, outcome, agent } of respondersWithAgents) {
