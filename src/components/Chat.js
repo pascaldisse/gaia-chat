@@ -203,6 +203,13 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   const handleSubmit = async (message) => {
     if (!message.trim()) return;
 
+    // Check for command
+    if (message.startsWith('/')) {
+      const [command, ...args] = message.slice(1).split(' ');
+      handleCommand(command, args.join(' '));
+      return;
+    }
+
     const newMessage = {
       id: Date.now(),
       content: message,
@@ -262,6 +269,27 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCommand = (command, args) => {
+    switch(command) {
+      case 'imagine':
+        generateImage(args);
+        break;
+      default:
+        console.warn(`Unknown command: /${command}`);
+    }
+  };
+
+  const generateImage = async (prompt) => {
+    setCurrentChat(prev => [...prev, {
+      id: Date.now(),
+      content: `Generating image for: "${prompt}"...`,
+      isUser: false,
+      isCommand: true
+    }]);
+
+    // Add actual image generation API call here
   };
 
   const handleRegenerate = async (message) => {

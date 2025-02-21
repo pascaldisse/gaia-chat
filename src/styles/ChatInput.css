@@ -52,11 +52,15 @@
   overflow-y: auto;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   z-index: 1000;
+  scroll-behavior: smooth;
 }
 
 .suggestion-item {
   padding: 8px 12px;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  scroll-margin: 8px;
 }
 
 .suggestion-item:hover,
@@ -67,5 +71,38 @@
 
 .cancel-button {
   background-color: #ed4245 !important;
+}
+
+/* Add command suggestion styles */
+.command-name {
+  font-weight: 500;
+  color: #dcddde;
+}
+
+.command-description {
+  font-size: 0.9em;
+  color: #b9bbbe;
+  margin-top: 2px;
+}
+
+/* Add persona mention styles */
+.persona-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.persona-name {
+  font-weight: 500;
+  color: #dcddde;
+}
+
+/* Adjust suggestion item layout */
+.suggestion-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 
