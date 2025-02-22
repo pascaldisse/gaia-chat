@@ -144,7 +144,22 @@ Gaia supports multiple AI models:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Gaia is open source software [licensed under the MIT license](LICENSE). The MIT License is a permissive license that is short and to the point. It lets people do anything they want with your code as long as they provide attribution back to you and don't hold you liable.
+
+### What you can do with this code:
+- ✅ Commercial use
+- ✅ Modify
+- ✅ Distribute
+- ✅ Private use
+
+### Requirements:
+- ℹ️ License and copyright notice
+
+### Limitations:
+- ⚠️ No liability
+- ⚠️ No warranty
+
+See the [LICENSE](LICENSE) file for the full license text.
 
 ## Acknowledgments
 
