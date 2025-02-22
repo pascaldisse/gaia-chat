@@ -1,0 +1,68 @@
+.tools-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+}
+
+.tools-content {
+  background: #36393f;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.tools-list {
+  margin-top: 15px;
+  margin-bottom: 20px;
+}
+
+.tool-item {
+  padding: 10px;
+  border-bottom: 1px solid #2f3136;
+}
+
+.tool-info {
+  display: flex;
+  flex-direction: column;
+  margin-left: 10px;
+}
+
+.tool-name {
+  font-weight: 500;
+  color: #dcddde;
+}
+
+.tool-description {
+  font-size: 0.9em;
+  color: #b9bbbe;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 15px;
+  border-top: 1px solid #2f3136;
+}
+
+.save-button {
+  background: #5865f2;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.save-button:hover {
+  background: #4752c4;
+} 

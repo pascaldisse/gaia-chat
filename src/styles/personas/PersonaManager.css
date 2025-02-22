@@ -20,6 +20,8 @@
   padding: 24px;
   width: 500px;
   max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .close-button {
@@ -224,6 +226,38 @@
   &:hover {
     background-color: #3b44a9;
   }
+}
+
+.tools-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: #2f3136;
+  border-radius: 8px;
+}
+
+.current-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.tool-tag {
+  background-color: #5865f2;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.no-tools {
+  color: #b9bbbe;
+  font-style: italic;
+}
+
+.manage-tools-button {
+  width: 100%;
+  margin-top: 8px;
 }
 
 

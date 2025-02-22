@@ -8,12 +8,47 @@ import { DEFAULT_PERSONA_ID } from '../../config/defaultPersona';
 import { GAIA_CONFIG } from '../../config/defaultPersona';
 import FilePreview from '../FilePreview';
 import { knowledgeDB } from '../../services/db';
+import ToolsPopup from './ToolsPopup';
+
+const availableTools = [
+  { name: 'dice_roll', label: 'Dice Roll', description: 'Roll polyhedral dice' },
+  { name: 'image_generation', label: 'Image Generation', description: 'Generate images from text' }
+];
+
+const defaultToolConfig = {
+  fileSearch: true,
+  imageGeneration: false,
+  diceRoll: false
+};
+
+const defaultAgentSettings = {
+  maxIterations: 3,
+  toolConfig: defaultToolConfig
+};
 
 const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
-  const [currentPersona, setCurrentPersona] = useState(
-    persona || new Persona({ name: '', systemPrompt: '', model: MODELS.LLAMA3_70B })
-  );
+  const [currentPersona, setCurrentPersona] = useState(() => {
+    const initialPersona = persona || new Persona({ 
+      name: '', 
+      systemPrompt: '', 
+      model: MODELS.LLAMA3_70B
+    });
+
+    // Ensure agentSettings and toolConfig exist
+    return {
+      ...initialPersona,
+      agentSettings: {
+        ...defaultAgentSettings,
+        ...(initialPersona.agentSettings || {}),
+        toolConfig: {
+          ...defaultToolConfig,
+          ...(initialPersona.agentSettings?.toolConfig || {})
+        }
+      }
+    };
+  });
   const [showAttributesEditor, setShowAttributesEditor] = useState(false);
+  const [showToolsPopup, setShowToolsPopup] = useState(false);
   const [imageSource, setImageSource] = useState('url'); // 'url' or 'file'
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [files, setFiles] = useState([]);
@@ -32,10 +67,35 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
     }
   };
 
+  const getEnabledTools = () => {
+    const toolConfig = currentPersona?.agentSettings?.toolConfig || defaultToolConfig;
+    
+    return Object.entries(toolConfig)
+      .filter(([tool, enabled]) => enabled && tool !== 'fileSearch')
+      .map(([tool]) => {
+        const toolInfo = availableTools.find(t => t.name === tool);
+        return toolInfo ? toolInfo.label : tool;
+      });
+  };
+
+  const handleToolsUpdate = (updatedTools) => {
+    setCurrentPersona(prev => ({
+      ...prev,
+      agentSettings: {
+        ...defaultAgentSettings,
+        ...(prev.agentSettings || {}),
+        toolConfig: {
+          ...defaultToolConfig,
+          ...(prev.agentSettings?.toolConfig || {}),
+          ...updatedTools
+        }
+      }
+    }));
+  };
+
   const handleSave = async () => {
     const updatedPersona = new Persona({
       ...currentPersona,
-      name: currentPersona.id === DEFAULT_PERSONA_ID ? GAIA_CONFIG.name : currentPersona.name,
       updatedAt: Date.now()
     });
     
@@ -183,6 +243,26 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
               Edit Personality Attributes
             </button>
           </div>
+          <div className="tools-section">
+            <h3>Agent Tools</h3>
+            <div className="current-tools">
+              {getEnabledTools().length > 0 ? (
+                getEnabledTools().map(tool => (
+                  <div key={tool} className="tool-tag">
+                    {tool}
+                  </div>
+                ))
+              ) : (
+                <span className="no-tools">No tools enabled</span>
+              )}
+            </div>
+            <button 
+              className="manage-tools-button"
+              onClick={() => setShowToolsPopup(true)}
+            >
+              Manage Tools
+            </button>
+          </div>
           <div className="knowledge-section">
             <h3>Knowledge Base</h3>
             <input 
@@ -253,6 +333,14 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
         >
           Restore Default Settings
         </button>
+      )}
+
+      {showToolsPopup && (
+        <ToolsPopup
+          tools={currentPersona?.agentSettings?.toolConfig || defaultToolConfig}
+          onUpdate={handleToolsUpdate}
+          onClose={() => setShowToolsPopup(false)}
+        />
       )}
     </>
   );

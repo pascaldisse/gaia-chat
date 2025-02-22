@@ -14,7 +14,15 @@ export class Persona {
       adaptability = 5,
       patience = 5,
       skepticism = 5,
-      optimism = 5
+      optimism = 5,
+      agentSettings = {
+        maxIterations: 3,
+        toolConfig: {
+          fileSearch: true,
+          imageGeneration: false,
+          diceRoll: false
+        }
+      }
     }) {
       this.id = Date.now().toString();
       this.name = name;
@@ -33,13 +41,7 @@ export class Persona {
       this.skepticism = skepticism;
       this.optimism = optimism;
       this.lastActive = Date.now();
-      this.agentSettings = {
-        maxIterations: 3,
-        toolConfig: {
-          fileSearch: true,
-          imageGeneration: false
-        }
-      };
+      this.agentSettings = agentSettings;
     }
 
     markActive() {
