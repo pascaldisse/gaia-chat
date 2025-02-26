@@ -7,7 +7,7 @@ import { RPGSystem } from '../utils/RPGSystem';
 import { Persona } from '../utils/Persona';
 import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 import FilePreview from './FilePreview';
-import { knowledgeDB } from '../services/db';
+import { chatDB, knowledgeDB } from '../services/db';
 import { parseFileContent } from '../utils/FileParser';
 import { PersonaAgent } from "../services/agentService";
 import { createPersonaTools } from "../services/tools";
@@ -21,7 +21,8 @@ const Chat = ({
   activePersonas,
   setActivePersonas,
   selectedChatId,
-  chatHistory
+  chatHistory,
+  setChatHistory
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [debugLog, setDebugLog] = useState([]);
@@ -36,6 +37,7 @@ const Chat = ({
   const [useEnhancement, setUseEnhancement] = useState(true);
   const [imageModel, setImageModel] = useState(IMAGE_MODELS.SDXL);
   const [chatKnowledgeFiles, setChatKnowledgeFiles] = useState([]);
+  const [filesUpdated, setFilesUpdated] = useState(false);
 
   // Create a ref for the AbortController
   const controllerRef = useRef(null);
@@ -521,74 +523,143 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     console.log('Debug Log updated:', debugLog);
   }, [debugLog]);
 
-  useEffect(() => {
-    if (selectedChatId) {
-      const chat = chatHistory.find(c => c.id === selectedChatId);
-      if (chat?.knowledgeFiles) {
-        loadChatFiles(chat.knowledgeFiles);
-      }
+  // More robust loadFiles function with better error handling
+  const loadFiles = async (fileIds) => {
+    console.log("Loading files for IDs:", fileIds);
+    
+    // Clear files first to avoid showing stale data
+    setChatKnowledgeFiles([]);
+    
+    if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
+      console.log("No files to load, knowledge base cleared");
+      return;
     }
-  }, [selectedChatId]);
-
-  const loadChatFiles = async (fileIds) => {
-    if (fileIds?.length > 0) {
+    
+    try {
+      // Get files directly from database with fresh query
       const files = await knowledgeDB.getFiles(fileIds);
-      setChatKnowledgeFiles(files);
+      console.log("Successfully loaded files:", files);
+      
+      if (files && files.length > 0) {
+        // Set the files in state
+        setChatKnowledgeFiles(files);
+      }
+    } catch (error) {
+      console.error("Error loading chat files:", error);
     }
   };
 
+  // Add this debug useEffect to track changes
+  useEffect(() => {
+    console.log("Current chatKnowledgeFiles:", chatKnowledgeFiles);
+  }, [chatKnowledgeFiles]);
+
+  // Completely revised useEffect for file loading
+  useEffect(() => {
+    console.log("Selected chat changed to:", selectedChatId);
+    
+    // Define an async function to load chat files
+    const loadSelectedChatFiles = async () => {
+      if (!selectedChatId) {
+        console.log("No chat selected, clearing files");
+        setChatKnowledgeFiles([]);
+        return;
+      }
+      
+      try {
+        // Always get the most current chat data directly from database
+        const chat = await chatDB.getChatById(selectedChatId);
+        
+        if (!chat) {
+          console.error("Selected chat not found in database");
+          setChatKnowledgeFiles([]);
+          return;
+        }
+        
+        console.log("Retrieved chat:", chat);
+        
+        // Check if knowledgeFiles exists and has items
+        if (chat.knowledgeFiles && Array.isArray(chat.knowledgeFiles) && chat.knowledgeFiles.length > 0) {
+          console.log("Chat has knowledge files:", chat.knowledgeFiles);
+          await loadFiles(chat.knowledgeFiles);
+        } else {
+          console.log("Chat has no knowledge files");
+          setChatKnowledgeFiles([]);
+        }
+      } catch (error) {
+        console.error("Error loading files for selected chat:", error);
+        setChatKnowledgeFiles([]);
+      }
+    };
+    
+    // Call the async function
+    loadSelectedChatFiles();
+    
+  }, [selectedChatId]); // Only trigger when selected chat changes
+
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      // Convert ArrayBuffer to Base64
-      const arrayBuffer = await file.arrayBuffer();
-      const base64Content = btoa(
-        new Uint8Array(arrayBuffer)
-          .reduce((data, byte) => data + String.fromCharCode(byte), '')
-      );
-
-      // Parse the content
-      const parsedText = await parseFileContent(arrayBuffer, file.type, file.name);
-
-      const newFile = {
-        name: file.name,
-        type: file.type,
-        content: base64Content, // Store as Base64 string instead of ArrayBuffer
-        parsedText: parsedText,
-        uploadedAt: Date.now()
-      };
-
-      const id = await knowledgeDB.addFile(newFile);
-      setCurrentChat(prev => {
-        const currentChatState = Array.isArray(prev) ? prev : [];
-        return {
-          ...currentChatState,
-          knowledgeFiles: [...(currentChatState.knowledgeFiles || []), id]
+    if (file) {
+      setIsLoading(true);
+      try {
+        // Read file content
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const content = event.target.result;
+          
+          // Save file to knowledge DB
+          const fileData = {
+            name: file.name,
+            type: file.type,
+            content: content,
+            uploadedAt: Date.now()
+          };
+          
+          const fileId = await knowledgeDB.addFile(fileData);
+          console.log("Added new file with ID:", fileId);
+          
+          // Add file to UI immediately
+          const newFile = { id: fileId, name: file.name, type: file.type };
+          setChatKnowledgeFiles(prevFiles => [...prevFiles, newFile]);
+          
+          // Update chat in database
+          if (selectedChatId) {
+            try {
+              // Get current chat
+              const currentChat = await chatDB.getChatById(selectedChatId);
+              if (!currentChat) {
+                console.error("Current chat not found");
+                setIsLoading(false);
+                return;
+              }
+              
+              // Prepare updated knowledge files array
+              const currentFiles = Array.isArray(currentChat.knowledgeFiles) 
+                ? currentChat.knowledgeFiles 
+                : [];
+              
+              const updatedFiles = [...currentFiles, fileId];
+              console.log("Updating chat with files:", updatedFiles);
+              
+              // Update chat using chatDB (not knowledgeDB)
+              const updatedChat = {
+                ...currentChat,
+                knowledgeFiles: updatedFiles
+              };
+              
+              await chatDB.updateChat(updatedChat);
+            } catch (error) {
+              console.error("Error updating chat with new file:", error);
+            }
+          }
+          
+          setIsLoading(false);
         };
-      });
-      setChatKnowledgeFiles(prev => [...prev, { ...newFile, id }]);
-
-      // Update command message to include parsed text preview
-      const fileMessage = {
-        id: Date.now(),
-        content: `📁 Added file: ${newFile.name}\nParsed content: ${parsedText.substring(0, 200)}...`,
-        isUser: false,
-        isCommand: true,
-        fileData: { id, parsedText }
-      };
-      setCurrentChat(prev => [...(Array.isArray(prev) ? prev : []), fileMessage]);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      // Add error message to chat
-      const errorMessage = {
-        id: Date.now(),
-        content: `❌ Error uploading file: ${file.name}`,
-        isUser: false,
-        isCommand: true
-      };
-      setCurrentChat(prev => [...(Array.isArray(prev) ? prev : []), errorMessage]);
+        reader.readAsArrayBuffer(file);
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        setIsLoading(false);
+      }
     }
   };
 

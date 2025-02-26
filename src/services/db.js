@@ -53,6 +53,12 @@ export const chatDB = {
   async updateChat(chat) {
     const db = await dbPromise;
     await db.put(CHAT_STORE, chat);
+  },
+
+  // Get a chat by ID
+  async getChatById(id) {
+    const db = await dbPromise;
+    return db.get(CHAT_STORE, id);
   }
 };
 
@@ -75,28 +81,40 @@ export const personaDB = {
 
 // Add knowledgeDB service
 export const knowledgeDB = {
-  async addFile(file) {
+  // Add a file to the database
+  async addFile(fileData) {
     const db = await dbPromise;
-    return db.add(KNOWLEDGE_STORE, file);
+    return db.add(KNOWLEDGE_STORE, fileData);
   },
-
-  async deleteFile(id) {
+  
+  // Get files by their IDs
+  async getFiles(fileIds) {
     const db = await dbPromise;
-    return db.delete(KNOWLEDGE_STORE, id);
+    if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
+      return [];
+    }
+    
+    // Get each file by ID - filter out any null results from missing files
+    const filesPromises = fileIds.map(id => db.get(KNOWLEDGE_STORE, id));
+    const files = await Promise.all(filesPromises);
+    return files.filter(file => file !== undefined);
   },
-
-  async getFiles(ids) {
+  
+  // Delete a file by ID
+  async deleteFile(fileId) {
     const db = await dbPromise;
-    const files = await Promise.all(ids.map(id => db.get(KNOWLEDGE_STORE, id)));
-    return files.map(file => ({
-      ...file,
-      parsedText: file.parsedText || '' // Ensure parsedText exists
-    }));
+    await db.delete(KNOWLEDGE_STORE, fileId);
   },
-
-  async getAllFiles() {
+  
+  // Search files by content (basic implementation)
+  async searchFiles(query) {
     const db = await dbPromise;
-    return db.getAll(KNOWLEDGE_STORE);
+    const allFiles = await db.getAll(KNOWLEDGE_STORE);
+    
+    // Simple string matching search (could be improved with proper indexing)
+    return allFiles.filter(file => 
+      file.content && file.content.toLowerCase().includes(query.toLowerCase())
+    );
   }
 };
 

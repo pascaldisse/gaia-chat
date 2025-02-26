@@ -57,13 +57,17 @@ function App() {
   useEffect(() => {
     const saveChat = async () => {
       if (selectedChatId && Array.isArray(currentChat) && currentChat.length > 0) {
+        // First get the existing chat to preserve knowledgeFiles
+        const existingChat = await chatDB.getChatById(selectedChatId);
+        
         const updatedChat = {
           id: selectedChatId,
           messages: currentChat,
           systemPrompt,
           model,
           activePersonas: activePersonas.map(p => p.id),
-          knowledgeFiles: Array.isArray(currentChat.knowledgeFiles) ? currentChat.knowledgeFiles : [],
+          // Preserve existing knowledgeFiles if they exist
+          knowledgeFiles: existingChat?.knowledgeFiles || [],
           createdAt: chatHistory.find(c => c.id === selectedChatId)?.createdAt || Date.now(),
           timestamp: Date.now(),
           title: currentChat[0]?.content?.slice(0, 30) + '...' || 'New Chat'
