@@ -306,8 +306,43 @@
 
 /* Execution Modal Styles */
 .execution-modal {
-  max-width: 700px;
+  max-width: 800px;
   width: 90%;
+}
+
+.chat-integration-note {
+  margin-top: 10px;
+  background-color: rgba(67, 181, 129, 0.1);
+  color: #43b581;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.execution-log.workflow-start,
+.execution-log.workflow-complete,
+.execution-log.workflow-error {
+  background-color: rgba(114, 137, 218, 0.1);
+  border-left: 3px solid #7289da;
+  font-weight: 500;
+}
+
+.execution-log.workflow-complete {
+  background-color: rgba(67, 181, 129, 0.1);
+  border-left: 3px solid #43b581;
+}
+
+.execution-log.workflow-error {
+  background-color: rgba(240, 71, 71, 0.1);
+  border-left: 3px solid #f04747;
+}
+
+.execution-log .duration {
+  font-size: 12px;
+  color: #72767d;
+  margin-left: 8px;
 }
 
 .execution-progress {

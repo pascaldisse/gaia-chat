@@ -62,14 +62,58 @@ const WorkflowExecution = ({
     }
   };
 
+  // Format execution time in a readable format
+  const formatExecutionTime = (milliseconds) => {
+    if (!milliseconds) return '';
+    
+    if (milliseconds < 1000) {
+      return `${milliseconds}ms`;
+    } else if (milliseconds < 60000) {
+      return `${(milliseconds / 1000).toFixed(2)}s`;
+    } else {
+      const minutes = Math.floor(milliseconds / 60000);
+      const seconds = ((milliseconds % 60000) / 1000).toFixed(0);
+      return `${minutes}m ${seconds}s`;
+    }
+  };
+
   // Render log message
   const renderLogMessage = (log) => {
     switch (log.type) {
+      case 'workflow_start':
+        return (
+          <div className="execution-log workflow-start">
+            <span className="timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
+            <span className="status">Workflow Started</span>
+            <div className="info-message">
+              Input: {log.input ? (log.input.length > 50 ? `${log.input.substring(0, 50)}...` : log.input) : 'None'}
+            </div>
+          </div>
+        );
+        
+      case 'workflow_complete':
+        return (
+          <div className="execution-log workflow-complete">
+            <span className="timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
+            <span className="status">Workflow Completed</span>
+            <span className="duration">Execution time: {formatExecutionTime(log.executionTime)}</span>
+          </div>
+        );
+        
+      case 'workflow_error':
+        return (
+          <div className="execution-log workflow-error">
+            <span className="timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
+            <span className="status">Workflow Error</span>
+            <div className="error-message">{log.error}</div>
+          </div>
+        );
+        
       case 'node_start':
         return (
           <div className="execution-log start">
             <span className="timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
-            <span className="node-name">{getNodeName(log.nodeId)}</span>
+            <span className="node-name">{log.nodeName || getNodeName(log.nodeId)}</span>
             <span className="status">Starting execution...</span>
           </div>
         );
@@ -78,13 +122,28 @@ const WorkflowExecution = ({
         return (
           <div className="execution-log complete">
             <span className="timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
-            <span className="node-name">{getNodeName(log.nodeId)}</span>
+            <span className="node-name">{log.nodeName || getNodeName(log.nodeId)}</span>
             <span className="status">Completed</span>
+            {log.duration && <span className="duration">({formatExecutionTime(log.duration)})</span>}
             {log.result && (
               <div className="result">
-                <pre>{typeof log.result === 'string' ? log.result : JSON.stringify(log.result, null, 2)}</pre>
+                <pre>
+                  {typeof log.result === 'string' 
+                    ? (log.result.length > 300 ? `${log.result.substring(0, 300)}...` : log.result)
+                    : JSON.stringify(log.result, null, 2).substring(0, 300) + '...'}
+                </pre>
               </div>
             )}
+          </div>
+        );
+        
+      case 'node_error':
+        return (
+          <div className="execution-log error">
+            <span className="timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
+            <span className="node-name">{log.nodeName || getNodeName(log.nodeId)}</span>
+            <span className="status">Error</span>
+            <div className="error-message">{log.error || log.message}</div>
           </div>
         );
         
@@ -93,7 +152,7 @@ const WorkflowExecution = ({
           <div className="execution-log error">
             <span className="timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
             <span className="status">Error:</span>
-            <div className="error-message">{log.message}</div>
+            <div className="error-message">{log.message || log.error}</div>
           </div>
         );
         
@@ -162,7 +221,20 @@ const WorkflowExecution = ({
         {status === 'completed' && result && (
           <div className="execution-result">
             <h4>Final Result</h4>
-            <pre>{typeof result === 'string' ? result : JSON.stringify(result, null, 2)}</pre>
+            <pre>
+              {typeof result === 'string' ? result : 
+               result.results ? (
+                 Array.isArray(result.results) ? 
+                   result.results.join('\n\n') : 
+                   JSON.stringify(result.results, null, 2)
+               ) : 
+               JSON.stringify(result, null, 2)}
+            </pre>
+            {workflow.chatIntegration && (
+              <div className="chat-integration-note">
+                ✓ Results have been saved to chat history
+              </div>
+            )}
           </div>
         )}
         

@@ -25,6 +25,50 @@
   color: white;
 }
 
+.agent-flow-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chat-integration {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  padding: 0 10px;
+  color: #ccc;
+}
+
+.chat-integration input {
+  margin-right: 5px;
+}
+
+.template-button {
+  background-color: #7289da;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.template-button:hover {
+  background-color: #5a67a3;
+}
+
+.template-selector {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background-color: #2f3136;
+  color: #dcddde;
+  font-size: 14px;
+  min-width: 160px;
+}
+
 .agent-flow-actions button,
 .agent-flow-actions select {
   padding: 8px 16px;

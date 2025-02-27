@@ -32,7 +32,11 @@ import {
   getAllWorkflows, 
   getWorkflow, 
   deleteWorkflow,
-  executeWorkflow
+  executeWorkflow,
+  saveTemplate,
+  getAllTemplates,
+  getTemplatesByCategory,
+  createWorkflowFromTemplate
 } from '../../services/agentFlow/WorkflowService';
 
 // Database services
@@ -101,12 +105,16 @@ const AgentFlowContent = () => {
   const [files, setFiles] = useState([]);
   const [currentWorkflow, setCurrentWorkflow] = useState({ id: null, name: 'New Workflow' });
   const [savedWorkflows, setSavedWorkflows] = useState([]);
+  const [workflowTemplates, setWorkflowTemplates] = useState([]);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [showTemplateSave, setShowTemplateSave] = useState(false);
   const [executionState, setExecutionState] = useState({
     logs: [],
     status: 'idle',
     progress: 0,
     result: null
   });
+  const [chatIntegration, setChatIntegration] = useState(false);
   
   // Load personas and files on component mount
   useEffect(() => {
@@ -116,31 +124,45 @@ const AgentFlowContent = () => {
         const loadedPersonas = await personaDB.getAllPersonas();
         setPersonas(loadedPersonas);
         
-        // Load knowledge files - this method doesn't exist in our db service, 
-        // so we create a mock implementation for demo purposes
-        const mockFiles = [
-          { 
-            id: 'file-1',
-            name: 'example.pdf',
-            type: 'application/pdf',
-            size: 1024000
-          },
-          {
-            id: 'file-2',
-            name: 'data.csv',
-            type: 'text/csv',
-            size: 50000
-          }
-        ];
-        setFiles(mockFiles);
+        // Load knowledge files from the database
+        try {
+          const allFiles = await knowledgeDB.getAllFiles();
+          setFiles(allFiles);
+        } catch (error) {
+          console.error('Error loading knowledge files:', error);
+          // Fallback to mock data if needed
+          const mockFiles = [
+            { 
+              id: 'file-1',
+              name: 'example.pdf',
+              type: 'application/pdf',
+              size: 1024000
+            },
+            {
+              id: 'file-2',
+              name: 'data.csv',
+              type: 'text/csv',
+              size: 50000
+            }
+          ];
+          setFiles(mockFiles);
+        }
         
-        // Load saved workflows from localStorage
-        const allItems = Object.keys(localStorage)
-          .filter(key => key.startsWith('agentflow-'))
-          .map(key => JSON.parse(localStorage.getItem(key)))
-          .sort((a, b) => b.updatedAt - a.updatedAt);
-          
-        setSavedWorkflows(allItems);
+        // Load saved workflows from the database
+        try {
+          const workflows = await getAllWorkflows();
+          setSavedWorkflows(workflows);
+        } catch (error) {
+          console.error('Error loading workflows:', error);
+        }
+        
+        // Load workflow templates
+        try {
+          const templates = await getAllTemplates();
+          setWorkflowTemplates(templates);
+        } catch (error) {
+          console.error('Error loading workflow templates:', error);
+        }
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -181,7 +203,7 @@ const AgentFlowContent = () => {
     [setEdges]
   );
   
-  // Save the current workflow - using localStorage
+  // Save the current workflow - now using IndexedDB
   const saveCurrentWorkflow = async () => {
     if (reactFlowInstance) {
       try {
@@ -204,23 +226,20 @@ const AgentFlowContent = () => {
           nodes: flowObject.nodes,
           edges: flowObject.edges,
           viewport: flowObject.viewport,
+          chatIntegration: chatIntegration,
           createdAt: currentWorkflow.createdAt || Date.now(),
           updatedAt: Date.now()
         };
         
-        // Save to localStorage
-        localStorage.setItem(`agentflow-${workflowId}`, JSON.stringify(workflow));
+        // Save to database
+        await saveWorkflow(workflow);
         
         // Update current workflow
         setCurrentWorkflow(workflow);
         
         // Refresh saved workflows
-        const allItems = Object.keys(localStorage)
-          .filter(key => key.startsWith('agentflow-'))
-          .map(key => JSON.parse(localStorage.getItem(key)))
-          .sort((a, b) => b.updatedAt - a.updatedAt);
-          
-        setSavedWorkflows(allItems);
+        const workflows = await getAllWorkflows();
+        setSavedWorkflows(workflows);
         
         alert('Workflow saved successfully!');
       } catch (error) {
@@ -230,17 +249,62 @@ const AgentFlowContent = () => {
     }
   };
   
-  // Load a saved workflow from localStorage
+  // Save the current workflow as a template
+  const saveCurrentWorkflowAsTemplate = async () => {
+    if (reactFlowInstance) {
+      try {
+        // Prompt for template name and category
+        const templateName = prompt('Enter a name for this template:', currentWorkflow.name);
+        if (!templateName) return; // User cancelled
+        
+        const templateCategory = prompt('Enter a category for this template (e.g., "data-analysis", "chatbot"):', 'general');
+        if (!templateCategory) return; // User cancelled
+        
+        // Get the current workflow state
+        const flowObject = reactFlowInstance.toObject();
+        
+        // Create template object
+        const templateId = `template-${Date.now()}`;
+        const template = {
+          id: templateId,
+          name: templateName,
+          category: templateCategory,
+          nodes: flowObject.nodes,
+          edges: flowObject.edges,
+          viewport: flowObject.viewport,
+          isTemplate: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+        
+        // Save to database
+        await saveTemplate(template);
+        
+        // Refresh templates
+        const templates = await getAllTemplates();
+        setWorkflowTemplates(templates);
+        
+        alert('Template saved successfully!');
+      } catch (error) {
+        console.error('Error saving template:', error);
+        alert(`Error saving template: ${error.message}`);
+      }
+    }
+  };
+  
+  // Load a saved workflow from database
   const loadSavedWorkflow = async (workflowId) => {
     try {
-      const workflowJson = localStorage.getItem(`agentflow-${workflowId}`);
-      if (workflowJson) {
-        const workflow = JSON.parse(workflowJson);
-        
+      const workflow = await getWorkflow(workflowId);
+      
+      if (workflow) {
         // Set nodes and edges
         setNodes(workflow.nodes || []);
         setEdges(workflow.edges || []);
         setCurrentWorkflow(workflow);
+        
+        // Set chat integration flag
+        setChatIntegration(workflow.chatIntegration || false);
         
         // Reset viewport if available
         if (reactFlowInstance && workflow.viewport) {
@@ -254,6 +318,24 @@ const AgentFlowContent = () => {
     } catch (error) {
       console.error('Error loading workflow:', error);
       alert(`Error loading workflow: ${error.message}`);
+    }
+  };
+  
+  // Load a workflow template
+  const loadWorkflowTemplate = async (templateId) => {
+    try {
+      // Create a new workflow from the template
+      const newWorkflowId = await createWorkflowFromTemplate(templateId);
+      
+      if (newWorkflowId) {
+        // Load the newly created workflow
+        await loadSavedWorkflow(newWorkflowId);
+      } else {
+        alert('Failed to create workflow from template');
+      }
+    } catch (error) {
+      console.error('Error loading template:', error);
+      alert(`Error loading template: ${error.message}`);
     }
   };
   
@@ -271,7 +353,7 @@ const AgentFlowContent = () => {
     }
   };
   
-  // Execute the current workflow - simulated for demo
+  // Execute the current workflow - real implementation
   const executeCurrentWorkflow = async () => {
     if (nodes.length === 0) {
       alert('Workflow is empty. Add nodes before executing.');
@@ -289,117 +371,77 @@ const AgentFlowContent = () => {
     // Show execution modal
     setShowExecution(true);
     
-    // Simulate execution with a delay
-    const simulateExecution = async () => {
-      const addLog = (type, nodeId, message = null, result = null) => {
-        // Update execution state with progress
-        setExecutionState(prev => {
-          // Add new log
-          const logs = [...prev.logs, {
-            type,
-            nodeId,
-            message,
-            result,
-            timestamp: Date.now()
-          }];
-          
-          // Calculate progress
-          const completedNodes = logs.filter(log => log.type === 'node_complete').length;
-          const progress = Math.min(Math.round((completedNodes / nodes.length) * 100), 100);
-          
-          // Set status
-          let status = 'running';
-          if (type === 'error') {
-            status = 'error';
-          } else if (progress >= 100) {
-            status = 'completed';
-          }
-          
-          return {
-            ...prev,
-            logs,
-            progress,
-            status,
-            result: result || prev.result
-          };
-        });
-      };
-      
-      // Example user input
-      const userInput = 'Process this data and create a report';
-      
-      // Process each node with delay
-      for (const node of nodes) {
-        // Add start log
-        addLog('node_start', node.id);
-        
-        // Wait between 1-3 seconds
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-        
-        // Generate result based on node type
-        let result = '';
-        
-        switch (node.type) {
-          case 'personaNode':
-            const personaName = node.data.personaData?.name || 'Unknown Persona';
-            result = `${personaName} processed the input: "${userInput}" and generated a response.`;
-            break;
-            
-          case 'toolNode':
-            result = `Used tool "${node.data.toolName || 'Unknown Tool'}" to perform an action.`;
-            break;
-            
-          case 'fileNode':
-            result = `Read data from file "${node.data.fileName || 'Unknown File'}" for processing.`;
-            break;
-            
-          case 'triggerNode':
-            result = `Workflow triggered by event: "${node.data.label || 'Unknown Trigger'}"`;
-            break;
-            
-          case 'actionNode':
-            result = `Performed action: "${node.data.label || 'Unknown Action'}"`;
-            break;
-            
-          case 'decisionNode':
-            result = `Decision evaluation: "${node.data.label || 'Unknown Decision'}" = true`;
-            break;
-            
-          default:
-            result = `Unknown node type processed: ${node.type}`;
-        }
-        
-        // Add complete log
-        addLog('node_complete', node.id, null, result);
-        
-        // Randomly add info log
-        if (Math.random() > 0.7) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          addLog('info', node.id, 'Additional information about node execution');
-        }
-        
-        // Simulate an error randomly (10% chance)
-        if (Math.random() > 0.9) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          addLog('error', node.id, 'An error occurred during execution');
-          return; // Stop execution on error
-        }
-      }
-      
-      // Final result
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+    // Prompt for user input
+    const userInput = prompt('Enter input for this workflow:', 'Process this data and create a report');
+    if (!userInput) {
+      // User cancelled
       setExecutionState(prev => ({
         ...prev,
-        status: 'completed',
-        progress: 100,
-        result: `Workflow execution completed successfully. Processed ${nodes.length} nodes.`
+        status: 'cancelled',
+        logs: [
+          ...prev.logs,
+          {
+            type: 'info',
+            message: 'Execution cancelled by user',
+            timestamp: Date.now()
+          }
+        ]
       }));
-    };
+      return;
+    }
     
-    // Start simulation
-    simulateExecution().catch(error => {
-      console.error('Error in simulation:', error);
+    try {
+      // Execute the workflow with real implementation
+      await executeWorkflow(
+        {
+          id: currentWorkflow.id || 'temp-workflow',
+          name: currentWorkflow.name,
+          nodes,
+          edges,
+          chatIntegration
+        },
+        userInput,
+        (update) => {
+          // Handle execution updates
+          setExecutionState(prev => {
+            // Add new log
+            const logs = [...prev.logs, {
+              ...update,
+              timestamp: update.timestamp || Date.now()
+            }];
+            
+            // Calculate progress
+            const totalNodes = nodes.length;
+            const completedNodes = logs.filter(log => 
+              log.type === 'node_complete'
+            ).length;
+            
+            const progress = Math.min(Math.round((completedNodes / totalNodes) * 100), 100);
+            
+            // Set status based on update type
+            let status = prev.status;
+            let result = prev.result;
+            
+            if (update.type === 'workflow_complete') {
+              status = 'completed';
+              result = update.results;
+            } else if (update.type === 'workflow_error') {
+              status = 'error';
+            } else if (update.type === 'node_error') {
+              status = 'error';
+            }
+            
+            return {
+              logs,
+              status,
+              progress,
+              result: result || prev.result
+            };
+          });
+        }
+      );
+    } catch (error) {
+      console.error('Error executing workflow:', error);
       
       // Update error state
       setExecutionState(prev => ({
@@ -414,7 +456,7 @@ const AgentFlowContent = () => {
           }
         ]
       }));
-    });
+    }
   };
   
   // Handle node click
@@ -634,6 +676,8 @@ const AgentFlowContent = () => {
         <div className="agent-flow-actions">
           <button onClick={createNewWorkflow} className="new-button">New Workflow</button>
           <button onClick={saveCurrentWorkflow} className="save-button">Save Workflow</button>
+          <button onClick={saveCurrentWorkflowAsTemplate} className="template-button">Save as Template</button>
+          
           <select 
             className="workflow-selector"
             onChange={(e) => {
@@ -650,6 +694,35 @@ const AgentFlowContent = () => {
               </option>
             ))}
           </select>
+          
+          <select 
+            className="template-selector"
+            onChange={(e) => {
+              if (e.target.value) {
+                loadWorkflowTemplate(e.target.value);
+              }
+            }}
+            value=""
+          >
+            <option value="">-- Use Template --</option>
+            {workflowTemplates.map(template => (
+              <option key={template.id} value={template.id}>
+                {template.name || template.id}
+              </option>
+            ))}
+          </select>
+          
+          <div className="chat-integration">
+            <label>
+              <input 
+                type="checkbox" 
+                checked={chatIntegration} 
+                onChange={(e) => setChatIntegration(e.target.checked)} 
+              />
+              Chat Integration
+            </label>
+          </div>
+          
           <button 
             onClick={executeCurrentWorkflow}
             className="execute-button"

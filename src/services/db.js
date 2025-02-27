@@ -2,10 +2,12 @@ import { openDB } from 'idb';
 
 // Database configuration
 const DB_NAME = 'chatApp';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const CHAT_STORE = 'chats';
 const PERSONA_STORE = 'personas';
 const KNOWLEDGE_STORE = 'knowledge_files';
+const WORKFLOW_STORE = 'workflows';
+const TEMPLATE_STORE = 'workflow_templates';
 
 // Create/open the database
 const dbPromise = openDB(DB_NAME, DB_VERSION, {
@@ -25,6 +27,19 @@ const dbPromise = openDB(DB_NAME, DB_VERSION, {
         keyPath: 'id',
         autoIncrement: true
       });
+    }
+    if (!db.objectStoreNames.contains(WORKFLOW_STORE)) {
+      const workflowStore = db.createObjectStore(WORKFLOW_STORE, { 
+        keyPath: 'id',
+      });
+      workflowStore.createIndex('updatedAt', 'updatedAt');
+      workflowStore.createIndex('name', 'name');
+    }
+    if (!db.objectStoreNames.contains(TEMPLATE_STORE)) {
+      const templateStore = db.createObjectStore(TEMPLATE_STORE, { 
+        keyPath: 'id',
+      });
+      templateStore.createIndex('category', 'category');
     }
   },
 });
@@ -87,6 +102,12 @@ export const knowledgeDB = {
     return db.add(KNOWLEDGE_STORE, fileData);
   },
   
+  // Get all knowledge files
+  async getAllFiles() {
+    const db = await dbPromise;
+    return db.getAll(KNOWLEDGE_STORE);
+  },
+  
   // Get files by their IDs
   async getFiles(fileIds) {
     const db = await dbPromise;
@@ -115,6 +136,90 @@ export const knowledgeDB = {
     return allFiles.filter(file => 
       file.content && file.content.toLowerCase().includes(query.toLowerCase())
     );
+  }
+};
+
+// Add workflow database service
+export const workflowDB = {
+  // Save a workflow to the database
+  async saveWorkflow(workflow) {
+    if (!workflow.id) {
+      workflow.id = `workflow-${Date.now()}`;
+    }
+    
+    workflow.updatedAt = Date.now();
+    if (!workflow.createdAt) {
+      workflow.createdAt = Date.now();
+    }
+    
+    const db = await dbPromise;
+    await db.put(WORKFLOW_STORE, workflow);
+    return workflow.id;
+  },
+  
+  // Get a workflow by ID
+  async getWorkflow(id) {
+    const db = await dbPromise;
+    return db.get(WORKFLOW_STORE, id);
+  },
+  
+  // Get all workflows
+  async getAllWorkflows() {
+    const db = await dbPromise;
+    const workflows = await db.getAll(WORKFLOW_STORE);
+    return workflows.sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+  
+  // Delete a workflow
+  async deleteWorkflow(id) {
+    const db = await dbPromise;
+    await db.delete(WORKFLOW_STORE, id);
+    return true;
+  }
+};
+
+// Add workflow template database service
+export const templateDB = {
+  // Save a workflow template
+  async saveTemplate(template) {
+    if (!template.id) {
+      template.id = `template-${Date.now()}`;
+    }
+    
+    template.updatedAt = Date.now();
+    if (!template.createdAt) {
+      template.createdAt = Date.now();
+    }
+    
+    const db = await dbPromise;
+    await db.put(TEMPLATE_STORE, template);
+    return template.id;
+  },
+  
+  // Get a template by ID
+  async getTemplate(id) {
+    const db = await dbPromise;
+    return db.get(TEMPLATE_STORE, id);
+  },
+  
+  // Get all templates
+  async getAllTemplates() {
+    const db = await dbPromise;
+    return db.getAll(TEMPLATE_STORE);
+  },
+  
+  // Get templates by category
+  async getTemplatesByCategory(category) {
+    const db = await dbPromise;
+    const index = db.transaction(TEMPLATE_STORE).store.index('category');
+    return index.getAll(category);
+  },
+  
+  // Delete a template
+  async deleteTemplate(id) {
+    const db = await dbPromise;
+    await db.delete(TEMPLATE_STORE, id);
+    return true;
   }
 };
 
