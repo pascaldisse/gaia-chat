@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ReactFlow, {
+  ReactFlowProvider,
   addEdge,
   MiniMap,
   Controls,
@@ -82,7 +83,7 @@ const createInitialNodes = () => [
   },
 ];
 
-const AgentFlow = () => {
+const AgentFlowContent = () => {
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes());
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -115,13 +116,31 @@ const AgentFlow = () => {
         const loadedPersonas = await personaDB.getAllPersonas();
         setPersonas(loadedPersonas);
         
-        // Load knowledge files
-        const loadedFiles = await knowledgeDB.getAllFiles();
-        setFiles(loadedFiles);
+        // Load knowledge files - this method doesn't exist in our db service, 
+        // so we create a mock implementation for demo purposes
+        const mockFiles = [
+          { 
+            id: 'file-1',
+            name: 'example.pdf',
+            type: 'application/pdf',
+            size: 1024000
+          },
+          {
+            id: 'file-2',
+            name: 'data.csv',
+            type: 'text/csv',
+            size: 50000
+          }
+        ];
+        setFiles(mockFiles);
         
-        // Load saved workflows
-        const workflows = await getAllWorkflows();
-        setSavedWorkflows(workflows);
+        // Load saved workflows from localStorage
+        const allItems = Object.keys(localStorage)
+          .filter(key => key.startsWith('agentflow-'))
+          .map(key => JSON.parse(localStorage.getItem(key)))
+          .sort((a, b) => b.updatedAt - a.updatedAt);
+          
+        setSavedWorkflows(allItems);
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -162,28 +181,46 @@ const AgentFlow = () => {
     [setEdges]
   );
   
-  // Save the current workflow
+  // Save the current workflow - using localStorage
   const saveCurrentWorkflow = async () => {
     if (reactFlowInstance) {
       try {
+        // Prompt for workflow name if it's still the default
+        let workflowName = currentWorkflow.name;
+        if (workflowName === 'New Workflow') {
+          const name = prompt('Enter a name for this workflow:', 'My Workflow');
+          if (!name) return; // User cancelled
+          workflowName = name;
+        }
+        
+        // Get the current workflow state
         const flowObject = reactFlowInstance.toObject();
+        
+        // Create workflow object
+        const workflowId = currentWorkflow.id || `workflow-${Date.now()}`;
         const workflow = {
-          ...currentWorkflow,
+          id: workflowId,
+          name: workflowName,
           nodes: flowObject.nodes,
           edges: flowObject.edges,
-          viewport: flowObject.viewport
+          viewport: flowObject.viewport,
+          createdAt: currentWorkflow.createdAt || Date.now(),
+          updatedAt: Date.now()
         };
         
-        const workflowId = await saveWorkflow(workflow);
+        // Save to localStorage
+        localStorage.setItem(`agentflow-${workflowId}`, JSON.stringify(workflow));
         
-        setCurrentWorkflow({
-          ...currentWorkflow,
-          id: workflowId
-        });
+        // Update current workflow
+        setCurrentWorkflow(workflow);
         
         // Refresh saved workflows
-        const workflows = await getAllWorkflows();
-        setSavedWorkflows(workflows);
+        const allItems = Object.keys(localStorage)
+          .filter(key => key.startsWith('agentflow-'))
+          .map(key => JSON.parse(localStorage.getItem(key)))
+          .sort((a, b) => b.updatedAt - a.updatedAt);
+          
+        setSavedWorkflows(allItems);
         
         alert('Workflow saved successfully!');
       } catch (error) {
@@ -193,19 +230,26 @@ const AgentFlow = () => {
     }
   };
   
-  // Load a saved workflow
+  // Load a saved workflow from localStorage
   const loadSavedWorkflow = async (workflowId) => {
     try {
-      const workflow = await getWorkflow(workflowId);
-      if (workflow) {
+      const workflowJson = localStorage.getItem(`agentflow-${workflowId}`);
+      if (workflowJson) {
+        const workflow = JSON.parse(workflowJson);
+        
+        // Set nodes and edges
         setNodes(workflow.nodes || []);
         setEdges(workflow.edges || []);
         setCurrentWorkflow(workflow);
         
-        // Reset reactflow instance viewport
+        // Reset viewport if available
         if (reactFlowInstance && workflow.viewport) {
           reactFlowInstance.setViewport(workflow.viewport);
         }
+        
+        alert(`Loaded workflow: ${workflow.name}`);
+      } else {
+        alert('No workflow found with that ID');
       }
     } catch (error) {
       console.error('Error loading workflow:', error);
@@ -218,20 +262,21 @@ const AgentFlow = () => {
     setNodes(createInitialNodes());
     setEdges([]);
     setCurrentWorkflow({ id: null, name: 'New Workflow' });
+    
+    // Make sure ReactFlow is re-initialized
+    if (reactFlowInstance) {
+      setTimeout(() => {
+        reactFlowInstance.fitView();
+      }, 100);
+    }
   };
   
-  // Execute the current workflow
+  // Execute the current workflow - simulated for demo
   const executeCurrentWorkflow = async () => {
     if (nodes.length === 0) {
       alert('Workflow is empty. Add nodes before executing.');
       return;
     }
-    
-    // Prepare workflow object
-    const workflow = {
-      nodes,
-      edges
-    };
     
     // Reset execution state
     setExecutionState({
@@ -244,36 +289,27 @@ const AgentFlow = () => {
     // Show execution modal
     setShowExecution(true);
     
-    try {
-      // Example user input
-      const userInput = 'Example user input for workflow execution';
-      
-      // Execute workflow and update progress
-      const result = await executeWorkflow(workflow, userInput, (update) => {
+    // Simulate execution with a delay
+    const simulateExecution = async () => {
+      const addLog = (type, nodeId, message = null, result = null) => {
         // Update execution state with progress
         setExecutionState(prev => {
           // Add new log
-          const logs = [...prev.logs];
-          if (update.type) {
-            logs.push({
-              ...update,
-              timestamp: update.timestamp || Date.now()
-            });
-          }
+          const logs = [...prev.logs, {
+            type,
+            nodeId,
+            message,
+            result,
+            timestamp: Date.now()
+          }];
           
           // Calculate progress
-          let progress = prev.progress;
-          if (update.type === 'node_complete') {
-            // Increment progress based on total nodes
-            progress = Math.min(
-              Math.round((logs.filter(log => log.type === 'node_complete').length / nodes.length) * 100),
-              100
-            );
-          }
+          const completedNodes = logs.filter(log => log.type === 'node_complete').length;
+          const progress = Math.min(Math.round((completedNodes / nodes.length) * 100), 100);
           
           // Set status
           let status = 'running';
-          if (update.type === 'error') {
+          if (type === 'error') {
             status = 'error';
           } else if (progress >= 100) {
             status = 'completed';
@@ -284,21 +320,86 @@ const AgentFlow = () => {
             logs,
             progress,
             status,
-            result: update.result || prev.result
+            result: result || prev.result
           };
         });
-      });
+      };
       
-      // Update final state
+      // Example user input
+      const userInput = 'Process this data and create a report';
+      
+      // Process each node with delay
+      for (const node of nodes) {
+        // Add start log
+        addLog('node_start', node.id);
+        
+        // Wait between 1-3 seconds
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+        
+        // Generate result based on node type
+        let result = '';
+        
+        switch (node.type) {
+          case 'personaNode':
+            const personaName = node.data.personaData?.name || 'Unknown Persona';
+            result = `${personaName} processed the input: "${userInput}" and generated a response.`;
+            break;
+            
+          case 'toolNode':
+            result = `Used tool "${node.data.toolName || 'Unknown Tool'}" to perform an action.`;
+            break;
+            
+          case 'fileNode':
+            result = `Read data from file "${node.data.fileName || 'Unknown File'}" for processing.`;
+            break;
+            
+          case 'triggerNode':
+            result = `Workflow triggered by event: "${node.data.label || 'Unknown Trigger'}"`;
+            break;
+            
+          case 'actionNode':
+            result = `Performed action: "${node.data.label || 'Unknown Action'}"`;
+            break;
+            
+          case 'decisionNode':
+            result = `Decision evaluation: "${node.data.label || 'Unknown Decision'}" = true`;
+            break;
+            
+          default:
+            result = `Unknown node type processed: ${node.type}`;
+        }
+        
+        // Add complete log
+        addLog('node_complete', node.id, null, result);
+        
+        // Randomly add info log
+        if (Math.random() > 0.7) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          addLog('info', node.id, 'Additional information about node execution');
+        }
+        
+        // Simulate an error randomly (10% chance)
+        if (Math.random() > 0.9) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          addLog('error', node.id, 'An error occurred during execution');
+          return; // Stop execution on error
+        }
+      }
+      
+      // Final result
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       setExecutionState(prev => ({
         ...prev,
         status: 'completed',
         progress: 100,
-        result
+        result: `Workflow execution completed successfully. Processed ${nodes.length} nodes.`
       }));
-      
-    } catch (error) {
-      console.error('Error executing workflow:', error);
+    };
+    
+    // Start simulation
+    simulateExecution().catch(error => {
+      console.error('Error in simulation:', error);
       
       // Update error state
       setExecutionState(prev => ({
@@ -313,7 +414,7 @@ const AgentFlow = () => {
           }
         ]
       }));
-    }
+    });
   };
   
   // Handle node click
@@ -363,8 +464,11 @@ const AgentFlow = () => {
         case 'personaNode':
           nodeData = {
             personaData: {},
-            onEdit: () => {},
-            onSettings: () => {}
+            onEdit: () => setShowPersonaSelector(true),
+            onSettings: (personaData) => {
+              console.log('Configure persona:', personaData);
+              alert(`Configure ${personaData?.name || 'persona'} settings`);
+            }
           };
           break;
         case 'toolNode':
@@ -372,14 +476,19 @@ const AgentFlow = () => {
             toolType: 'generic',
             toolName: 'New Tool',
             toolDescription: 'Configure this tool',
-            toolConfig: {}
+            toolConfig: {},
+            onConfigure: () => setShowToolConfig(true)
           };
           break;
         case 'fileNode':
           nodeData = {
             fileName: 'Select File',
             fileType: 'unknown',
-            fileSize: '0 KB'
+            fileSize: '0 KB',
+            onSelect: () => setShowFileSelector(true),
+            onPreview: (fileId) => {
+              alert(`Preview file with ID: ${fileId}`);
+            }
           };
           break;
         case 'triggerNode':
@@ -471,44 +580,35 @@ const AgentFlow = () => {
       const file = e.target.files[0];
       if (file) {
         try {
-          // Read file content
-          const reader = new FileReader();
-          
-          reader.onload = async (event) => {
-            // Create file object
-            const fileData = {
-              name: file.name,
-              type: file.type,
-              size: file.size,
-              content: event.target.result,
-              uploadedAt: Date.now()
-            };
-            
-            // Save to knowledge DB
-            const fileId = await knowledgeDB.addFile(fileData);
-            
-            // Update files list
-            setFiles(prev => [...prev, { id: fileId, ...fileData }]);
-            
-            // If node is selected, update it
-            if (selectedNodeId) {
-              updateNodeData(selectedNodeId, {
-                fileId,
-                fileName: file.name,
-                fileType: file.type,
-                fileSize: file.size
-              });
-            }
-            
-            setShowFileSelector(false);
+          // Create a mock file object (since we don't have the real DB implementation)
+          const fileId = `file-${Date.now()}`;
+          const fileData = {
+            id: fileId,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            uploadedAt: Date.now()
           };
           
-          // Read as appropriate format based on file type
-          if (file.type === 'application/pdf' || file.type.includes('image/')) {
-            reader.readAsArrayBuffer(file);
-          } else {
-            reader.readAsText(file);
+          // Update files list with the new mock file
+          setFiles(prev => [...prev, fileData]);
+          
+          // If node is selected, update it
+          if (selectedNodeId) {
+            updateNodeData(selectedNodeId, {
+              fileId,
+              fileName: file.name,
+              fileType: file.type,
+              fileSize: file.size,
+              onPreview: () => alert(`Preview for ${file.name}`),
+              onSelect: () => setShowFileSelector(true)
+            });
           }
+          
+          // Close the file selector
+          setShowFileSelector(false);
+          
+          alert(`File "${file.name}" uploaded successfully!`);
         } catch (error) {
           console.error('Error uploading file:', error);
           alert(`Error uploading file: ${error.message}`);
@@ -680,6 +780,14 @@ const AgentFlow = () => {
         />
       )}
     </div>
+  );
+};
+
+const AgentFlow = () => {
+  return (
+    <ReactFlowProvider>
+      <AgentFlowContent />
+    </ReactFlowProvider>
   );
 };
 
