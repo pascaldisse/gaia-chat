@@ -214,39 +214,27 @@ export const createNodeTool = async (toolNode) => {
             
             // Format search results
             const formattedResults = results.map(file => {
-              // Handle different content types safely
-              let content = "";
-              
-              if (typeof file.content === 'string') {
-                content = file.content;
-              } else if (file.content instanceof ArrayBuffer) {
-                return `[${file.name}]: Binary content (ArrayBuffer) - cannot display text snippet`;
-              } else if (file.content && typeof file.content === 'object') {
-                return `[${file.name}]: Object content - cannot display text snippet`;
-              } else if (file.content === null || file.content === undefined) {
-                return `[${file.name}]: No content available`;
-              } else {
-                try {
-                  content = String(file.content);
-                } catch (err) {
-                  return `[${file.name}]: Content cannot be converted to string`;
-                }
-              }
-              
-              // Only try to extract snippet if content is a string
               try {
-                const matchIndex = content.toLowerCase().indexOf(query.toLowerCase());
-                if (matchIndex >= 0) {
-                  const snippetStart = Math.max(0, matchIndex - 100);
-                  const snippetEnd = Math.min(content.length, matchIndex + 100);
-                  const snippet = content.substring(snippetStart, snippetEnd);
-                  return `[${file.name}]: "${snippet}..."`;
-                } else {
-                  return `[${file.name}]: File found but no exact text match`;
+                // Use parsedContent if available (for PDFs and other binary files)
+                const content = file.parsedContent || file.content || '';
+                
+                // Only try to extract snippet if content is a string
+                if (typeof content === 'string') {
+                  const matchIndex = content.toLowerCase().indexOf(query.toLowerCase());
+                  if (matchIndex >= 0) {
+                    const snippetStart = Math.max(0, matchIndex - 100);
+                    const snippetEnd = Math.min(content.length, matchIndex + 100);
+                    const snippet = content.substring(snippetStart, snippetEnd);
+                    return `[${file.name}]: "${snippet}..."`;
+                  }
                 }
+                
+                // Fallback if no exact match or content isn't a string
+                return `[${file.name}]: File matched query but no exact text location found`;
+                
               } catch (err) {
                 console.error("Error processing file content:", err);
-                return `[${file.name}]: Error extracting snippet`;
+                return `[${file.name}]: Error extracting snippet - ${err.message}`;
               }
             }).join('\n\n');
             
@@ -693,28 +681,42 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
           } else {
             const file = files[0];
             
-            // Handle different content types safely
-            let contentStr = "No content available";
-            
-            if (typeof file.content === 'string') {
-              contentStr = file.content;
-            } else if (file.content instanceof ArrayBuffer) {
-              contentStr = "Binary content (ArrayBuffer) - cannot display as text";
-            } else if (file.content && typeof file.content === 'object') {
-              try {
-                contentStr = JSON.stringify(file.content, null, 2);
-              } catch (err) {
-                contentStr = "Object content - cannot display as text";
+            // Parse file content using the existing FileParser utility
+            try {
+              const { parseFileContent } = await import('../../utils/FileParser');
+              const parsedContent = await parseFileContent(
+                file.content,
+                file.type,
+                file.name
+              );
+              
+              result = `File: ${file.name}\nSize: ${file.size || 'unknown'} bytes\nType: ${file.type || 'unknown'}\n\nContent:\n${parsedContent}`;
+            } catch (parseError) {
+              console.error("Error parsing file content:", parseError);
+              
+              // Fallback to basic content handling if parsing fails
+              let contentStr = "No content available";
+              
+              if (typeof file.content === 'string') {
+                contentStr = file.content;
+              } else if (file.content instanceof ArrayBuffer) {
+                contentStr = "Binary content (ArrayBuffer) - cannot display as text";
+              } else if (file.content && typeof file.content === 'object') {
+                try {
+                  contentStr = JSON.stringify(file.content, null, 2);
+                } catch (err) {
+                  contentStr = "Object content - cannot display as text";
+                }
+              } else if (file.content !== null && file.content !== undefined) {
+                try {
+                  contentStr = String(file.content);
+                } catch (err) {
+                  contentStr = "Content cannot be converted to string";
+                }
               }
-            } else if (file.content !== null && file.content !== undefined) {
-              try {
-                contentStr = String(file.content);
-              } catch (err) {
-                contentStr = "Content cannot be converted to string";
-              }
+              
+              result = `File: ${file.name}\nSize: ${file.size || 'unknown'} bytes\nType: ${file.type || 'unknown'}\n\nContent:\n${contentStr}\n\n(Error parsing file content: ${parseError.message})`;
             }
-            
-            result = `File: ${file.name}\nSize: ${file.size || 'unknown'} bytes\nType: ${file.type || 'unknown'}\n\nContent:\n${contentStr}`;
           }
         } catch (error) {
           console.error("Error reading file in file node:", error);

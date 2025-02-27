@@ -127,29 +127,54 @@ export const knowledgeDB = {
     await db.delete(KNOWLEDGE_STORE, fileId);
   },
   
-  // Search files by content (basic implementation)
+  // Search files by content (advanced implementation with PDF parsing)
   async searchFiles(query) {
-    const db = await dbPromise;
-    const allFiles = await db.getAll(KNOWLEDGE_STORE);
-    
-    // Filter files that have content that can be searched
-    return allFiles.filter(file => {
-      if (!file.content) return false;
+    try {
+      const db = await dbPromise;
+      const allFiles = await db.getAll(KNOWLEDGE_STORE);
+      const { parseFileContent } = await import('../utils/FileParser');
       
-      // Only search in text content
-      if (typeof file.content === 'string') {
+      // Process files and search in their content
+      const results = [];
+      
+      for (const file of allFiles) {
+        if (!file.content) continue;
+        
         try {
-          return file.content.toLowerCase().includes(query.toLowerCase());
+          // If content is already a string, search directly
+          if (typeof file.content === 'string') {
+            if (file.content.toLowerCase().includes(query.toLowerCase())) {
+              results.push(file);
+            }
+            continue;
+          }
+          
+          // For binary content (like PDFs), parse it first
+          const parsedContent = await parseFileContent(
+            file.content,
+            file.type,
+            file.name
+          );
+          
+          // Search in the parsed content
+          if (parsedContent && 
+              typeof parsedContent === 'string' && 
+              parsedContent.toLowerCase().includes(query.toLowerCase())) {
+            // Save the parsed content to make it available for display
+            file.parsedContent = parsedContent;
+            results.push(file);
+          }
         } catch (error) {
-          console.error(`Error searching in file ${file.id}:`, error);
-          return false;
+          console.error(`Error processing file ${file.id || file.name} for search:`, error);
+          // Continue with other files even if one fails
         }
       }
       
-      // For now, non-string content is considered a non-match
-      // Could be extended to search in JSON objects, extracted text from PDFs, etc.
-      return false;
-    });
+      return results;
+    } catch (error) {
+      console.error("Error in searchFiles:", error);
+      return [];
+    }
   }
 };
 
