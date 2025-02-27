@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Chat from './components/Chat';
 import Sidebar from './components/Sidebar';
+import AgentFlow from './components/AgentFlow/AgentFlow';
 import { chatDB } from './services/db';
 import './styles/Sidebar.css';
 import './App.css';
@@ -22,6 +23,7 @@ function App() {
   const [showPersonaManager, setShowPersonaManager] = useState(false);
   const [editingPersona, setEditingPersona] = useState(null);
   const [activePersonas, setActivePersonas] = useState([]);
+  const [viewMode, setViewMode] = useState('chat'); // 'chat' or 'agentflow'
 
   // Load chat history from database
   useEffect(() => {
@@ -201,17 +203,38 @@ function App() {
         createNewPersona={createNewPersona}
         onEditPersona={setEditingPersona}
       />
-      <Chat 
-        currentChat={currentChat} 
-        setCurrentChat={setCurrentChat} 
-        model={model}
-        systemPrompt={systemPrompt}
-        personas={personas}
-        activePersonas={activePersonas}
-        setActivePersonas={setActivePersonas}
-        selectedChatId={selectedChatId}
-        chatHistory={chatHistory}
-      />
+      
+      <div className="view-toggle">
+        <button 
+          className={viewMode === 'chat' ? 'active' : ''} 
+          onClick={() => setViewMode('chat')}
+        >
+          Chat
+        </button>
+        <button 
+          className={viewMode === 'agentflow' ? 'active' : ''} 
+          onClick={() => setViewMode('agentflow')}
+        >
+          Agent Workflow
+        </button>
+      </div>
+      
+      {viewMode === 'chat' ? (
+        <Chat 
+          currentChat={currentChat} 
+          setCurrentChat={setCurrentChat} 
+          model={model}
+          systemPrompt={systemPrompt}
+          personas={personas}
+          activePersonas={activePersonas}
+          setActivePersonas={setActivePersonas}
+          selectedChatId={selectedChatId}
+          chatHistory={chatHistory}
+        />
+      ) : (
+        <AgentFlow />
+      )}
+      
       {editingPersona && (
         <PersonaManager 
           persona={editingPersona}

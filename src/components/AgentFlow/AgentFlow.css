@@ -1,0 +1,177 @@
+.agent-flow-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 20px;
+  background-color: #f5f7fa;
+}
+
+.agent-flow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.agent-flow-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.agent-flow-actions button {
+  padding: 8px 16px;
+  margin-left: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.save-button {
+  background-color: #4caf50;
+  color: white;
+}
+
+.save-button:hover {
+  background-color: #45a049;
+}
+
+.load-button {
+  background-color: #2196f3;
+  color: white;
+}
+
+.load-button:hover {
+  background-color: #0b7dda;
+}
+
+.agent-flow-tools {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.agent-flow-tool {
+  cursor: grab;
+}
+
+.tool-node {
+  width: 100px;
+  padding: 10px;
+  text-align: center;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+  transition: transform 0.2s;
+}
+
+.tool-node:hover {
+  transform: scale(1.05);
+}
+
+.tool-node.trigger {
+  background-color: #00a3bf;
+}
+
+.tool-node.action {
+  background-color: #3498db;
+}
+
+.tool-node.decision {
+  background-color: #2ecc71;
+}
+
+.agent-flow-canvas {
+  flex: 1;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Node styling */
+.agent-flow-node {
+  padding: 10px;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  width: 180px;
+  user-select: none;
+  position: relative;
+}
+
+.agent-flow-node.trigger {
+  background-color: #00a3bf;
+  color: white;
+}
+
+.agent-flow-node.action {
+  background-color: #3498db;
+  color: white;
+}
+
+.agent-flow-node.action.teal {
+  background-color: #00a3bf;
+}
+
+.agent-flow-node.action.blue {
+  background-color: #3498db;
+}
+
+.agent-flow-node.decision {
+  background-color: #2ecc71;
+  color: white;
+  transform: rotate(45deg);
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agent-flow-node.decision .node-label {
+  transform: rotate(-45deg);
+}
+
+.node-label {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.node-icons {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+}
+
+.node-icon {
+  width: 20px;
+  height: 20px;
+  margin-left: 5px;
+}
+
+.node-add-icon {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.node-add-icon:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}

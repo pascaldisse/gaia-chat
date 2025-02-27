@@ -93,5 +93,41 @@
 .app {
   display: flex;
   height: 100vh;
+  position: relative;
+}
+
+.view-toggle {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  gap: 10px;
+  background-color: rgba(47, 49, 54, 0.9);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.view-toggle button {
+  background-color: #36393f;
+  color: #dcddde;
+  border: 1px solid #202225;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.view-toggle button:hover {
+  background-color: #40444b;
+}
+
+.view-toggle button.active {
+  background-color: #5865f2;
+  color: white;
+  border-color: #4752c4;
 }
 
