@@ -25,7 +25,8 @@
   color: white;
 }
 
-.agent-flow-actions button {
+.agent-flow-actions button,
+.agent-flow-actions select {
   padding: 8px 16px;
   margin-left: 10px;
   border: none;
@@ -33,6 +34,7 @@
   cursor: pointer;
   font-weight: 600;
   transition: background-color 0.2s;
+  font-size: 14px;
 }
 
 .save-button {
@@ -44,13 +46,51 @@
   background-color: #3ca374;
 }
 
-.load-button {
+.load-button,
+.workflow-selector {
   background-color: #5865f2;
   color: white;
 }
 
-.load-button:hover {
+.load-button:hover,
+.workflow-selector:hover {
   background-color: #4752c4;
+}
+
+.new-button {
+  background-color: #4f545c;
+  color: white;
+}
+
+.new-button:hover {
+  background-color: #5d6269;
+}
+
+.execute-button {
+  background-color: #f04747;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.execute-button:hover {
+  background-color: #d84040;
+}
+
+.execute-button:disabled {
+  background-color: #72767d;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.workflow-selector {
+  min-width: 150px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='18px' height='18px'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
 }
 
 .agent-flow-tools {
@@ -94,6 +134,25 @@
   background-color: #43b581;
 }
 
+.tool-node.persona {
+  background-color: #7289da;
+}
+
+.tool-node.tool {
+  background-color: #ff9800;
+}
+
+.tool-node.file {
+  background-color: #607d8b;
+}
+
+.nodes-divider {
+  width: 1px;
+  height: 30px;
+  background-color: #4f545c;
+  margin: 0 10px;
+}
+
 .agent-flow-canvas {
   flex: 1;
   margin: 0 20px 20px;
@@ -105,22 +164,28 @@
 
 /* Node styling */
 .agent-flow-node {
-  padding: 10px;
-  border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  width: 180px;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  width: 200px;
   user-select: none;
   position: relative;
+  color: white;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
+.agent-flow-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Original node types */
 .agent-flow-node.trigger {
   background-color: #00a3bf;
-  color: white;
 }
 
 .agent-flow-node.action {
   background-color: #5865f2;
-  color: white;
 }
 
 .agent-flow-node.action.teal {
@@ -133,7 +198,6 @@
 
 .agent-flow-node.decision {
   background-color: #43b581;
-  color: white;
   transform: rotate(45deg);
   width: 120px;
   height: 120px;
@@ -146,16 +210,41 @@
   transform: rotate(-45deg);
 }
 
+/* New node types */
+.agent-flow-node.persona {
+  background-color: #7289da;
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-flow-node.tool {
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-flow-node.file {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Common node elements */
 .node-label {
   font-weight: 600;
   font-size: 14px;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+}
+
+.node-description {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 10px;
+  line-height: 1.3;
 }
 
 .node-icons {
   position: absolute;
-  top: 5px;
-  right: 5px;
+  top: 8px;
+  right: 8px;
   display: flex;
 }
 
@@ -167,12 +256,12 @@
 
 .node-add-icon {
   position: absolute;
-  bottom: 5px;
-  right: 5px;
+  bottom: 8px;
+  right: 8px;
   background-color: rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -181,6 +270,63 @@
 
 .node-add-icon:hover {
   background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Persona node specific */
+.node-attributes {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.attribute-chip {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Tool node specific */
+.node-file-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 10px;
+  opacity: 0.8;
+}
+
+/* Action buttons */
+.node-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.node-action-button {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.node-action-button:hover {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.node-action-button.settings {
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.node-action-button.preview {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Adjust ReactFlow background */
