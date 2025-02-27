@@ -132,10 +132,24 @@ export const knowledgeDB = {
     const db = await dbPromise;
     const allFiles = await db.getAll(KNOWLEDGE_STORE);
     
-    // Simple string matching search (could be improved with proper indexing)
-    return allFiles.filter(file => 
-      file.content && file.content.toLowerCase().includes(query.toLowerCase())
-    );
+    // Filter files that have content that can be searched
+    return allFiles.filter(file => {
+      if (!file.content) return false;
+      
+      // Only search in text content
+      if (typeof file.content === 'string') {
+        try {
+          return file.content.toLowerCase().includes(query.toLowerCase());
+        } catch (error) {
+          console.error(`Error searching in file ${file.id}:`, error);
+          return false;
+        }
+      }
+      
+      // For now, non-string content is considered a non-match
+      // Could be extended to search in JSON objects, extracted text from PDFs, etc.
+      return false;
+    });
   }
 };
 

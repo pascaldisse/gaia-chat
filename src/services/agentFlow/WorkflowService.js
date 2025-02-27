@@ -125,6 +125,25 @@ export const createPersonaAgent = async (personaNode, tools = []) => {
     throw new Error("Invalid persona data in node");
   }
   
+  // Handle empty tools array
+  if (!tools || tools.length === 0) {
+    // Create a dummy tool so the agent creation doesn't fail
+    tools = [
+      new DynamicTool({
+        name: "default_tool",
+        description: "A default tool that doesn't do anything",
+        func: async (input) => {
+          return "This is a placeholder tool. Connect this persona to tools or files to enhance its capabilities.";
+        }
+      })
+    ];
+  }
+  
+  // Format tools for prompt template
+  const toolStrings = tools.map(tool => 
+    `- ${tool.name}: ${tool.description || "No description"}`
+  ).join("\n");
+  
   // Create a prompt template for the agent
   const prompt = ChatPromptTemplate.fromMessages([
     ["system", `You are ${personaData.name}. ${personaData.systemPrompt || 'Help users complete tasks.'}
@@ -136,36 +155,41 @@ Current attributes:
 - Confidence: ${personaData.confidence || 5}/10
 
 You have access to the following tools:
-{tools}
+${toolStrings}
 
 {agent_scratchpad}
 `],
     ["human", "{input}"]
   ]);
   
-  // Create LLM instance
+  // Create LLM instance with fallback to a default model if not specified
   const llm = new ChatDeepInfra({
     apiKey: API_KEY,
-    modelName: personaData.model,
+    modelName: personaData.model || "deepinfra/mixtral-8x7b-instruct",
     temperature: (personaData.creativity || 5) / 10,
     maxTokens: 1000,
     streaming: true,
   });
   
-  // Create the agent
-  const agent = await createOpenAIFunctionsAgent({
-    llm,
-    tools,
-    prompt,
-  });
-  
-  // Create and return the agent executor
-  return new AgentExecutor({
-    agent,
-    tools,
-    maxIterations: 3,
-    returnIntermediateSteps: true,
-  });
+  try {
+    // Create the agent
+    const agent = await createOpenAIFunctionsAgent({
+      llm,
+      tools,
+      prompt,
+    });
+    
+    // Create and return the agent executor
+    return new AgentExecutor({
+      agent,
+      tools,
+      maxIterations: 3,
+      returnIntermediateSteps: true,
+    });
+  } catch (error) {
+    console.error("Error creating agent:", error);
+    throw new Error(`Failed to create agent: ${error.message}`);
+  }
 };
 
 // Create a LangChain tool from a tool node
@@ -190,14 +214,40 @@ export const createNodeTool = async (toolNode) => {
             
             // Format search results
             const formattedResults = results.map(file => {
-              // Extract a snippet around the matching text
-              const content = file.content || "";
-              const matchIndex = content.toLowerCase().indexOf(query.toLowerCase());
-              const snippetStart = Math.max(0, matchIndex - 100);
-              const snippetEnd = Math.min(content.length, matchIndex + 100);
-              const snippet = content.substring(snippetStart, snippetEnd);
+              // Handle different content types safely
+              let content = "";
               
-              return `[${file.name}]: "${snippet}..."`;
+              if (typeof file.content === 'string') {
+                content = file.content;
+              } else if (file.content instanceof ArrayBuffer) {
+                return `[${file.name}]: Binary content (ArrayBuffer) - cannot display text snippet`;
+              } else if (file.content && typeof file.content === 'object') {
+                return `[${file.name}]: Object content - cannot display text snippet`;
+              } else if (file.content === null || file.content === undefined) {
+                return `[${file.name}]: No content available`;
+              } else {
+                try {
+                  content = String(file.content);
+                } catch (err) {
+                  return `[${file.name}]: Content cannot be converted to string`;
+                }
+              }
+              
+              // Only try to extract snippet if content is a string
+              try {
+                const matchIndex = content.toLowerCase().indexOf(query.toLowerCase());
+                if (matchIndex >= 0) {
+                  const snippetStart = Math.max(0, matchIndex - 100);
+                  const snippetEnd = Math.min(content.length, matchIndex + 100);
+                  const snippet = content.substring(snippetStart, snippetEnd);
+                  return `[${file.name}]: "${snippet}..."`;
+                } else {
+                  return `[${file.name}]: File found but no exact text match`;
+                }
+              } catch (err) {
+                console.error("Error processing file content:", err);
+                return `[${file.name}]: Error extracting snippet`;
+              }
             }).join('\n\n');
             
             return `Found ${results.length} document(s) matching "${query}":\n\n${formattedResults}`;
@@ -223,7 +273,29 @@ export const createNodeTool = async (toolNode) => {
             }
             
             const file = files[0];
-            return `Content of file "${file.name}":\n\n${file.content || "No content available"}`;
+            
+            // Handle different content types safely
+            let contentStr = "No content available";
+            
+            if (typeof file.content === 'string') {
+              contentStr = file.content;
+            } else if (file.content instanceof ArrayBuffer) {
+              contentStr = "Binary content (ArrayBuffer) - cannot display as text";
+            } else if (file.content && typeof file.content === 'object') {
+              try {
+                contentStr = JSON.stringify(file.content, null, 2);
+              } catch (err) {
+                contentStr = "Object content - cannot display as text";
+              }
+            } else if (file.content !== null && file.content !== undefined) {
+              try {
+                contentStr = String(file.content);
+              } catch (err) {
+                contentStr = "Content cannot be converted to string";
+              }
+            }
+            
+            return `Content of file "${file.name}":\n\n${contentStr}`;
           } catch (error) {
             console.error("Error in file reading tool:", error);
             return `Error reading file ${fileId}: ${error.message}`;
@@ -620,7 +692,29 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
             result = `File with ID ${fileId} not found.`;
           } else {
             const file = files[0];
-            result = `File: ${file.name}\nSize: ${file.size} bytes\nType: ${file.type}\n\nContent:\n${file.content || "No content available"}`;
+            
+            // Handle different content types safely
+            let contentStr = "No content available";
+            
+            if (typeof file.content === 'string') {
+              contentStr = file.content;
+            } else if (file.content instanceof ArrayBuffer) {
+              contentStr = "Binary content (ArrayBuffer) - cannot display as text";
+            } else if (file.content && typeof file.content === 'object') {
+              try {
+                contentStr = JSON.stringify(file.content, null, 2);
+              } catch (err) {
+                contentStr = "Object content - cannot display as text";
+              }
+            } else if (file.content !== null && file.content !== undefined) {
+              try {
+                contentStr = String(file.content);
+              } catch (err) {
+                contentStr = "Content cannot be converted to string";
+              }
+            }
+            
+            result = `File: ${file.name}\nSize: ${file.size || 'unknown'} bytes\nType: ${file.type || 'unknown'}\n\nContent:\n${contentStr}`;
           }
         } catch (error) {
           console.error("Error reading file in file node:", error);
