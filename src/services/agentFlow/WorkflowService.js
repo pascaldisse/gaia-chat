@@ -204,28 +204,64 @@ export const createNodeTool = async (toolNode) => {
         description: toolDescription || "Search for information in documents",
         func: async (query) => {
           try {
+            console.log(`ToolNode executing search with query: "${query}"`);
+            
+            // Validate input
+            if (!query || typeof query !== 'string' || query.trim().length === 0) {
+              return "Please provide a valid search query with at least one keyword.";
+            }
+            
             // Real implementation using knowledgeDB
             const { knowledgeDB } = await import('../db');
             const results = await knowledgeDB.searchFiles(query);
             
             if (results.length === 0) {
-              return "No matching documents found.";
+              console.log(`No documents matched the search query: "${query}"`);
+              // Provide more helpful error message with suggestions
+              return `No matching documents found for "${query}". 
+Try using:
+- Simpler keywords
+- Different terms for the same concept
+- Check for typos
+- Use more general terms`;
             }
             
             // Format search results
             const formattedResults = results.map(file => {
               try {
+                console.log(`Processing match in file: ${file.name}, match type: ${file.matchType || 'unknown'}`);
+                
                 // Use parsedContent if available (for PDFs and other binary files)
                 const content = file.parsedContent || file.content || '';
                 
                 // Only try to extract snippet if content is a string
                 if (typeof content === 'string') {
-                  const matchIndex = content.toLowerCase().indexOf(query.toLowerCase());
+                  // Try to find the exact query first
+                  let matchIndex = content.toLowerCase().indexOf(query.toLowerCase());
+                  
+                  // If no exact match but we got a fuzzy/partial match, find the first matching word
+                  if (matchIndex < 0 && (file.matchType === 'fuzzy' || file.matchType === 'partial')) {
+                    const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+                    for (const word of queryWords) {
+                      const wordIndex = content.toLowerCase().indexOf(word);
+                      if (wordIndex >= 0) {
+                        matchIndex = wordIndex;
+                        break;
+                      }
+                    }
+                  }
+                  
                   if (matchIndex >= 0) {
-                    const snippetStart = Math.max(0, matchIndex - 100);
-                    const snippetEnd = Math.min(content.length, matchIndex + 100);
-                    const snippet = content.substring(snippetStart, snippetEnd);
-                    return `[${file.name}]: "${snippet}..."`;
+                    // Extract a larger context window for better understanding
+                    const snippetStart = Math.max(0, matchIndex - 200);
+                    const snippetEnd = Math.min(content.length, matchIndex + 200);
+                    let snippet = content.substring(snippetStart, snippetEnd);
+                    
+                    // Add ellipsis if we're not at the beginning/end
+                    if (snippetStart > 0) snippet = "..." + snippet;
+                    if (snippetEnd < content.length) snippet = snippet + "...";
+                    
+                    return `[${file.name}${file.matchType ? ` - ${file.matchType} match` : ''}]: "${snippet}"`;
                   }
                 }
                 
@@ -566,7 +602,48 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
     // Process node based on type
     switch (node.type) {
       case 'personaNode':
-        // Get connected tool nodes and file nodes for tools
+        // Gather all data from connected nodes first before executing the persona
+        const connectedFilesData = [];
+        
+        // Collect data from nodes connected to this persona first
+        const incomingNodeIds = edges
+          .filter(edge => edge.target === nodeId)
+          .map(edge => edge.source);
+        
+        // Process file nodes first to get their content before running the agent
+        for (const connectedId of incomingNodeIds) {
+          const connectedNode = nodesMap.get(connectedId);
+          if (!connectedNode) continue;
+          
+          // Process file nodes first to get their content
+          if (connectedNode.type === 'fileNode') {
+            try {
+              // Execute the file node to get its content if not already processed
+              if (!memory.results || !memory.results[connectedId]) {
+                // Execute the file node first
+                const fileResult = await executeNode(
+                  connectedId,
+                  nodesMap,
+                  edges,
+                  input,
+                  memory,
+                  onUpdate
+                );
+                
+                // Store this result
+                connectedFilesData.push(fileResult);
+              } else {
+                // Already processed, just get the result
+                connectedFilesData.push(memory.results[connectedId]);
+              }
+            } catch (error) {
+              console.error(`Error processing connected file node ${connectedId}:`, error);
+              connectedFilesData.push(`Error processing file: ${error.message}`);
+            }
+          }
+        }
+        
+        // Get outgoing tool nodes that this persona can use
         const toolNodeIds = edges
           .filter(edge => edge.source === nodeId && nodesMap.get(edge.target)?.type === 'toolNode')
           .map(edge => edge.target);
@@ -618,8 +695,23 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                     return `No file matching "${fileQuery}" found. Available files: ${files.map(f => f.name).join(', ')}`;
                   }
                   
-                  // Return the first matching file's content
-                  return `Content of "${matchingFiles[0].name}":\n\n${matchingFiles[0].content || "No content available"}`;
+                  // Parse the file content if needed
+                  const { parseFileContent } = await import('../../utils/FileParser');
+                  let content = matchingFiles[0].content;
+                  if (content && typeof content !== 'string') {
+                    try {
+                      content = await parseFileContent(
+                        content,
+                        matchingFiles[0].type,
+                        matchingFiles[0].name
+                      );
+                    } catch (error) {
+                      console.error("Error parsing file content:", error);
+                      content = "Error parsing file content";
+                    }
+                  }
+                  
+                  return `Content of "${matchingFiles[0].name}":\n\n${content || "No content available"}`;
                 }
                 
                 // Otherwise, list available files
@@ -645,13 +737,20 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
           files: fileNodeIds.length
         };
         
+        // Enhance the input with file content if available
+        let enhancedInput = input;
+        if (connectedFilesData.length > 0) {
+          enhancedInput = `${input}\n\nHere are the files for you to process:\n\n${connectedFilesData.join('\n\n')}`;
+        }
+        
         // Track progress in the execution
         const agentResult = await agent.invoke({ 
-          input,
+          input: enhancedInput,
           memory: nodeMemory
         });
         
         // Store full agent result in memory
+        if (!memory.results) memory.results = {};
         memory.results[nodeId] = agentResult;
         
         // For the workflow, we return just the output
@@ -683,6 +782,15 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
             
             // Parse file content using the existing FileParser utility
             try {
+              // Helper to format file size
+              const formatFileSize = (bytes) => {
+                if (!bytes || isNaN(bytes)) return 'unknown';
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                if (bytes === 0) return '0 Bytes';
+                const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[Math.min(i, sizes.length - 1)]}`;
+              };
+            
               const { parseFileContent } = await import('../../utils/FileParser');
               const parsedContent = await parseFileContent(
                 file.content,
@@ -690,12 +798,45 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                 file.name
               );
               
-              result = `File: ${file.name}\nSize: ${file.size || 'unknown'} bytes\nType: ${file.type || 'unknown'}\n\nContent:\n${parsedContent}`;
+              // Get the file size from file node data if available, otherwise use the size from the file
+              let fileSize = 'unknown';
+              const fileNodeData = node.data;
+              if (fileNodeData && fileNodeData.fileSize) {
+                fileSize = formatFileSize(fileNodeData.fileSize);
+              } else if (file.size) {
+                fileSize = formatFileSize(file.size);
+              }
+              
+              // Add file size to the file object for future use
+              file.size = file.size || node.data.fileSize;
+              
+              result = `File: ${file.name}\nSize: ${fileSize}\nType: ${file.type || 'unknown'}\n\nContent:\n${parsedContent}`;
             } catch (parseError) {
               console.error("Error parsing file content:", parseError);
               
               // Fallback to basic content handling if parsing fails
               let contentStr = "No content available";
+              
+              // Helper to format file size
+              const formatFileSize = (bytes) => {
+                if (!bytes || isNaN(bytes)) return 'unknown';
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                if (bytes === 0) return '0 Bytes';
+                const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[Math.min(i, sizes.length - 1)]}`;
+              };
+              
+              // Get the file size from file node data if available, otherwise use the size from the file
+              let fileSize = 'unknown';
+              const fileNodeData = node.data;
+              if (fileNodeData && fileNodeData.fileSize) {
+                fileSize = formatFileSize(fileNodeData.fileSize);
+              } else if (file.size) {
+                fileSize = formatFileSize(file.size);
+              }
+              
+              // Add file size to the file object for future use
+              file.size = file.size || node.data.fileSize;
               
               if (typeof file.content === 'string') {
                 contentStr = file.content;
@@ -715,7 +856,7 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                 }
               }
               
-              result = `File: ${file.name}\nSize: ${file.size || 'unknown'} bytes\nType: ${file.type || 'unknown'}\n\nContent:\n${contentStr}\n\n(Error parsing file content: ${parseError.message})`;
+              result = `File: ${file.name}\nSize: ${fileSize}\nType: ${file.type || 'unknown'}\n\nContent:\n${contentStr}\n\n(Error parsing file content: ${parseError.message})`;
             }
           }
         } catch (error) {
@@ -762,6 +903,7 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
     }
     
     // Update memory with result of this node
+    if (!memory.results) memory.results = {};
     memory.results[nodeId] = result;
     
     // Update node status in memory

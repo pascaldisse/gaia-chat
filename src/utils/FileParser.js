@@ -44,6 +44,7 @@ export const parseFileContent = async (content, mimeType, fileName) => {
     // Handle PDF files
     if (mimeType === 'application/pdf' || extension === 'pdf') {
       try {
+        console.log(`Parsing PDF: ${fileName}, content size: ${arrayBuffer.byteLength} bytes`);
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         let text = '';
         
@@ -51,13 +52,18 @@ export const parseFileContent = async (content, mimeType, fileName) => {
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          text += content.items.map(item => item.str).join(' ') + '\n';
+          
+          // Improved text extraction with better spacing
+          const pageText = content.items.map(item => item.str).join(' ');
+          text += pageText + '\n\n'; // Add extra newline between pages
+          
+          console.log(`Extracted ${pageText.length} characters from page ${i}/${pdf.numPages}`);
         }
         
         return text;
       } catch (pdfError) {
         console.error("PDF parsing error:", pdfError);
-        return "[Error extracting PDF content]";
+        return `[Error extracting PDF content: ${pdfError.message}]`;
       }
     }
 

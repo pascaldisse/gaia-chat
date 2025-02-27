@@ -105,7 +105,29 @@ export const knowledgeDB = {
   // Get all knowledge files
   async getAllFiles() {
     const db = await dbPromise;
-    return db.getAll(KNOWLEDGE_STORE);
+    const files = await db.getAll(KNOWLEDGE_STORE);
+    
+    // Calculate and add file sizes for binary content if missing
+    return files.map(file => {
+      if (!file.size && file.content) {
+        // Estimate size based on content
+        if (typeof file.content === 'string') {
+          file.size = file.content.length;
+        } else if (file.content instanceof ArrayBuffer) {
+          file.size = file.content.byteLength;
+        } else if (file.content instanceof Blob) {
+          file.size = file.content.size;
+        } else if (file.content && typeof file.content === 'object') {
+          // Rough estimate for objects
+          try {
+            file.size = JSON.stringify(file.content).length;
+          } catch (e) {
+            file.size = 1024; // Default size if can't calculate
+          }
+        }
+      }
+      return file;
+    });
   },
   
   // Get files by their IDs
@@ -118,7 +140,29 @@ export const knowledgeDB = {
     // Get each file by ID - filter out any null results from missing files
     const filesPromises = fileIds.map(id => db.get(KNOWLEDGE_STORE, id));
     const files = await Promise.all(filesPromises);
-    return files.filter(file => file !== undefined);
+    const validFiles = files.filter(file => file !== undefined);
+    
+    // Calculate and add file sizes for binary content if missing
+    return validFiles.map(file => {
+      if (!file.size && file.content) {
+        // Estimate size based on content
+        if (typeof file.content === 'string') {
+          file.size = file.content.length;
+        } else if (file.content instanceof ArrayBuffer) {
+          file.size = file.content.byteLength;
+        } else if (file.content instanceof Blob) {
+          file.size = file.content.size;
+        } else if (file.content && typeof file.content === 'object') {
+          // Rough estimate for objects
+          try {
+            file.size = JSON.stringify(file.content).length;
+          } catch (e) {
+            file.size = 1024; // Default size if can't calculate
+          }
+        }
+      }
+      return file;
+    });
   },
   
   // Delete a file by ID
@@ -137,17 +181,25 @@ export const knowledgeDB = {
       // Process files and search in their content
       const results = [];
       
+      console.log(`Searching ${allFiles.length} files for query: "${query}"`);
+      
       for (const file of allFiles) {
-        if (!file.content) continue;
+        if (!file.content) {
+          console.log(`Skipping file ${file.name || file.id}: No content available`);
+          continue;
+        }
         
         try {
           // If content is already a string, search directly
           if (typeof file.content === 'string') {
             if (file.content.toLowerCase().includes(query.toLowerCase())) {
+              console.log(`Match found in text file: ${file.name}`);
               results.push(file);
             }
             continue;
           }
+          
+          console.log(`Parsing binary content for file: ${file.name}, type: ${file.type}`);
           
           // For binary content (like PDFs), parse it first
           const parsedContent = await parseFileContent(
@@ -157,12 +209,42 @@ export const knowledgeDB = {
           );
           
           // Search in the parsed content
-          if (parsedContent && 
-              typeof parsedContent === 'string' && 
-              parsedContent.toLowerCase().includes(query.toLowerCase())) {
-            // Save the parsed content to make it available for display
-            file.parsedContent = parsedContent;
-            results.push(file);
+          if (parsedContent && typeof parsedContent === 'string') {
+            // Implement simple fuzzy matching
+            const contentLower = parsedContent.toLowerCase();
+            const queryLower = query.toLowerCase();
+            
+            // Check exact match first
+            if (contentLower.includes(queryLower)) {
+              console.log(`Exact match found in file: ${file.name}`);
+              file.parsedContent = parsedContent;
+              file.matchType = 'exact';
+              results.push(file);
+              continue;
+            }
+            
+            // Check if all words in the query appear in the content
+            const queryWords = queryLower.split(/\s+/).filter(word => word.length > 2);
+            const allWordsMatch = queryWords.every(word => contentLower.includes(word));
+            
+            if (allWordsMatch) {
+              console.log(`Partial match (all words) found in file: ${file.name}`);
+              file.parsedContent = parsedContent;
+              file.matchType = 'partial';
+              results.push(file);
+              continue;
+            }
+            
+            // Check if at least 50% of words match for longer queries
+            if (queryWords.length >= 3) {
+              const matchingWords = queryWords.filter(word => contentLower.includes(word));
+              if (matchingWords.length >= Math.ceil(queryWords.length / 2)) {
+                console.log(`Fuzzy match (${matchingWords.length}/${queryWords.length} words) found in file: ${file.name}`);
+                file.parsedContent = parsedContent;
+                file.matchType = 'fuzzy';
+                results.push(file);
+              }
+            }
           }
         } catch (error) {
           console.error(`Error processing file ${file.id || file.name} for search:`, error);
@@ -170,6 +252,7 @@ export const knowledgeDB = {
         }
       }
       
+      console.log(`Search complete. Found ${results.length} matching files.`);
       return results;
     } catch (error) {
       console.error("Error in searchFiles:", error);
