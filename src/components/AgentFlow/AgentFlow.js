@@ -314,7 +314,7 @@ const AgentFlow = () => {
         >
           <Controls />
           <MiniMap />
-          <Background variant="dots" gap={12} size={1} color="#cccccc" />
+          <Background variant="dots" gap={16} size={1} color="#2f3136" />
         </ReactFlow>
       </div>
     </div>

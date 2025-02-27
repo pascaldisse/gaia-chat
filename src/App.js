@@ -209,12 +209,18 @@ function App() {
           className={viewMode === 'chat' ? 'active' : ''} 
           onClick={() => setViewMode('chat')}
         >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '6px' }}>
+            <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
+          </svg>
           Chat
         </button>
         <button 
           className={viewMode === 'agentflow' ? 'active' : ''} 
           onClick={() => setViewMode('agentflow')}
         >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '6px' }}>
+            <path d="M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h2v3h7zM7 9H4V5h3v4zm10 6h3v4h-3v-4zm0-10h3v4h-3V5z" />
+          </svg>
           Agent Workflow
         </button>
       </div>

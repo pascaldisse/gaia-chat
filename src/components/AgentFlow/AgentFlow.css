@@ -1,9 +1,11 @@
 .agent-flow-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  padding: 20px;
-  background-color: #f5f7fa;
+  height: 100%;
+  flex: 1;
+  width: calc(100% - 250px); /* Sidebar width is 250px */
+  background-color: #36393f;
+  color: #dcddde;
 }
 
 .agent-flow-header {
@@ -11,12 +13,16 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding: 15px 20px;
+  background-color: #2f3136;
+  border-bottom: 1px solid #202225;
+  color: white;
 }
 
 .agent-flow-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #333;
+  color: white;
 }
 
 .agent-flow-actions button {
@@ -30,31 +36,31 @@
 }
 
 .save-button {
-  background-color: #4caf50;
+  background-color: #43b581;
   color: white;
 }
 
 .save-button:hover {
-  background-color: #45a049;
+  background-color: #3ca374;
 }
 
 .load-button {
-  background-color: #2196f3;
+  background-color: #5865f2;
   color: white;
 }
 
 .load-button:hover {
-  background-color: #0b7dda;
+  background-color: #4752c4;
 }
 
 .agent-flow-tools {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
-  padding: 10px;
-  background-color: white;
+  margin: 0 20px 20px;
+  padding: 15px;
+  background-color: #2f3136;
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .agent-flow-tool {
@@ -81,18 +87,19 @@
 }
 
 .tool-node.action {
-  background-color: #3498db;
+  background-color: #5865f2;
 }
 
 .tool-node.decision {
-  background-color: #2ecc71;
+  background-color: #43b581;
 }
 
 .agent-flow-canvas {
   flex: 1;
-  background-color: #f0f0f0;
+  margin: 0 20px 20px;
+  background-color: #40444b;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
@@ -100,7 +107,7 @@
 .agent-flow-node {
   padding: 10px;
   border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
   width: 180px;
   user-select: none;
   position: relative;
@@ -112,7 +119,7 @@
 }
 
 .agent-flow-node.action {
-  background-color: #3498db;
+  background-color: #5865f2;
   color: white;
 }
 
@@ -121,11 +128,11 @@
 }
 
 .agent-flow-node.action.blue {
-  background-color: #3498db;
+  background-color: #5865f2;
 }
 
 .agent-flow-node.decision {
-  background-color: #2ecc71;
+  background-color: #43b581;
   color: white;
   transform: rotate(45deg);
   width: 120px;
@@ -174,4 +181,35 @@
 
 .node-add-icon:hover {
   background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Adjust ReactFlow background */
+.react-flow__background {
+  background-color: #40444b;
+}
+
+.react-flow__controls {
+  background-color: #2f3136;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.react-flow__controls button {
+  background-color: #40444b;
+  border-color: #202225;
+  color: #dcddde;
+}
+
+.react-flow__controls button:hover {
+  background-color: #5865f2;
+}
+
+.react-flow__minimap {
+  background-color: #2f3136;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(88, 101, 242, 0.3);
 }
