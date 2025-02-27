@@ -18,21 +18,47 @@ export const base64ToArrayBuffer = (base64) => {
 export const parseFileContent = async (content, mimeType, fileName) => {
   try {
     const extension = fileName.split('.').pop().toLowerCase();
-    const arrayBuffer = content instanceof ArrayBuffer ? content : base64ToArrayBuffer(content);
+    
+    // Determine if content is ArrayBuffer, base64 string, or other format
+    let arrayBuffer;
+    if (content instanceof ArrayBuffer) {
+      arrayBuffer = content;
+    } else if (typeof content === 'string' && content.indexOf(',') !== -1) {
+      // Handle data URI format (e.g., "data:application/pdf;base64,...")
+      const base64String = content.split(',')[1];
+      arrayBuffer = base64ToArrayBuffer(base64String);
+    } else if (typeof content === 'string') {
+      // Assume it's a base64 string
+      try {
+        arrayBuffer = base64ToArrayBuffer(content);
+      } catch (e) {
+        console.error("Error converting base64:", e);
+        // Just use the string if it's not valid base64
+        return content;
+      }
+    } else {
+      console.error("Unrecognized content format:", typeof content);
+      return "[Unrecognized file format]";
+    }
 
     // Handle PDF files
     if (mimeType === 'application/pdf' || extension === 'pdf') {
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let text = '';
-      
-      // Extract text from all pages
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map(item => item.str).join(' ') + '\n';
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = '';
+        
+        // Extract text from all pages
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\n';
+        }
+        
+        return text;
+      } catch (pdfError) {
+        console.error("PDF parsing error:", pdfError);
+        return "[Error extracting PDF content]";
       }
-      
-      return text;
     }
 
     // Handle text-based files

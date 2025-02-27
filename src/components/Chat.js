@@ -140,11 +140,44 @@ const Chat = ({
         })
         .join('\n');
 
+      // Get knowledge file content to include in the context
+      let knowledgeContent = "";
+      if (chatKnowledgeFiles && chatKnowledgeFiles.length > 0) {
+        try {
+          // Gather file content from knowledgeDB
+          const fileDetails = await Promise.all(
+            chatKnowledgeFiles.map(async (file) => {
+              const fullFile = await knowledgeDB.getFiles([file.id]);
+              if (fullFile && fullFile.length > 0 && fullFile[0].content) {
+                // Parse the file content based on type
+                const parsedContent = await parseFileContent(
+                  fullFile[0].content,
+                  fullFile[0].type,
+                  fullFile[0].name
+                );
+                return `--- File: ${fullFile[0].name} ---\n${parsedContent}\n\n`;
+              }
+              return "";
+            })
+          );
+          
+          // Combine all file content
+          knowledgeContent = fileDetails.join("");
+          
+          // Log for debugging
+          console.log(`Including ${chatKnowledgeFiles.length} knowledge files in request`);
+        } catch (error) {
+          console.error("Error processing knowledge files:", error);
+        }
+      }
+
       const modulatedPrompt = `${persona.systemPrompt}
 ${generateRpgInstructions(outcome)}
 
 Recent conversation:
 ${recentMessages}
+
+${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
@@ -293,11 +326,44 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           // Create new AbortController for this request
           controllerRef.current = new AbortController();
 
+          // Get knowledge file content to include in the context
+          let knowledgeContent = "";
+          if (chatKnowledgeFiles && chatKnowledgeFiles.length > 0) {
+            try {
+              // Gather file content from knowledgeDB
+              const fileDetails = await Promise.all(
+                chatKnowledgeFiles.map(async (file) => {
+                  const fullFile = await knowledgeDB.getFiles([file.id]);
+                  if (fullFile && fullFile.length > 0 && fullFile[0].content) {
+                    // Parse the file content based on type
+                    const parsedContent = await parseFileContent(
+                      fullFile[0].content,
+                      fullFile[0].type,
+                      fullFile[0].name
+                    );
+                    return `--- File: ${fullFile[0].name} ---\n${parsedContent}\n\n`;
+                  }
+                  return "";
+                })
+              );
+              
+              // Combine all file content
+              knowledgeContent = fileDetails.join("");
+              
+              // Log for debugging
+              console.log(`Including ${chatKnowledgeFiles.length} knowledge files in request`);
+            } catch (error) {
+              console.error("Error processing knowledge files:", error);
+            }
+          }
+
           const modulatedPrompt = `${persona.systemPrompt}
 ${generateRpgInstructions(outcome)}
 
 Recent conversation:
 ${recentMessages}
+
+${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
@@ -602,62 +668,115 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     if (file) {
       setIsLoading(true);
       try {
-        // Read file content
+        // Add status message
+        const statusMessageId = Date.now();
+        setCurrentChat(prev => [...prev, {
+          id: statusMessageId,
+          content: `📎 Uploading and processing file: ${file.name}...`,
+          isUser: false,
+          isCommand: true
+        }]);
+        
+        // Choose the correct reading method based on file type
         const reader = new FileReader();
-        reader.onload = async (event) => {
-          const content = event.target.result;
+        
+        // Create a promise to handle file reading
+        const readFilePromise = new Promise((resolve, reject) => {
+          reader.onload = (event) => resolve(event.target.result);
+          reader.onerror = (error) => reject(error);
           
-          // Save file to knowledge DB
-          const fileData = {
-            name: file.name,
-            type: file.type,
-            content: content,
-            uploadedAt: Date.now()
-          };
-          
-          const fileId = await knowledgeDB.addFile(fileData);
-          console.log("Added new file with ID:", fileId);
-          
-          // Add file to UI immediately
-          const newFile = { id: fileId, name: file.name, type: file.type };
-          setChatKnowledgeFiles(prevFiles => [...prevFiles, newFile]);
-          
-          // Update chat in database
-          if (selectedChatId) {
-            try {
-              // Get current chat
-              const currentChat = await chatDB.getChatById(selectedChatId);
-              if (!currentChat) {
-                console.error("Current chat not found");
-                setIsLoading(false);
-                return;
-              }
-              
-              // Prepare updated knowledge files array
-              const currentFiles = Array.isArray(currentChat.knowledgeFiles) 
-                ? currentChat.knowledgeFiles 
-                : [];
-              
-              const updatedFiles = [...currentFiles, fileId];
-              console.log("Updating chat with files:", updatedFiles);
-              
-              // Update chat using chatDB (not knowledgeDB)
-              const updatedChat = {
-                ...currentChat,
-                knowledgeFiles: updatedFiles
-              };
-              
-              await chatDB.updateChat(updatedChat);
-            } catch (error) {
-              console.error("Error updating chat with new file:", error);
-            }
+          // PDF files and other binary formats should be read as ArrayBuffer
+          if (file.type === 'application/pdf' || 
+              file.name.toLowerCase().endsWith('.pdf') ||
+              file.type.startsWith('image/') ||
+              file.type.includes('spreadsheet') ||
+              file.type.includes('msword') ||
+              file.type.includes('officedocument')) {
+            reader.readAsArrayBuffer(file);
+          } else {
+            // Text files can be read as text
+            reader.readAsText(file);
           }
-          
-          setIsLoading(false);
+        });
+        
+        // Wait for file to be read
+        const content = await readFilePromise;
+        
+        // Save file to knowledge DB
+        const fileData = {
+          name: file.name,
+          type: file.type,
+          content: content,
+          uploadedAt: Date.now()
         };
-        reader.readAsArrayBuffer(file);
+        
+        const fileId = await knowledgeDB.addFile(fileData);
+        console.log("Added new file with ID:", fileId);
+        
+        // Add file to UI immediately
+        const newFile = { id: fileId, name: file.name, type: file.type };
+        setChatKnowledgeFiles(prevFiles => [...prevFiles, newFile]);
+        
+        // Update chat in database
+        if (selectedChatId) {
+          try {
+            // Get current chat
+            const currentChat = await chatDB.getChatById(selectedChatId);
+            if (!currentChat) {
+              console.error("Current chat not found");
+              // Update status message
+              setCurrentChat(prev => prev.map(msg => 
+                msg.id === statusMessageId 
+                  ? { ...msg, content: `❌ Error: Could not find chat to update` }
+                  : msg
+              ));
+              setIsLoading(false);
+              return;
+            }
+            
+            // Prepare updated knowledge files array
+            const currentFiles = Array.isArray(currentChat.knowledgeFiles) 
+              ? currentChat.knowledgeFiles 
+              : [];
+            
+            const updatedFiles = [...currentFiles, fileId];
+            console.log("Updating chat with files:", updatedFiles);
+            
+            // Update chat using chatDB (not knowledgeDB)
+            const updatedChat = {
+              ...currentChat,
+              knowledgeFiles: updatedFiles
+            };
+            
+            await chatDB.updateChat(updatedChat);
+            
+            // Update status message
+            setCurrentChat(prev => prev.map(msg => 
+              msg.id === statusMessageId 
+                ? { ...msg, content: `✅ File uploaded: ${file.name}` }
+                : msg
+            ));
+          } catch (error) {
+            console.error("Error updating chat with new file:", error);
+            // Update status message
+            setCurrentChat(prev => prev.map(msg => 
+              msg.id === statusMessageId 
+                ? { ...msg, content: `❌ Error updating chat: ${error.message}` }
+                : msg
+            ));
+          }
+        }
+        
+        setIsLoading(false);
       } catch (error) {
         console.error('Error uploading file:', error);
+        // Add error message to chat
+        setCurrentChat(prev => [...prev, {
+          id: Date.now(),
+          content: `❌ Error uploading file: ${error.message}`,
+          isUser: false,
+          isCommand: true
+        }]);
         setIsLoading(false);
       }
     }
