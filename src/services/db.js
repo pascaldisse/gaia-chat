@@ -169,7 +169,7 @@ export const chatDB = {
     }
   },
   
-  // Get all chats for a specific user
+  // Get all chats for a specific user (chats they own or are a participant in)
   async getChatsByUser(userId) {
     if (!userId) return [];
     
@@ -177,7 +177,15 @@ export const chatDB = {
       const db = await dbPromise;
       // Get all chats and filter client-side
       const allChats = await db.getAll(CHAT_STORE);
-      const userChats = allChats.filter(chat => chat.userId === userId);
+      
+      // A user can see a chat if:
+      // 1. They are the original creator (userId === their ID), OR
+      // 2. They are in the participants array
+      const userChats = allChats.filter(chat => 
+        chat.userId === userId || 
+        (Array.isArray(chat.participants) && chat.participants.includes(userId))
+      );
+      
       return userChats.sort((a, b) => b.createdAt - a.createdAt);
     } catch (error) {
       console.error('Error getting chats by user:', error);
@@ -229,7 +237,7 @@ export const chatDB = {
     }
   },
   
-  // Get a chat by ID and verify it belongs to a user
+  // Get a chat by ID and verify the user has access to it
   async getUserChatById(id, userId) {
     if (!userId) return null;
     
@@ -237,8 +245,12 @@ export const chatDB = {
       const db = await dbPromise;
       const chat = await db.get(CHAT_STORE, id);
       
-      // Check if chat exists and belongs to the user
-      if (!chat || chat.userId !== userId) {
+      // Check if chat exists and the user has access to it 
+      // (either as owner or participant)
+      if (!chat || (
+          chat.userId !== userId && 
+          !(Array.isArray(chat.participants) && chat.participants.includes(userId))
+        )) {
         return null;
       }
       
@@ -263,6 +275,17 @@ export const chatDB = {
       // Update each chat with the userId
       for (const chat of chats) {
         chat.userId = userId;
+        
+        // Initialize participants array if it doesn't exist
+        if (!Array.isArray(chat.participants)) {
+          chat.participants = [];
+        }
+        
+        // Add the user as a participant if not already included
+        if (!chat.participants.includes(userId)) {
+          chat.participants.push(userId);
+        }
+        
         await db.put(CHAT_STORE, chat);
       }
       
@@ -270,6 +293,60 @@ export const chatDB = {
     } catch (error) {
       console.error('Error assigning chats to user:', error);
       return 0;
+    }
+  },
+  
+  // Add a user as a participant in a chat
+  async addParticipantToChat(chatId, userId) {
+    try {
+      const db = await dbPromise;
+      const chat = await db.get(CHAT_STORE, chatId);
+      
+      if (!chat) {
+        throw new Error(`Chat with ID ${chatId} not found`);
+      }
+      
+      // Initialize participants array if it doesn't exist
+      if (!Array.isArray(chat.participants)) {
+        chat.participants = [];
+      }
+      
+      // Add the user as a participant if not already included
+      if (!chat.participants.includes(userId)) {
+        chat.participants.push(userId);
+        await db.put(CHAT_STORE, chat);
+        return true;
+      }
+      
+      return false; // User was already a participant
+    } catch (error) {
+      console.error('Error adding participant to chat:', error);
+      throw error;
+    }
+  },
+  
+  // Remove a user as a participant from a chat
+  async removeParticipantFromChat(chatId, userId) {
+    try {
+      const db = await dbPromise;
+      const chat = await db.get(CHAT_STORE, chatId);
+      
+      if (!chat) {
+        throw new Error(`Chat with ID ${chatId} not found`);
+      }
+      
+      // If the participants array doesn't exist or the user isn't in it
+      if (!Array.isArray(chat.participants) || !chat.participants.includes(userId)) {
+        return false;
+      }
+      
+      // Remove the user from participants
+      chat.participants = chat.participants.filter(id => id !== userId);
+      await db.put(CHAT_STORE, chat);
+      return true;
+    } catch (error) {
+      console.error('Error removing participant from chat:', error);
+      throw error;
     }
   }
 };
@@ -1299,7 +1376,8 @@ export const userDB = {
 // In the chat schema
 const chatSchema = {
   id: { type: 'number', primary: true },
-  userId: { type: 'string', index: true }, // User who owns this chat
+  userId: { type: 'string', index: true }, // Original owner (creator) of this chat
+  participants: { type: 'array' }, // Array of userIds who can access this chat
   messages: { type: 'array' },
   systemPrompt: { type: 'string' },
   model: { type: 'string' },

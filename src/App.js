@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Chat from './components/Chat';
 import Sidebar from './components/Sidebar';
 import AgentFlow from './components/AgentFlow/AgentFlow';
-import { chatDB } from './services/db';
+import { chatDB, userDB } from './services/db';
 import './styles/Sidebar.css';
 import './App.css';
 import './styles/Chat.css';
@@ -24,6 +24,7 @@ function AppContent() {
   const [showPersonaManager, setShowPersonaManager] = useState(false);
   const [editingPersona, setEditingPersona] = useState(null);
   const [activePersonas, setActivePersonas] = useState([]);
+  const [activeUsers, setActiveUsers] = useState([]);
   const [viewMode, setViewMode] = useState('chat'); // 'chat' or 'agentflow'
 
   // Load chat history from database
@@ -55,10 +56,39 @@ function AppContent() {
                 ? currentChatFromDB.messages 
                 : []
             );
+            
+            // Set active personas
             const activePersonas = personas.filter(p => 
               currentChatFromDB.activePersonas?.includes(p.id)
             );
             setActivePersonas(activePersonas);
+            
+            // Load active users for this chat
+            if (Array.isArray(currentChatFromDB.participants) && currentChatFromDB.participants.length > 0) {
+              // Fetch user data for all participants
+              const loadChatParticipants = async () => {
+                try {
+                  // Get all users
+                  const allUsers = await userDB.getAllUsers();
+                  
+                  // Filter to just the participants in this chat
+                  const chatParticipants = allUsers.filter(user => 
+                    currentChatFromDB.participants.includes(user.id) &&
+                    (currentUser && user.id !== currentUser.id) // Don't include current user in the UI list
+                  );
+                  
+                  // Update state with chat participants
+                  setActiveUsers(chatParticipants);
+                } catch (error) {
+                  console.error('Error loading chat participants:', error);
+                }
+              };
+              
+              loadChatParticipants();
+            } else {
+              // No participants in this chat
+              setActiveUsers([]);
+            }
           }
         }
         
@@ -93,7 +123,9 @@ function AppContent() {
           timestamp: Date.now(),
           title: currentChat[0]?.content?.slice(0, 30) + '...' || 'New Chat',
           // Preserve existing userId or set it if user is logged in
-          userId: existingChat?.userId || (currentUser ? currentUser.id : undefined)
+          userId: existingChat?.userId || (currentUser ? currentUser.id : undefined),
+          // Preserve existing participants
+          participants: existingChat?.participants || (currentUser ? [currentUser.id] : [])
         };
 
         try {
@@ -177,7 +209,8 @@ function AppContent() {
       title: 'New Chat',
       activePersonas: [defaultGaia.id], // Always include GAIA
       knowledgeFiles: [], // Initialize as empty array
-      userId: currentUser ? currentUser.id : undefined // Associate with user if logged in
+      userId: currentUser ? currentUser.id : undefined, // Associate with user if logged in
+      participants: currentUser ? [currentUser.id] : [] // Initialize participants list with current user if logged in
     };
 
     try {
@@ -345,8 +378,11 @@ function AppContent() {
           personas={personas}
           activePersonas={activePersonas}
           setActivePersonas={setActivePersonas}
+          activeUsers={activeUsers}
+          setActiveUsers={setActiveUsers}
           selectedChatId={selectedChatId}
           chatHistory={chatHistory}
+          setChatHistory={setChatHistory}
         />
       ) : (
         <AgentFlow />

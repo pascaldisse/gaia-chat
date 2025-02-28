@@ -20,6 +20,8 @@ const Chat = ({
   personas,
   activePersonas,
   setActivePersonas,
+  activeUsers,
+  setActiveUsers,
   selectedChatId,
   chatHistory,
   setChatHistory
@@ -58,9 +60,6 @@ const Chat = ({
   };
 
   useEffect(scrollToBottom, [currentChat]);
-
-  // State for active users in the chat
-  const [activeUsers, setActiveUsers] = useState([]);
 
   const getMentionedPersonas = (message) => {
     const matches = message.match(/@(\w+)/g) || [];
@@ -315,9 +314,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       const updatedUsers = await updateActiveUsers(message, activeUsers);
       setActiveUsers(updatedUsers);
       
-      // If we have any newly added users, add user notification message
+      // If we have any newly added users, add user notification message and add them as participants to the chat
       const newUsers = updatedUsers.filter(u => !activeUsers.some(au => au.id === u.id));
-      if (newUsers.length > 0) {
+      if (newUsers.length > 0 && selectedChatId) {
         const usernames = newUsers.map(u => u.displayName || u.username).join(', ');
         setCurrentChat(prev => [...prev, {
           id: Date.now(),
@@ -325,6 +324,16 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           isUser: false,
           isCommand: true
         }]);
+        
+        // Add each new user as a participant in the database
+        for (const user of newUsers) {
+          try {
+            await chatDB.addParticipantToChat(selectedChatId, user.id);
+            console.log(`Added user ${user.id} (${user.displayName || user.username}) as participant in chat ${selectedChatId}`);
+          } catch (error) {
+            console.error(`Error adding user ${user.id} as participant:`, error);
+          }
+        }
       }
 
       // Get response candidates
@@ -615,10 +624,33 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     );
   };
   
-  const handleRemoveUser = (userId) => {
-    setActiveUsers(prev => 
-      prev.filter(u => u.id !== userId)
-    );
+  const handleRemoveUser = async (userId) => {
+    // Remove user from UI first
+    setActiveUsers(prev => prev.filter(u => u.id !== userId));
+    
+    // Then remove them from the chat in the database
+    if (selectedChatId) {
+      try {
+        // Get user name for notification message
+        const removedUser = activeUsers.find(u => u.id === userId);
+        const userName = removedUser ? (removedUser.displayName || removedUser.username) : 'User';
+        
+        // Remove from database
+        await chatDB.removeParticipantFromChat(selectedChatId, userId);
+        
+        // Add notification to the chat
+        setCurrentChat(prev => [...prev, {
+          id: Date.now(),
+          content: `👤 Removed user from chat: ${userName}`,
+          isUser: false,
+          isCommand: true
+        }]);
+        
+        console.log(`Removed user ${userId} from chat ${selectedChatId}`);
+      } catch (error) {
+        console.error(`Error removing user ${userId} from chat:`, error);
+      }
+    }
   };
 
   useEffect(() => {
