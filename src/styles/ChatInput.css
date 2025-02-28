@@ -85,17 +85,38 @@
   margin-top: 2px;
 }
 
-/* Add persona mention styles */
-.persona-avatar {
+/* Add persona and user mention styles */
+.persona-avatar, .user-avatar {
   width: 24px;
   height: 24px;
   border-radius: 50%;
   margin-right: 8px;
 }
 
-.persona-name {
+.user-avatar {
+  background-color: #4f545c;
+}
+
+.persona-name, .user-name {
   font-weight: 500;
   color: #dcddde;
+}
+
+.user-type, .persona-type {
+  font-size: 10px;
+  padding: 2px 5px;
+  margin-left: auto;
+  border-radius: 3px;
+}
+
+.persona-type {
+  color: #c27c0e;
+  background-color: rgba(194, 124, 14, 0.15);
+}
+
+.user-type {
+  color: #0091ff;
+  background-color: rgba(0, 145, 255, 0.15);
 }
 
 /* Adjust suggestion item layout */

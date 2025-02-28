@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import '../styles/ChatInput.css';
+import { userDB } from '../services/db';
+import { useUser } from '../contexts/UserContext';
 
 const COMMANDS = [
   { name: 'imagine', description: 'Generate an image from text description' }
@@ -11,8 +13,29 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
   const [filteredSuggestions, setFilteredSuggestions] = useState([]);
   const [mentionStartIndex, setMentionStartIndex] = useState(null);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [users, setUsers] = useState([]);
+  const { user: currentUser } = useUser();
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
+  
+  // Fetch all users on component mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        // In a real app, this would be a server-side API call with pagination
+        const allUsers = await userDB.getAllUsers();
+        // Filter out the current user
+        const filteredUsers = allUsers.filter(u => 
+          currentUser && u.id !== currentUser.id
+        );
+        setUsers(filteredUsers);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+    
+    fetchUsers();
+  }, [currentUser]);
 
   const updateSuggestions = (value, cursorPos) => {
     const substring = value.substring(0, cursorPos);
@@ -26,12 +49,27 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
     
     setMentionStartIndex(atIndex);
     const mentionQuery = substring.substring(atIndex + 1);
-    const matches = personas.filter(p =>
+    
+    // First, filter personas
+    const personaMatches = personas.filter(p =>
       p.name.toLowerCase().startsWith(mentionQuery.toLowerCase())
     );
     
-    setFilteredSuggestions(matches);
-    setShowSuggestions(matches.length > 0);
+    // Then, filter users
+    const userMatches = users.filter(u =>
+      (u.displayName && u.displayName.toLowerCase().startsWith(mentionQuery.toLowerCase())) ||
+      (u.username && u.username.toLowerCase().startsWith(mentionQuery.toLowerCase()))
+    ).map(u => ({
+      ...u,
+      name: u.displayName || u.username,
+      isUser: true // Flag to identify this as a user mention
+    }));
+    
+    // Combine both with personas first, then users
+    const combined = [...personaMatches, ...userMatches];
+    
+    setFilteredSuggestions(combined);
+    setShowSuggestions(combined.length > 0);
     setSelectedSuggestionIndex(0);
   };
 
@@ -182,6 +220,17 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
                   <div className="command-name">/{suggestion.name}</div>
                   <div className="command-description">{suggestion.description}</div>
                 </>
+              ) : suggestion.isUser ? (
+                // User mention
+                <>
+                  <img 
+                    src={'/user-avatar.png'} 
+                    alt={suggestion.name}
+                    className="user-avatar"
+                  />
+                  <div className="user-name">{suggestion.name}</div>
+                  <div className="user-type">User</div>
+                </>
               ) : (
                 // Persona mention
                 <>
@@ -191,6 +240,7 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
                     className="persona-avatar"
                   />
                   <div className="persona-name">{suggestion.name}</div>
+                  <div className="persona-type">Persona</div>
                 </>
               )}
             </div>

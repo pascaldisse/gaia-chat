@@ -991,6 +991,25 @@ export const templateDB = {
 
 // User database service
 export const userDB = {
+  // Get all users
+  async getAllUsers() {
+    try {
+      const db = await dbPromise;
+      const allUsers = await db.getAll(USER_STORE);
+      
+      // Return users without password hashes
+      return allUsers
+        .filter(user => user.isActive !== false) // Only include active users
+        .map(user => {
+          const { passwordHash, ...userWithoutPassword } = user;
+          return userWithoutPassword;
+        });
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
+  },
+  
   // Register a new user
   async registerUser(userData) {
     try {

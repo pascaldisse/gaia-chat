@@ -156,7 +156,7 @@
     color: #FF9800;
   }
   
-  .active-personas {
+  .active-participants {
     position: fixed;
     top: 20px;
     right: 20px;
@@ -170,20 +170,30 @@
     color: #dcddde;
   }
   
-  .persona-list {
+  .active-personas, .active-users {
+    margin-bottom: 10px;
+  }
+  
+  .active-users h4 {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #40444b;
+  }
+  
+  .persona-list, .user-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
   
-  .persona-item {
+  .persona-item, .user-item {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 5px;
   }
   
-  .persona-avatar {
+  .persona-avatar, .user-avatar {
     width: 30px;
     height: 30px;
     border-radius: 50%;
@@ -191,7 +201,11 @@
     border-color: #36393f;
   }
   
-  .remove-persona {
+  .user-avatar {
+    background-color: #4f545c;
+  }
+  
+  .remove-persona, .remove-user {
     margin-left: auto;
     background: none;
     border: none;
@@ -201,8 +215,16 @@
     color: #b9bbbe !important;
   }
   
-  .remove-persona:hover {
+  .remove-persona:hover, .remove-user:hover {
     color: #dcddde !important;
+  }
+  
+  .user-type, .persona-type {
+    position: absolute;
+    right: 8px;
+    font-size: 10px;
+    color: #999;
+    opacity: 0.7;
   }
   
   .modal-overlay {

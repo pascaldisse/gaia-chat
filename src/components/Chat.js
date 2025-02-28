@@ -7,7 +7,7 @@ import { RPGSystem } from '../utils/RPGSystem';
 import { Persona } from '../utils/Persona';
 import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 import FilePreview from './FilePreview';
-import { chatDB, knowledgeDB } from '../services/db';
+import { chatDB, knowledgeDB, userDB } from '../services/db';
 import { parseFileContent } from '../utils/FileParser';
 import { PersonaAgent } from "../services/agentService";
 import { createPersonaTools } from "../services/tools";
@@ -59,6 +59,9 @@ const Chat = ({
 
   useEffect(scrollToBottom, [currentChat]);
 
+  // State for active users in the chat
+  const [activeUsers, setActiveUsers] = useState([]);
+
   const getMentionedPersonas = (message) => {
     const matches = message.match(/@(\w+)/g) || [];
     return matches
@@ -67,12 +70,42 @@ const Chat = ({
       .filter(Boolean);
   };
 
+  const getMentionedUsers = async (message) => {
+    try {
+      const matches = message.match(/@(\w+)/g) || [];
+      if (matches.length === 0) return [];
+      
+      // Get all users
+      const allUsers = await userDB.getAllUsers();
+      
+      // Find mentioned users by username or displayName
+      return matches
+        .map(match => match.substring(1)) // Remove @ symbol
+        .map(name => allUsers.find(u => 
+          (u.username && u.username.toLowerCase() === name.toLowerCase()) ||
+          (u.displayName && u.displayName.toLowerCase() === name.toLowerCase())
+        ))
+        .filter(Boolean);
+    } catch (error) {
+      console.error('Error getting mentioned users:', error);
+      return [];
+    }
+  };
+
   const updateActivePersonas = (message, currentPersonas) => {
     const mentionedPersonas = getMentionedPersonas(message);
     const newPersonas = mentionedPersonas.filter(p => 
       !currentPersonas.some(ap => ap.id === p.id)
     );
     return [...currentPersonas, ...newPersonas];
+  };
+
+  const updateActiveUsers = async (message, currentUsers) => {
+    const mentionedUsers = await getMentionedUsers(message);
+    const newUsers = mentionedUsers.filter(u => 
+      !currentUsers.some(au => au.id === u.id)
+    );
+    return [...currentUsers, ...newUsers];
   };
 
   const analyzeMessageContext = (message) => {
@@ -277,6 +310,22 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       const mentionedPersonas = getMentionedPersonas(message);
       const updatedPersonas = updateActivePersonas(message, activePersonas);
       setActivePersonas(updatedPersonas);
+      
+      // Update active users based on mentions
+      const updatedUsers = await updateActiveUsers(message, activeUsers);
+      setActiveUsers(updatedUsers);
+      
+      // If we have any newly added users, add user notification message
+      const newUsers = updatedUsers.filter(u => !activeUsers.some(au => au.id === u.id));
+      if (newUsers.length > 0) {
+        const usernames = newUsers.map(u => u.displayName || u.username).join(', ');
+        setCurrentChat(prev => [...prev, {
+          id: Date.now(),
+          content: `👤 Added ${newUsers.length === 1 ? 'user' : 'users'} to chat: ${usernames}`,
+          isUser: false,
+          isCommand: true
+        }]);
+      }
 
       // Get response candidates
       const responseCandidates = mentionedPersonas.length > 0
@@ -285,7 +334,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
 
       const context = analyzeMessageContext(message);
 
-      // Calculate responses for all candidates -- THIS WAS MISSING
+      // Calculate responses for all candidates
       const responseQueue = await Promise.all(
         responseCandidates.map(async (persona) => {
           const outcome = RPGSystem.calculateOutcome(persona, context);
@@ -304,7 +353,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           const bIsMentioned = context.mentionedPersonaIds?.includes(b.persona.id);
 
           if (aIsMentioned === bIsMentioned) {
-            return b.outcome.responsePriority - a.outcome.responsePriority; // Corrected this line
+            return b.outcome.responsePriority - a.outcome.responsePriority;
           }
           if (aIsMentioned) return -1;
           return 1;
@@ -565,6 +614,12 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       prev.filter(p => p.id !== personaId)
     );
   };
+  
+  const handleRemoveUser = (userId) => {
+    setActiveUsers(prev => 
+      prev.filter(u => u.id !== userId)
+    );
+  };
 
   useEffect(() => {
     return () => {
@@ -805,26 +860,52 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
 
   return (
     <div className="chat-container">
-      <div className="active-personas">
-        <h4>Active Personas</h4>
-        <div className="persona-list">
-          {activePersonas.map(persona => (
-            <div key={persona.id} className="persona-item">
-              <img 
-                src={persona.image || '/default-avatar.png'} 
-                alt={persona.name}
-                className="persona-avatar"
-              />
-              <span>{persona.name}</span>
-              <button 
-                className="remove-persona"
-                onClick={() => handleRemovePersona(persona.id)}
-              >
-                ×
-              </button>
-            </div>
-          ))}
+      <div className="active-participants">
+        <div className="active-personas">
+          <h4>Active Personas</h4>
+          <div className="persona-list">
+            {activePersonas.map(persona => (
+              <div key={persona.id} className="persona-item">
+                <img 
+                  src={persona.image || '/default-avatar.png'} 
+                  alt={persona.name}
+                  className="persona-avatar"
+                />
+                <span>{persona.name}</span>
+                <button 
+                  className="remove-persona"
+                  onClick={() => handleRemovePersona(persona.id)}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
+        
+        {activeUsers.length > 0 && (
+          <div className="active-users">
+            <h4>Active Users</h4>
+            <div className="user-list">
+              {activeUsers.map(user => (
+                <div key={user.id} className="user-item">
+                  <img 
+                    src={'/user-avatar.png'} 
+                    alt={user.displayName || user.username}
+                    className="user-avatar"
+                  />
+                  <span>{user.displayName || user.username}</span>
+                  <button 
+                    className="remove-user"
+                    onClick={() => handleRemoveUser(user.id)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className="messages">
         {currentChat.map(message => (
