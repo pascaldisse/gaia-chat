@@ -2,6 +2,7 @@ import React from 'react';
 import { MODELS } from '../config';
 import '../styles/Sidebar.css';
 import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
+import UserButton from './auth/UserButton';
 
 const Sidebar = ({ 
   personas,
@@ -28,6 +29,8 @@ const Sidebar = ({
 
   return (
     <div className="sidebar">
+      <UserButton />
+      
       <button 
         className="new-chat-btn"
         onClick={createNewChat}

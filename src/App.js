@@ -11,8 +11,9 @@ import { personaDB } from './services/db';
 import Persona from './models/Persona';
 import PersonaManager from './components/personas/PersonaManager';
 import { GAIA_CONFIG, DEFAULT_PERSONA_ID } from './config/defaultPersona';
+import { UserProvider } from './contexts/UserContext';
 
-function App() {
+function AppContent() {
   const [currentChat, setCurrentChat] = useState([]);
   const [model, setModel] = useState(MODELS.LLAMA3_70B);
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
@@ -29,7 +30,21 @@ function App() {
   useEffect(() => {
     const loadChats = async () => {
       try {
-        const chats = await chatDB.getAllChats();
+        // Get current user from context
+        const { getCurrentUser } = await import('./services/auth');
+        const currentUser = await getCurrentUser();
+        
+        // Get chats based on user status
+        let chats;
+        if (currentUser) {
+          // For logged in users, get their chats
+          chats = await chatDB.getChatsByUser(currentUser.id);
+        } else {
+          // For anonymous users, get chats without userId
+          chats = await chatDB.getAllChats();
+          chats = chats.filter(chat => !chat.userId);
+        }
+        
         const sortedChats = chats.sort((a, b) => b.createdAt - a.createdAt);
         
         if (selectedChatId) {
@@ -62,6 +77,10 @@ function App() {
         // First get the existing chat to preserve knowledgeFiles
         const existingChat = await chatDB.getChatById(selectedChatId);
         
+        // Get current user
+        const { getCurrentUser } = await import('./services/auth');
+        const currentUser = await getCurrentUser();
+        
         const updatedChat = {
           id: selectedChatId,
           messages: currentChat,
@@ -72,12 +91,23 @@ function App() {
           knowledgeFiles: existingChat?.knowledgeFiles || [],
           createdAt: chatHistory.find(c => c.id === selectedChatId)?.createdAt || Date.now(),
           timestamp: Date.now(),
-          title: currentChat[0]?.content?.slice(0, 30) + '...' || 'New Chat'
+          title: currentChat[0]?.content?.slice(0, 30) + '...' || 'New Chat',
+          // Preserve existing userId or set it if user is logged in
+          userId: existingChat?.userId || (currentUser ? currentUser.id : undefined)
         };
 
         try {
           await chatDB.updateChat(updatedChat);
-          const freshChats = await chatDB.getAllChats();
+          
+          // Get updated chat history based on user status
+          let freshChats;
+          if (currentUser) {
+            freshChats = await chatDB.getChatsByUser(currentUser.id);
+          } else {
+            const allChats = await chatDB.getAllChats();
+            freshChats = allChats.filter(chat => !chat.userId);
+          }
+          
           setChatHistory(freshChats.sort((a, b) => b.createdAt - a.createdAt));
         } catch (error) {
           console.error('Error saving chat:', error);
@@ -92,7 +122,22 @@ function App() {
   // Add useEffect for loading personas
   useEffect(() => {
     const loadPersonas = async () => {
-      const loaded = await personaDB.getAllPersonas();
+      // Get current user from context
+      const { getCurrentUser } = await import('./services/auth');
+      const currentUser = await getCurrentUser();
+      
+      let loaded;
+      if (currentUser) {
+        // For logged in users, get both their personas and the system personas (those without userId)
+        const userPersonas = await personaDB.getPersonasByUser(currentUser.id);
+        const systemPersonas = await personaDB.getAllPersonas();
+        const systemPersonasWithoutUser = systemPersonas.filter(p => !p.userId);
+        loaded = [...userPersonas, ...systemPersonasWithoutUser];
+      } else {
+        // For anonymous users, get personas without userId
+        const allPersonas = await personaDB.getAllPersonas();
+        loaded = allPersonas.filter(p => !p.userId);
+      }
       
       // Check if GAIA already exists in the database
       const existingGaia = loaded.find(p => p.id === DEFAULT_PERSONA_ID);
@@ -117,6 +162,10 @@ function App() {
       console.error('GAIA persona not found!');
       return;
     }
+    
+    // Get current user
+    const { getCurrentUser } = await import('./services/auth');
+    const currentUser = await getCurrentUser();
 
     const newChat = {
       id: Date.now(),
@@ -127,12 +176,22 @@ function App() {
       timestamp: Date.now(),
       title: 'New Chat',
       activePersonas: [defaultGaia.id], // Always include GAIA
-      knowledgeFiles: [] // Initialize as empty array
+      knowledgeFiles: [], // Initialize as empty array
+      userId: currentUser ? currentUser.id : undefined // Associate with user if logged in
     };
 
     try {
       await chatDB.saveChat(newChat);
-      const updatedHistory = await chatDB.getAllChats();
+      
+      // Get updated chat history based on user status
+      let updatedHistory;
+      if (currentUser) {
+        updatedHistory = await chatDB.getChatsByUser(currentUser.id);
+      } else {
+        const allChats = await chatDB.getAllChats();
+        updatedHistory = allChats.filter(chat => !chat.userId);
+      }
+      
       setChatHistory(updatedHistory.sort((a, b) => b.createdAt - a.createdAt));
       setSelectedChatId(newChat.id);
       setCurrentChat([]); // Initialize as empty array
@@ -143,15 +202,32 @@ function App() {
   };
 
   const createNewPersona = async () => {
+    // Get current user
+    const { getCurrentUser } = await import('./services/auth');
+    const currentUser = await getCurrentUser();
+    
     const newPersona = new Persona({
       name: 'New Persona',
       systemPrompt: 'You are a helpful assistant',
-      model: MODELS.LLAMA3_70B
+      model: MODELS.LLAMA3_70B,
+      userId: currentUser ? currentUser.id : undefined // Associate with user if logged in
     });
     
     try {
       await personaDB.savePersona(newPersona);
-      const updatedPersonas = await personaDB.getAllPersonas();
+      
+      // Get updated personas based on user status
+      let updatedPersonas;
+      if (currentUser) {
+        const userPersonas = await personaDB.getPersonasByUser(currentUser.id);
+        const systemPersonas = await personaDB.getAllPersonas();
+        const systemPersonasWithoutUser = systemPersonas.filter(p => !p.userId);
+        updatedPersonas = [...userPersonas, ...systemPersonasWithoutUser];
+      } else {
+        const allPersonas = await personaDB.getAllPersonas();
+        updatedPersonas = allPersonas.filter(p => !p.userId);
+      }
+      
       setPersonas(updatedPersonas);
       setSelectedPersonaId(newPersona.id);
       setEditingPersona(newPersona);
@@ -165,10 +241,23 @@ function App() {
       // Save the updated persona
       await personaDB.savePersona(updatedPersona);
       
-      // Update the personas state
-      const updatedPersonas = await personaDB.getAllPersonas();
-      setPersonas(updatedPersonas);
+      // Get current user
+      const { getCurrentUser } = await import('./services/auth');
+      const currentUser = await getCurrentUser();
       
+      // Get updated personas based on user status
+      let updatedPersonas;
+      if (currentUser) {
+        const userPersonas = await personaDB.getPersonasByUser(currentUser.id);
+        const systemPersonas = await personaDB.getAllPersonas();
+        const systemPersonasWithoutUser = systemPersonas.filter(p => !p.userId);
+        updatedPersonas = [...userPersonas, ...systemPersonasWithoutUser];
+      } else {
+        const allPersonas = await personaDB.getAllPersonas();
+        updatedPersonas = allPersonas.filter(p => !p.userId);
+      }
+      
+      setPersonas(updatedPersonas);
       setEditingPersona(null);
     } catch (error) {
       console.error('Error updating persona:', error);
@@ -177,8 +266,30 @@ function App() {
 
   const handleDeletePersona = async (personaToDelete) => {
     try {
+      // Don't allow deleting system personas for regular users
+      if (personaToDelete.id === DEFAULT_PERSONA_ID) {
+        console.error('Cannot delete the default GAIA persona');
+        return;
+      }
+      
       await personaDB.deletePersona(personaToDelete.id);
-      const updatedPersonas = await personaDB.getAllPersonas();
+      
+      // Get current user
+      const { getCurrentUser } = await import('./services/auth');
+      const currentUser = await getCurrentUser();
+      
+      // Get updated personas based on user status
+      let updatedPersonas;
+      if (currentUser) {
+        const userPersonas = await personaDB.getPersonasByUser(currentUser.id);
+        const systemPersonas = await personaDB.getAllPersonas();
+        const systemPersonasWithoutUser = systemPersonas.filter(p => !p.userId);
+        updatedPersonas = [...userPersonas, ...systemPersonasWithoutUser];
+      } else {
+        const allPersonas = await personaDB.getAllPersonas();
+        updatedPersonas = allPersonas.filter(p => !p.userId);
+      }
+      
       setPersonas(updatedPersonas);
       if(selectedPersonaId === personaToDelete.id) {
         setSelectedPersonaId(null);
@@ -250,6 +361,14 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <UserProvider>
+      <AppContent />
+    </UserProvider>
   );
 }
 
