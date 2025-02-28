@@ -19,10 +19,19 @@ export class PersonaAgent {
   }
 
   async createExecutor() {
+    // Create a more explicit prompt that encourages tool usage
     const prompt = ChatPromptTemplate.fromMessages([
       ["system", `You are {persona_name}. {system_prompt}
 
 {rpg_instructions}
+
+You have access to the following tools that you should use whenever appropriate:
+${this.tools.map(tool => `- ${tool.name}: ${tool.description}`).join('\n')}
+
+IMPORTANT: When you are asked to perform a task that matches one of your tools, you must use the appropriate tool rather than simulating the result. For example:
+- If asked to roll dice, use the dice_roll tool
+- If asked to search files, use the file_search tool
+- If asked to generate an image, use the generate_image tool
 
 Current conversation:
 {history}

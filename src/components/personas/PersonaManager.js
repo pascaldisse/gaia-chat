@@ -11,8 +11,8 @@ import { knowledgeDB } from '../../services/db';
 import ToolsPopup from './ToolsPopup';
 
 const availableTools = [
-  { name: 'dice_roll', label: 'Dice Roll', description: 'Roll polyhedral dice' },
-  { name: 'image_generation', label: 'Image Generation', description: 'Generate images from text' }
+  { name: 'diceRoll', label: 'Dice Roll', description: 'Roll polyhedral dice' },
+  { name: 'imageGeneration', label: 'Image Generation', description: 'Generate images from text' }
 ];
 
 const defaultToolConfig = {
@@ -79,25 +79,40 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   };
 
   const handleToolsUpdate = (updatedTools) => {
-    setCurrentPersona(prev => ({
-      ...prev,
+    console.log('PersonaManager: Received updated tool configuration:', updatedTools);
+    
+    const updatedPersona = {
+      ...currentPersona,
       agentSettings: {
         ...defaultAgentSettings,
-        ...(prev.agentSettings || {}),
+        ...(currentPersona.agentSettings || {}),
         toolConfig: {
           ...defaultToolConfig,
-          ...(prev.agentSettings?.toolConfig || {}),
+          ...(currentPersona.agentSettings?.toolConfig || {}),
           ...updatedTools
         }
       }
-    }));
+    };
+    
+    console.log('PersonaManager: Updated persona with new tool configuration:', 
+      updatedPersona.agentSettings.toolConfig);
+    
+    setCurrentPersona(updatedPersona);
   };
 
   const handleSave = async () => {
+    console.log('PersonaManager: Saving persona with data:', currentPersona);
+    
+    // Create a complete persona object including all properties
     const updatedPersona = new Persona({
       ...currentPersona,
       updatedAt: Date.now()
     });
+    
+    // Add the agentSettings manually since they're not part of the Persona constructor
+    updatedPersona.agentSettings = currentPersona.agentSettings;
+    
+    console.log('PersonaManager: Final persona to be saved:', updatedPersona);
     
     await onPersonaUpdate(updatedPersona);
     onClose();

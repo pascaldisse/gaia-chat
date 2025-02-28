@@ -11,6 +11,7 @@ import { chatDB, knowledgeDB, userDB } from '../services/db';
 import { parseFileContent } from '../utils/FileParser';
 import { PersonaAgent } from "../services/agentService";
 import { createPersonaTools } from "../services/tools";
+import { isDiceRollCommand, extractDiceParams, formatDiceNotation } from "../utils/ToolUtilities";
 
 const Chat = ({ 
   currentChat, 
@@ -26,6 +27,10 @@ const Chat = ({
   chatHistory,
   setChatHistory
 }) => {
+  // Add a utility function to check if a persona has a specific tool
+  const personaHasTool = (persona, toolName) => {
+    return persona?.agentSettings?.toolConfig?.[toolName] === true;
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [debugLog, setDebugLog] = useState([]);
   const messagesEndRef = useRef(null);
@@ -150,6 +155,8 @@ const Chat = ({
     return instructions.join('\n');
   };
 
+  // We now use imported utility functions for dice roll detection and parameter extraction
+  
   const generatePersonaResponse = async (persona, triggerMessage, outcome) => {
     let messageId = Date.now();
     try {
@@ -203,7 +210,171 @@ const Chat = ({
         }
       }
 
-      const modulatedPrompt = `${persona.systemPrompt}
+      // Initialize an empty message in the chat
+      setCurrentChat(prev => [...prev, {
+        id: messageId,
+        content: '',
+        isUser: false,
+        personaId: persona.id
+      }]);
+      
+      // Create a component reference for tool creation
+      const componentRef = {
+        knowledgeDB,
+        generateImage,
+        imageModel,
+        selectedStyle,
+        setCurrentChat  // Pass this so tools can add messages to chat
+      };
+      
+      // Check if persona has tools configured and create them
+      let useAgent = false;
+      let tools = [];
+      
+      if (persona.agentSettings?.toolConfig) {
+        console.log(`Persona ${persona.name} has tool configuration:`, persona.agentSettings.toolConfig);
+        
+        // Check if any tools are enabled
+        const hasEnabledTools = Object.values(persona.agentSettings.toolConfig).some(enabled => enabled);
+        
+        if (hasEnabledTools) {
+          console.log(`Creating tools for persona ${persona.name}`);
+          tools = createPersonaTools(componentRef, persona);
+          useAgent = tools.length > 0;
+          console.log(`Created ${tools.length} tools for persona ${persona.name}`);
+          
+          // Add debug log for tools
+          addDebugLog('TOOLS', {
+            persona: persona.name,
+            tools: tools.map(t => t.name),
+            toolConfig: persona.agentSettings.toolConfig
+          });
+          
+          // This dice roll handling is now moved to the useAgent condition for more reliable execution
+          console.log("Direct dice roll handling moved to the useAgent section");
+        }
+      }
+      
+      // If we have tools, use the agent approach
+      if (useAgent) {
+        console.log(`Using agent with tools for persona ${persona.name}`);
+        
+        // First, check if this is a direct dice roll command that we can handle immediately
+        if (personaHasTool(persona, 'diceRoll') && 
+            isDiceRollCommand(triggerMessage.content)) {
+          try {
+            console.log(`Direct tool execution: Dice roll command detected for ${persona.name}`);
+            
+            // Find the dice roll tool
+            const diceRollTool = tools.find(tool => tool.name === "dice_roll");
+            if (diceRollTool) {
+              // Extract dice parameters
+              const { sides, count } = extractDiceParams(triggerMessage.content);
+              const diceNotation = formatDiceNotation(sides, count);
+              
+              console.log(`Executing dice roll directly: ${diceNotation}`);
+              
+              // First update message with "thinking" state
+              setCurrentChat(prev => 
+                prev.map(msg => 
+                  msg.id === messageId 
+                    ? { ...msg, content: `*Rolling ${diceNotation}...*` }
+                    : msg
+                )
+              );
+              
+              // Execute the dice roll
+              const result = await diceRollTool.func(diceNotation);
+              console.log("Dice roll result:", result);
+              
+              // Update message with the result
+              setCurrentChat(prev => 
+                prev.map(msg => 
+                  msg.id === messageId 
+                    ? { 
+                        ...msg, 
+                        content: `I rolled ${diceNotation} for you: ${result.replace('🎲 ', '')}`
+                      }
+                    : msg
+                )
+              );
+              
+              // Skip the rest of the agent processing
+              if (typeof persona.markActive === 'function') {
+                persona.markActive();
+              }
+              return;
+            }
+          } catch (error) {
+            console.error("Error executing dice roll directly:", error);
+            // Continue with normal processing if direct execution fails
+          }
+        }
+        
+        // Create token handler for streaming
+        let assistantMessage = '';
+        const handleNewToken = (token) => {
+          assistantMessage += token;
+          setCurrentChat(prev => 
+            prev.map(msg => 
+              msg.id === messageId 
+                ? { ...msg, content: assistantMessage }
+                : msg
+            )
+          );
+        };
+        
+        // Create the agent
+        const agent = await PersonaAgent.create(
+          persona,
+          tools,
+          {
+            handleNewToken,
+            handleToolStart: (tool) => {
+              console.log(`Tool execution started: ${tool.name}`);
+              addDebugLog('TOOL_START', { 
+                name: tool.name,
+                persona: persona.name, 
+                input: tool.input
+              });
+            },
+            handleToolEnd: (output) => {
+              console.log(`Tool execution completed with output:`, output);
+              addDebugLog('TOOL_END', { 
+                result: output, 
+                persona: persona.name
+              });
+            },
+            handleChainStart: (chain) => {
+              console.log(`Chain execution started for ${persona.name}`);
+            },
+            handleChainEnd: (output) => {
+              console.log(`Chain execution completed for ${persona.name}:`, output);
+            },
+            handleAgentAction: (action) => {
+              console.log(`Agent ${persona.name} is taking action:`, action);
+              addDebugLog('AGENT_ACTION', { 
+                action: action.tool,
+                input: action.toolInput,
+                persona: persona.name
+              });
+            }
+          }
+        );
+        
+        // Invoke the agent
+        const result = await agent.invoke({
+          message: triggerMessage.content,
+          history: recentMessages,
+          outcome
+        });
+        
+        console.log("Agent result:", result);
+      } else {
+        // Use the standard approach if no tools are enabled
+        console.log(`Using standard chat for persona ${persona.name} (no tools)`);
+        
+        const modulatedPrompt = `${persona.systemPrompt}
 ${generateRpgInstructions(outcome)}
 
 Recent conversation:
@@ -213,71 +384,95 @@ ${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
-      const response = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({
-          model: persona.model,
-          messages: [
-            { role: "system", content: modulatedPrompt },
-            { role: "user", content: triggerMessage.content }
-          ],
-          stream: true
-        }),
-        signal: controllerRef.current.signal // Add the abort signal
-      });
+        const response = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_KEY}`
+          },
+          body: JSON.stringify({
+            model: persona.model,
+            messages: [
+              { role: "system", content: modulatedPrompt },
+              { role: "user", content: triggerMessage.content }
+            ],
+            stream: true
+          }),
+          signal: controllerRef.current.signal // Add the abort signal
+        });
 
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantMessage = '';
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let assistantMessage = '';
 
-      setCurrentChat(prev => [...prev, {
-        id: messageId,
-        content: '',
-        isUser: false,
-        personaId: persona.id
-      }]);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim());
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.choices?.[0]?.delta?.content) {
-                assistantMessage += data.choices[0].delta.content;
-                setCurrentChat(prev => 
-                  prev.map(msg => 
-                    msg.id === messageId 
-                      ? { ...msg, content: assistantMessage }
-                      : msg
-                  )
-                );
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n').filter(line => line.trim());
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                // Handle the special [DONE] marker that isn't valid JSON
+                if (line.slice(6).trim() === '[DONE]') {
+                  continue;
+                }
+                
+                const data = JSON.parse(line.slice(6));
+                if (data.choices?.[0]?.delta?.content) {
+                  assistantMessage += data.choices[0].delta.content;
+                  setCurrentChat(prev => 
+                    prev.map(msg => 
+                      msg.id === messageId 
+                        ? { ...msg, content: assistantMessage }
+                        : msg
+                    )
+                  );
+                }
+              } catch (error) {
+                console.error('Parse error:', error);
               }
-            } catch (error) {
-              console.error('Parse error:', error);
             }
           }
         }
       }
 
-      persona.markActive();
+      // Check if markActive method exists before calling it
+      if (typeof persona.markActive === 'function') {
+        try {
+          persona.markActive();
+          console.log(`Marked persona ${persona.name} as active`);
+        } catch (error) {
+          console.warn(`Error marking persona ${persona.name} as active:`, error);
+        }
+      } else {
+        console.log(`No markActive method for persona ${persona.name}`);
+      }
     } catch (error) {
       console.error('Error generating response:', error);
       if (error.name === 'AbortError') {
         setCurrentChat(prev => prev.filter(msg => msg.id !== messageId));
+      } else {
+        // If it's not an abort error, update the message to show the error
+        setCurrentChat(prev => 
+          prev.map(msg => 
+            msg.id === messageId 
+              ? { ...msg, content: `Error: ${error.message}. Please try again.` }
+              : msg
+          )
+        );
       }
-      addDebugLog('ERROR', error.message);
+      addDebugLog('ERROR', {
+        message: error.message,
+        stack: error.stack,
+        context: 'generatePersonaResponse',
+        personaId: persona.id,
+        personaName: persona.name
+      });
     }
   };
 
@@ -292,8 +487,76 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     };
     setCurrentChat(prev => [...prev, newMessage]);
     setIsLoading(true);
+    
+    // Log message submission and any potential tool trigger
+    console.log(`User message: "${message}"`);
+    const isDiceCommand = isDiceRollCommand(message);
+    if (isDiceCommand) {
+      console.log(`Detected potential dice roll command: "${message}"`);
+      // Log which personas have the dice roll tool enabled
+      const personasWithDiceRoll = activePersonas.filter(p => personaHasTool(p, 'diceRoll'));
+      console.log(`Personas with dice roll tool enabled: ${personasWithDiceRoll.map(p => p.name).join(', ') || 'None'}`);
+      
+      // Add debug information about enabled tools
+      addDebugLog('DICE_COMMAND', { 
+        message,
+        personasWithDiceRoll: personasWithDiceRoll.map(p => p.name),
+        parsed: extractDiceParams(message)
+      });
+    }
 
     try {
+      // Check for direct dice roll commands and handle them before AI response
+      if (isDiceRollCommand(message)) {
+        // Find a persona that has the dice roll tool enabled
+        const diceEnabledPersona = activePersonas.find(p => personaHasTool(p, 'diceRoll'));
+        
+        if (diceEnabledPersona) {
+          console.log(`Handling direct dice roll with ${diceEnabledPersona.name}`);
+          
+          // Extract dice parameters
+          const { sides, count } = extractDiceParams(message);
+          const notation = formatDiceNotation(sides, count);
+          
+          // Roll the dice
+          const results = Array.from({length: count}, () => 
+            Math.floor(Math.random() * sides) + 1
+          );
+          
+          const total = results.reduce((a,b) => a + b, 0);
+          const resultString = `🎲 Rolling ${notation}: [${results.join(', ')}] = ${total}`;
+          
+          // Add dice roll result to chat
+          setCurrentChat(prev => [...prev, {
+            id: Date.now(),
+            content: `**Tool Used**: Dice Roll\n**Input**: ${notation}\n**Result**: ${resultString}`,
+            isUser: false,
+            isCommand: true,
+            isToolUsage: true,
+            toolName: "Dice Roll",
+            personaId: diceEnabledPersona.id,
+            toolData: {
+              toolName: "Dice Roll",
+              input: notation,
+              result: resultString,
+              timestamp: new Date().toISOString(),
+              persona: diceEnabledPersona.name
+            }
+          }]);
+          
+          // Log dice roll for debugging
+          addDebugLog('DICE_ROLL_EXECUTED', { 
+            persona: diceEnabledPersona.name,
+            notation,
+            results,
+            total
+          });
+          
+          setIsLoading(false);
+          return; // Exit early, no need for AI response
+        }
+      }
+
       // Get recent messages for context
       const recentMessages = currentChat
         .slice(-5)
@@ -347,6 +610,37 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       const responseQueue = await Promise.all(
         responseCandidates.map(async (persona) => {
           const outcome = RPGSystem.calculateOutcome(persona, context);
+          
+          // Log persona tools availability 
+          const hasToolConfig = !!persona.agentSettings?.toolConfig;
+          const enabledTools = hasToolConfig ? 
+            Object.entries(persona.agentSettings.toolConfig)
+              .filter(([name, enabled]) => enabled)
+              .map(([name]) => name) : 
+            [];
+            
+          console.log(`Persona ${persona.name} tool status:`, {
+            hasToolConfig,
+            enabledTools,
+            outcome: {
+              shouldRespond: outcome.shouldRespond,
+              responsePriority: outcome.responsePriority
+            }
+          });
+          
+          // Log if the persona can handle a potential dice roll
+          if (isDiceRollCommand(message) && personaHasTool(persona, 'diceRoll')) {
+            console.log(`${persona.name} can handle the dice roll command`);
+            addDebugLog('DICE_ROLL_CAPABLE', { persona: persona.name });
+            
+            // Force a response for dice rolls if the tool is available
+            if (!outcome.shouldRespond) {
+              console.log(`Overriding shouldRespond for ${persona.name} to handle dice roll`);
+              outcome.shouldRespond = true;
+              outcome.responsePriority += 10; // Increase priority significantly for tool use
+            }
+          }
+            
           return { persona, outcome };
         })
       );
@@ -457,7 +751,14 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
             for (const line of lines) {
               if (line.startsWith('data: ')) {
                 try {
-                  const data = JSON.parse(line.slice(6));
+                  // Check for the special [DONE] marker
+                  const dataText = line.slice(6).trim();
+                  if (dataText === '[DONE]') {
+                    console.log('Received [DONE] marker for streaming completion');
+                    continue;
+                  }
+                  
+                  const data = JSON.parse(dataText);
                   if (data.choices?.[0]?.delta?.content) {
                     // Update the chat content directly with each chunk
                     setCurrentChat(prev => {
@@ -472,12 +773,20 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
                     });
                   }
                 } catch (error) {
-                  console.error('Parse error:', error);
+                  console.error('Parse error:', error, 'on line:', line);
                 }
               }
             }
           }
-          persona.markActive(); // Mark persona as active after response
+          // Check if markActive exists before calling it
+          if (typeof persona.markActive === 'function') {
+            try {
+              persona.markActive();
+              console.log(`Marked persona ${persona.name} as active after response`);
+            } catch (error) {
+              console.warn(`Error marking persona ${persona.name} as active after response:`, error);
+            }
+          }
         } catch (error) {
             console.error('Error generating response:', error);
             if (error.name === 'AbortError') {
@@ -675,6 +984,21 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   useEffect(() => {
     console.log('Debug Log updated:', debugLog);
   }, [debugLog]);
+  
+  // Log active personas with their tool configurations whenever they change
+  useEffect(() => {
+    if (activePersonas.length > 0) {
+      console.log('Active personas with tool configurations:');
+      activePersonas.forEach(persona => {
+        const toolConfig = persona.agentSettings?.toolConfig || {};
+        const enabledTools = Object.entries(toolConfig)
+          .filter(([name, enabled]) => enabled)
+          .map(([name]) => name);
+          
+        console.log(`- ${persona.name}: Tools enabled: ${enabledTools.join(', ') || 'None'}`);
+      });
+    }
+  }, [activePersonas]);
 
   // More robust loadFiles function with better error handling
   const loadFiles = async (fileIds) => {
@@ -954,7 +1278,19 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       {showDebugLog && (
         <div className="debug-panel">
           <h3>Debug Information</h3>
-          <button onClick={() => setDebugLog([])}>Clear Logs</button>
+          <div className="debug-controls">
+            <button onClick={() => setDebugLog([])}>Clear Logs</button>
+            <div className="debug-filters">
+              <label>
+                <input 
+                  type="checkbox" 
+                  checked={true} 
+                  onChange={() => {}} 
+                />
+                Show Tool Usage
+              </label>
+            </div>
+          </div>
           <div className="debug-logs">
             {debugLog.map((log, index) => (
               <div key={index} className={`log-entry ${log.type}`}>
@@ -963,8 +1299,17 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
                   {log.type === 'RPG_OUTCOME' && (
                     <span className="dice-result">🎲 {log.data.match(/"total": (\d+)/)[1]}</span>
                   )}
+                  {log.type === 'TOOL_START' && (
+                    <span className="tool-start">🛠️ Started</span>
+                  )}
+                  {log.type === 'TOOL_END' && (
+                    <span className="tool-end">✅ Completed</span>
+                  )}
+                  {log.type === 'AGENT_ACTION' && (
+                    <span className="agent-action">🤖 Action</span>
+                  )}
                 </div>
-                <pre>{log.data}</pre>
+                <pre>{typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}</pre>
               </div>
             ))}
           </div>

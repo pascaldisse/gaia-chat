@@ -99,6 +99,10 @@
   .log-entry.ERROR { border-left: 4px solid #f44336; }
   .log-entry.CHUNK { border-left: 4px solid #9C27B0; }
   .log-entry.RPG_OUTCOME { border-left: 4px solid #FF9800; }
+  .log-entry.TOOLS { border-left: 4px solid #5865f2; }
+  .log-entry.TOOL_START { border-left: 4px solid #00b0f4; }
+  .log-entry.TOOL_END { border-left: 4px solid #43b581; }
+  .log-entry.AGENT_ACTION { border-left: 4px solid #faa61a; }
   
   .log-entry.IMAGE_REQUEST,
   .log-entry.IMAGE_RESPONSE,

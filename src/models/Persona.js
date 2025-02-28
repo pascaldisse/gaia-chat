@@ -21,7 +21,8 @@ export default class Persona {
       activeInChats = [],
       isDefault = false,
       isSystem = false,
-      userId = null
+      userId = null,
+      agentSettings = null
     }) {
       this.id = id;
       this.name = name;
@@ -47,5 +48,10 @@ export default class Persona {
       this.isDefault = isDefault; // Marks as default persona like GAIA
       this.isSystem = isSystem;   // Marks as system-wide, not tied to user
       this.userId = userId;       // Links to user if user-created
+      
+      // Initialize agent settings if provided
+      if (agentSettings) {
+        this.agentSettings = agentSettings;
+      }
     }
   }

@@ -378,8 +378,15 @@ export const personaDB = {
   
   async savePersona(persona) {
     try {
+      console.log('DB Service: Saving persona with data:', persona);
+      
+      // Ensure the persona is a plain object (not a class instance)
+      const personaObj = { ...persona };
+      
       const db = await dbPromise;
-      await db.put(PERSONA_STORE, persona);
+      await db.put(PERSONA_STORE, personaObj);
+      console.log('DB Service: Persona saved successfully');
+      return personaObj;
     } catch (error) {
       console.error('Error saving persona:', error);
       throw error;

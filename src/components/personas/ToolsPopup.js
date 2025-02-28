@@ -2,14 +2,15 @@ import React from 'react';
 import '../../styles/personas/ToolsPopup.css';
 
 const availableTools = [
-  { name: 'dice_roll', label: 'Dice Roll', description: 'Roll polyhedral dice' },
-  { name: 'image_generation', label: 'Image Generation', description: 'Generate images from text' }
+  { name: 'diceRoll', label: 'Dice Roll', description: 'Roll polyhedral dice' },
+  { name: 'imageGeneration', label: 'Image Generation', description: 'Generate images from text' }
 ];
 
 export default function ToolsPopup({ tools, onUpdate, onClose }) {
   const [localTools, setLocalTools] = React.useState(tools);
 
   const handleToggle = (toolName) => {
+    console.log(`ToolsPopup: Toggling tool ${toolName} from ${localTools[toolName]} to ${!localTools[toolName]}`);
     setLocalTools(prev => ({
       ...prev,
       [toolName]: !prev[toolName]
@@ -17,6 +18,7 @@ export default function ToolsPopup({ tools, onUpdate, onClose }) {
   };
 
   const handleSave = () => {
+    console.log('ToolsPopup: Saving tools with configuration:', localTools);
     onUpdate(localTools);
     onClose();
   };
