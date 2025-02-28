@@ -18,7 +18,7 @@ const resetDatabase = async () => {
     console.log('Database reset successfully');
     
     // Recreate it by opening a connection
-    return openDB(DB_NAME, 1, {
+    return openDB(DB_NAME, 6, {
       upgrade(db) {
         // Create all stores from scratch
         const chatStore = db.createObjectStore(CHAT_STORE, { keyPath: 'id' });
@@ -63,7 +63,7 @@ const resetDatabase = async () => {
 };
 
 // Create/open the database with a simple upgrade function
-let dbPromise = openDB(DB_NAME, 1, {
+let dbPromise = openDB(DB_NAME, 6, {
   upgrade(db, oldVersion, newVersion, transaction) {
     // In the upgrade handler, just create missing stores
     if (!db.objectStoreNames.contains(CHAT_STORE)) {

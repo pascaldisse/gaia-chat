@@ -3,14 +3,37 @@ import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 
 // Simple hashing function for passwords (in a real app, use bcrypt or similar)
 export const hashPassword = async (password) => {
-  // This is a placeholder - in a real app, use a proper crypto library
-  // with salt and proper hashing
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
+  try {
+    // Check if the Web Crypto API is available
+    if (!window.crypto || !window.crypto.subtle) {
+      // Fallback for environments where crypto.subtle is not available (like insecure contexts)
+      console.warn('Web Crypto API not available, using simple hash fallback');
+      let hash = 0;
+      for (let i = 0; i < password.length; i++) {
+        const char = password.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      // Convert to hex string and pad
+      const hashHex = (hash >>> 0).toString(16).padStart(64, '0');
+      return hashHex;
+    }
+    
+    // Standard Web Crypto implementation
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  } catch (error) {
+    console.error('Error in hashPassword:', error);
+    // Emergency fallback - NOT SECURE, but prevents app breakage
+    return Array.from(password)
+      .reduce((hash, char) => ((hash << 5) - hash) + char.charCodeAt(0), 0)
+      .toString(36)
+      .padStart(64, '0');
+  }
 };
 
 // Generate a session token
