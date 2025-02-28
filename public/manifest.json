@@ -1,6 +1,6 @@
 {
-  "short_name": "Gaia",
-  "name": "Gaia App",
+  "short_name": "GAIA",
+  "name": "GAIA Chat",
   "icons": [
     {
       "src": "favicon.ico",
@@ -26,5 +26,5 @@
   "theme_color": "#000000",
   "background_color": "#ffffff",
   "orientation": "portrait-primary",
-  "description": "Gaia - A role-playing conversation app"
+  "description": "GAIA Chat - A role-playing conversation app"
 }
