@@ -18,7 +18,10 @@ export default class Persona {
       patience = 5,
       skepticism = 5,
       optimism = 5,
-      activeInChats = []
+      activeInChats = [],
+      isDefault = false,
+      isSystem = false,
+      userId = null
     }) {
       this.id = id;
       this.name = name;
@@ -41,5 +44,8 @@ export default class Persona {
       this.skepticism = skepticism;
       this.optimism = optimism;
       this.activeInChats = activeInChats;
+      this.isDefault = isDefault; // Marks as default persona like GAIA
+      this.isSystem = isSystem;   // Marks as system-wide, not tied to user
+      this.userId = userId;       // Links to user if user-created
     }
   }

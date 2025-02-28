@@ -11,10 +11,18 @@
   background-color: rgba(0, 0, 0, 0.05);
 }
 
+.user-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px;
+}
+
 .user-info {
   display: flex;
   align-items: center;
-  padding: 10px;
+  cursor: pointer;
 }
 
 .user-avatar {
@@ -75,6 +83,51 @@
   background-color: #0060df;
 }
 
+.logout-button {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  padding: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.logout-button:hover {
+  background-color: rgba(255, 70, 70, 0.1);
+  color: #e53e3e;
+}
+
+.logout-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logout-message {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background-color: #f8f8f8;
+  color: #333;
+  padding: 10px 15px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1100;
+  animation: fadeIn 0.3s ease-in-out;
+  font-size: 14px;
+  border-left: 3px solid #0070f3;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .user-button-container:hover {
@@ -83,5 +136,20 @@
   
   .user-name {
     color: #f0f0f0;
+  }
+  
+  .logout-button {
+    color: #999;
+  }
+  
+  .logout-button:hover {
+    background-color: rgba(255, 70, 70, 0.15);
+    color: #ff8a8a;
+  }
+  
+  .logout-message {
+    background-color: #2a2a2a;
+    color: #f0f0f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 }

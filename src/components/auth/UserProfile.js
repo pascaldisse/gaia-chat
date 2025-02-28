@@ -7,15 +7,15 @@ const UserProfile = ({ onClose }) => {
   
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
-    displayName: user.displayName || '',
-    username: user.username || '',
-    email: user.email || ''
+    displayName: user?.displayName || '',
+    username: user?.username || '',
+    email: user?.email || ''
   });
   
   const [settingsData, setSettingsData] = useState({
-    theme: user.settings?.theme || 'light',
-    defaultModel: user.settings?.defaultModel || 'meta-llama/Meta-Llama-3-70B-Instruct',
-    defaultPersona: user.settings?.defaultPersona || ''
+    theme: user?.settings?.theme || 'light',
+    defaultModel: user?.settings?.defaultModel || 'meta-llama/Meta-Llama-3-70B-Instruct',
+    defaultPersona: user?.settings?.defaultPersona || ''
   });
   
   const [currentPassword, setCurrentPassword] = useState('');
@@ -115,7 +115,7 @@ const UserProfile = ({ onClose }) => {
     e.preventDefault();
     setFormError('');
     
-    if (deleteConfirmation !== user.username) {
+    if (!user || deleteConfirmation !== user.username) {
       setFormError('Username confirmation does not match');
       return;
     }
@@ -325,7 +325,7 @@ const UserProfile = ({ onClose }) => {
                   id="deleteConfirmation"
                   value={deleteConfirmation}
                   onChange={(e) => setDeleteConfirmation(e.target.value)}
-                  placeholder={`Type "${user.username}" to confirm`}
+                  placeholder={`Type "${user?.username || ''}" to confirm`}
                   disabled={isLoading}
                   required
                 />
@@ -346,7 +346,7 @@ const UserProfile = ({ onClose }) => {
               <button 
                 type="submit" 
                 className="danger-button" 
-                disabled={isLoading || deleteConfirmation !== user.username}
+                disabled={isLoading || !user || deleteConfirmation !== user.username}
               >
                 {isLoading ? 'Processing...' : 'Permanently Delete My Account'}
               </button>
