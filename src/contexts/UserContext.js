@@ -81,6 +81,9 @@ export const UserProvider = ({ children }) => {
   const logout = () => {
     logoutUser();
     setUser(null);
+    
+    // Force a reload to reset application state
+    window.location.reload();
   };
   
   // Update user data

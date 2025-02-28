@@ -11,9 +11,10 @@ import { personaDB } from './services/db';
 import Persona from './models/Persona';
 import PersonaManager from './components/personas/PersonaManager';
 import { GAIA_CONFIG, DEFAULT_PERSONA_ID } from './config/defaultPersona';
-import { UserProvider } from './contexts/UserContext';
+import { UserProvider, useUser } from './contexts/UserContext';
 
 function AppContent() {
+  const { user: currentUser } = useUser();
   const [currentChat, setCurrentChat] = useState([]);
   const [model, setModel] = useState(MODELS.LLAMA3_70B);
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
@@ -31,17 +32,15 @@ function AppContent() {
   useEffect(() => {
     const loadChats = async () => {
       try {
-        // Get current user from context
-        const { getCurrentUser } = await import('./services/auth');
-        const currentUser = await getCurrentUser();
-        
         // Get chats based on user status
         let chats;
         if (currentUser) {
           // For logged in users, get their chats
+          console.log("Loading chats for user:", currentUser.id);
           chats = await chatDB.getChatsByUser(currentUser.id);
         } else {
           // For anonymous users, get chats without userId
+          console.log("Loading chats for anonymous user");
           chats = await chatDB.getAllChats();
           chats = chats.filter(chat => !chat.userId);
         }
@@ -98,7 +97,7 @@ function AppContent() {
       }
     };
     loadChats();
-  }, [selectedChatId, personas]);
+  }, [selectedChatId, personas, currentUser]);
 
   // Save chat to database when it changes
   useEffect(() => {
@@ -106,10 +105,6 @@ function AppContent() {
       if (selectedChatId && Array.isArray(currentChat) && currentChat.length > 0) {
         // First get the existing chat to preserve knowledgeFiles
         const existingChat = await chatDB.getChatById(selectedChatId);
-        
-        // Get current user
-        const { getCurrentUser } = await import('./services/auth');
-        const currentUser = await getCurrentUser();
         
         const updatedChat = {
           id: selectedChatId,
@@ -134,8 +129,10 @@ function AppContent() {
           // Get updated chat history based on user status
           let freshChats;
           if (currentUser) {
+            console.log("Refreshing chats after save for user:", currentUser.id);
             freshChats = await chatDB.getChatsByUser(currentUser.id);
           } else {
+            console.log("Refreshing chats after save for anonymous user");
             const allChats = await chatDB.getAllChats();
             freshChats = allChats.filter(chat => !chat.userId);
           }
@@ -149,24 +146,22 @@ function AppContent() {
 
     const timeoutId = setTimeout(saveChat, 100);
     return () => clearTimeout(timeoutId);
-  }, [currentChat, selectedChatId, systemPrompt, model, chatHistory, activePersonas]);
+  }, [currentChat, selectedChatId, systemPrompt, model, chatHistory, activePersonas, currentUser]);
 
   // Add useEffect for loading personas
   useEffect(() => {
     const loadPersonas = async () => {
-      // Get current user from context
-      const { getCurrentUser } = await import('./services/auth');
-      const currentUser = await getCurrentUser();
-      
       let loaded;
       if (currentUser) {
         // For logged in users, get both their personas and the system personas (those without userId)
+        console.log("Loading personas for user:", currentUser.id);
         const userPersonas = await personaDB.getPersonasByUser(currentUser.id);
         const systemPersonas = await personaDB.getAllPersonas();
         const systemPersonasWithoutUser = systemPersonas.filter(p => !p.userId);
         loaded = [...userPersonas, ...systemPersonasWithoutUser];
       } else {
         // For anonymous users, get personas without userId
+        console.log("Loading personas for anonymous user");
         const allPersonas = await personaDB.getAllPersonas();
         loaded = allPersonas.filter(p => !p.userId);
       }
@@ -185,7 +180,7 @@ function AppContent() {
       }
     };
     loadPersonas();
-  }, []);
+  }, [currentUser]);
 
   const createNewChat = async () => {
     const defaultGaia = personas.find(p => p.id === DEFAULT_PERSONA_ID);
@@ -194,10 +189,6 @@ function AppContent() {
       console.error('GAIA persona not found!');
       return;
     }
-    
-    // Get current user
-    const { getCurrentUser } = await import('./services/auth');
-    const currentUser = await getCurrentUser();
 
     const newChat = {
       id: Date.now(),
@@ -219,8 +210,10 @@ function AppContent() {
       // Get updated chat history based on user status
       let updatedHistory;
       if (currentUser) {
+        console.log("Refreshing chats after new chat creation for user:", currentUser.id);
         updatedHistory = await chatDB.getChatsByUser(currentUser.id);
       } else {
+        console.log("Refreshing chats after new chat creation for anonymous user");
         const allChats = await chatDB.getAllChats();
         updatedHistory = allChats.filter(chat => !chat.userId);
       }
@@ -235,10 +228,6 @@ function AppContent() {
   };
 
   const createNewPersona = async () => {
-    // Get current user
-    const { getCurrentUser } = await import('./services/auth');
-    const currentUser = await getCurrentUser();
-    
     const newPersona = new Persona({
       name: 'New Persona',
       systemPrompt: 'You are a helpful assistant',
@@ -252,11 +241,13 @@ function AppContent() {
       // Get updated personas based on user status
       let updatedPersonas;
       if (currentUser) {
+        console.log("Getting updated personas for user:", currentUser.id);
         const userPersonas = await personaDB.getPersonasByUser(currentUser.id);
         const systemPersonas = await personaDB.getAllPersonas();
         const systemPersonasWithoutUser = systemPersonas.filter(p => !p.userId);
         updatedPersonas = [...userPersonas, ...systemPersonasWithoutUser];
       } else {
+        console.log("Getting updated personas for anonymous user");
         const allPersonas = await personaDB.getAllPersonas();
         updatedPersonas = allPersonas.filter(p => !p.userId);
       }
@@ -274,18 +265,16 @@ function AppContent() {
       // Save the updated persona
       await personaDB.savePersona(updatedPersona);
       
-      // Get current user
-      const { getCurrentUser } = await import('./services/auth');
-      const currentUser = await getCurrentUser();
-      
       // Get updated personas based on user status
       let updatedPersonas;
       if (currentUser) {
+        console.log("Getting updated personas after edit for user:", currentUser.id);
         const userPersonas = await personaDB.getPersonasByUser(currentUser.id);
         const systemPersonas = await personaDB.getAllPersonas();
         const systemPersonasWithoutUser = systemPersonas.filter(p => !p.userId);
         updatedPersonas = [...userPersonas, ...systemPersonasWithoutUser];
       } else {
+        console.log("Getting updated personas after edit for anonymous user");
         const allPersonas = await personaDB.getAllPersonas();
         updatedPersonas = allPersonas.filter(p => !p.userId);
       }
@@ -307,18 +296,16 @@ function AppContent() {
       
       await personaDB.deletePersona(personaToDelete.id);
       
-      // Get current user
-      const { getCurrentUser } = await import('./services/auth');
-      const currentUser = await getCurrentUser();
-      
       // Get updated personas based on user status
       let updatedPersonas;
       if (currentUser) {
+        console.log("Getting updated personas after delete for user:", currentUser.id);
         const userPersonas = await personaDB.getPersonasByUser(currentUser.id);
         const systemPersonas = await personaDB.getAllPersonas();
         const systemPersonasWithoutUser = systemPersonas.filter(p => !p.userId);
         updatedPersonas = [...userPersonas, ...systemPersonasWithoutUser];
       } else {
+        console.log("Getting updated personas after delete for anonymous user");
         const allPersonas = await personaDB.getAllPersonas();
         updatedPersonas = allPersonas.filter(p => !p.userId);
       }
