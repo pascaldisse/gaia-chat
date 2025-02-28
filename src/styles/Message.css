@@ -22,6 +22,44 @@
     transition: background-color 0.2s;
   }
   
+  /* Media queries for messages on mobile */
+  @media (max-width: 768px) {
+    .message {
+      max-width: 85%;
+      margin-bottom: 16px;
+    }
+    
+    .message-content {
+      padding: 10px 14px;
+      font-size: 15px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .message {
+      max-width: 90%;
+      margin-bottom: 14px;
+    }
+    
+    .message-content {
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    
+    .message-actions {
+      flex-wrap: wrap;
+    }
+    
+    .persona-header {
+      font-size: 0.8em;
+    }
+    
+    .persona-avatar {
+      width: 26px;
+      height: 26px;
+    }
+  }
+  
   .user .message-content {
     background-color: #5865f2;
     color: white;
@@ -130,6 +168,53 @@
     font-size: 1.0em;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+  }
+  
+  /* Media queries for tool usage on mobile */
+  @media (max-width: 768px) {
+    .tool-usage {
+      padding: 8px 10px;
+      margin: 4px 0;
+    }
+    
+    .tool-header {
+      margin-bottom: 6px;
+    }
+    
+    .tool-name {
+      font-size: 0.9em;
+    }
+    
+    .tool-details {
+      font-size: 0.75em;
+      max-height: 150px;
+      padding: 6px;
+    }
+    
+    .tool-badge {
+      font-size: 0.75em;
+      padding: 1px 4px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .tool-usage {
+      padding: 6px 8px;
+    }
+    
+    .tool-icon {
+      font-size: 1em;
+      margin-right: 6px;
+    }
+    
+    .tool-name {
+      font-size: 0.8em;
+    }
+    
+    .tool-details {
+      font-size: 0.7em;
+      max-height: 120px;
+    }
   }
   
   .tool-toggle {

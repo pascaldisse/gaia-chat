@@ -27,6 +27,7 @@ function AppContent() {
   const [activePersonas, setActivePersonas] = useState([]);
   const [activeUsers, setActiveUsers] = useState([]);
   const [viewMode, setViewMode] = useState('chat'); // 'chat' or 'agentflow'
+  const [sidebarVisible, setSidebarVisible] = useState(false); // Control sidebar visibility
 
   // Load chat history from database
   useEffect(() => {
@@ -322,18 +323,44 @@ function AppContent() {
 
   return (
     <div className="app">
-      <Sidebar 
-        setCurrentChat={setCurrentChat} 
-        chatHistory={chatHistory}
-        selectedChatId={selectedChatId}
-        setSelectedChatId={setSelectedChatId}
-        createNewChat={createNewChat}
-        personas={personas}
-        selectedPersonaId={selectedPersonaId}
-        setSelectedPersonaId={setSelectedPersonaId}
-        createNewPersona={createNewPersona}
-        onEditPersona={setEditingPersona}
-      />
+      {/* Hamburger menu toggle button */}
+      <button 
+        className="hamburger-menu" 
+        onClick={() => setSidebarVisible(!sidebarVisible)}
+        aria-label="Toggle sidebar"
+      >
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+          <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+        </svg>
+      </button>
+      
+      {/* Sidebar with collapsible behavior */}
+      <div className={`sidebar-container ${sidebarVisible ? 'visible' : 'hidden'}`}>
+        <Sidebar 
+          setCurrentChat={setCurrentChat} 
+          chatHistory={chatHistory}
+          selectedChatId={selectedChatId}
+          setSelectedChatId={setSelectedChatId}
+          createNewChat={createNewChat}
+          personas={personas}
+          selectedPersonaId={selectedPersonaId}
+          setSelectedPersonaId={setSelectedPersonaId}
+          createNewPersona={createNewPersona}
+          onEditPersona={setEditingPersona}
+        />
+        {/* Close button for mobile */}
+        <button 
+          className="sidebar-close" 
+          onClick={() => setSidebarVisible(false)}
+        >
+          ✕
+        </button>
+      </div>
+      
+      {/* Overlay for mobile */}
+      {sidebarVisible && 
+        <div className="sidebar-overlay" onClick={() => setSidebarVisible(false)}></div>
+      }
       
       <div className="view-toggle">
         <button 

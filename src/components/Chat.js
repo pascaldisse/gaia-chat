@@ -985,6 +985,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     console.log('Debug Log updated:', debugLog);
   }, [debugLog]);
   
+  // State for toggling participants panel
+  const [showParticipants, setShowParticipants] = useState(true);
+  
   // Log active personas with their tool configurations whenever they change
   useEffect(() => {
     if (activePersonas.length > 0) {
@@ -1216,44 +1219,41 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
 
   return (
     <div className="chat-container">
-      <div className="active-participants">
-        <div className="active-personas">
-          <h4>Active Personas</h4>
-          <div className="persona-list">
-            {activePersonas.map(persona => (
-              <div key={persona.id} className="persona-item">
-                <img 
-                  src={persona.image || '/default-avatar.png'} 
-                  alt={persona.name}
-                  className="persona-avatar"
-                />
-                <span>{persona.name}</span>
-                <button 
-                  className="remove-persona"
-                  onClick={() => handleRemovePersona(persona.id)}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Fixed toggle button that's always visible */}
+      <button 
+        className="participants-toggle-fixed"
+        onClick={() => setShowParticipants(!showParticipants)}
+        aria-label={showParticipants ? "Hide participants" : "Show participants"}
+        title={showParticipants ? "Hide active personas" : "Show active personas"}
+      >
+        👥
+      </button>
+      
+      {/* Collapsible participants panel */}
+      <div className={`active-participants ${showParticipants ? 'expanded' : 'collapsed'}`}>
+        <button 
+          className="participants-toggle"
+          onClick={() => setShowParticipants(false)}
+          aria-label="Hide participants"
+        >
+          ✕
+        </button>
         
-        {activeUsers.length > 0 && (
-          <div className="active-users">
-            <h4>Active Users</h4>
-            <div className="user-list">
-              {activeUsers.map(user => (
-                <div key={user.id} className="user-item">
+        <div className="participants-content">
+          <div className="active-personas">
+            <h4>Active Personas</h4>
+            <div className="persona-list">
+              {activePersonas.map(persona => (
+                <div key={persona.id} className="persona-item">
                   <img 
-                    src={'/user-avatar.png'} 
-                    alt={user.displayName || user.username}
-                    className="user-avatar"
+                    src={persona.image || '/default-avatar.png'} 
+                    alt={persona.name}
+                    className="persona-avatar"
                   />
-                  <span>{user.displayName || user.username}</span>
+                  <span>{persona.name}</span>
                   <button 
-                    className="remove-user"
-                    onClick={() => handleRemoveUser(user.id)}
+                    className="remove-persona"
+                    onClick={() => handleRemovePersona(persona.id)}
                   >
                     ×
                   </button>
@@ -1261,7 +1261,31 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
               ))}
             </div>
           </div>
-        )}
+          
+          {activeUsers.length > 0 && (
+            <div className="active-users">
+              <h4>Active Users</h4>
+              <div className="user-list">
+                {activeUsers.map(user => (
+                  <div key={user.id} className="user-item">
+                    <img 
+                      src={'/user-avatar.png'} 
+                      alt={user.displayName || user.username}
+                      className="user-avatar"
+                    />
+                    <span>{user.displayName || user.username}</span>
+                    <button 
+                      className="remove-user"
+                      onClick={() => handleRemoveUser(user.id)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       <div className="messages">
         {currentChat.map(message => (
