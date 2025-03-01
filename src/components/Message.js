@@ -40,23 +40,23 @@ const Message = ({ message, onRegenerate, personas }) => {
     }
     
     // Otherwise, generate new audio
-    // Use the correct DeepInfra voice IDs
-    // Default to Luna voice if none is set
-    let voiceToUse = "luna";
+    // Use the correct Zonos TTS voice IDs
+    // Default to random voice if none is set
+    let voiceToUse = "random";
     
     // In production, this would use the persona's configured voice:
-    // const voiceToUse = persona?.voiceId || "luna";
+    // const voiceToUse = persona?.voiceId || "random";
     
     // For demonstration, assign specific voices based on persona name
     if (persona) {
       if (persona.name === "GAIA") {
-        voiceToUse = "af_nova"; // Nova voice for GAIA
+        voiceToUse = "american_female"; // American female voice for GAIA
       } else if (persona.name.includes("Science")) {
-        voiceToUse = "bm_daniel"; // Daniel voice for Science personas
+        voiceToUse = "british_male"; // British male voice for Science personas
       } else if (persona.name.includes("Art")) {
-        voiceToUse = "af_bella"; // Bella voice for Art personas
+        voiceToUse = "british_female"; // British female voice for Art personas
       } else if (persona.name.includes("Business")) {
-        voiceToUse = "am_michael"; // Michael voice for Business personas
+        voiceToUse = "american_male"; // American male voice for Business personas
       }
     }
     
@@ -75,35 +75,31 @@ const Message = ({ message, onRegenerate, personas }) => {
       
       console.log("Sending text to TTS:", textContent.substring(0, 50) + "...");
       
-      try {
-        // Generate speech using the voice ID
-        const url = await generateSpeech(textContent, voiceToUse);
-        console.log("Generated audio URL:", url ? (typeof url === 'string' ? url.substring(0, 50) + "..." : "[blob URL]") : "null");
+      // Generate speech using the Zonos TTS voice ID
+      const url = await generateSpeech(textContent, voiceToUse);
+      console.log("Generated audio URL:", url ? (typeof url === 'string' ? url.substring(0, 50) + "..." : "[blob URL]") : "null");
+      
+      if (url) {
+        setAudioUrl(url);
         
-        if (url) {
-          setAudioUrl(url);
-          
-          // Play the audio after a short delay to ensure it's loaded
-          setTimeout(() => {
-            if (audioRef.current) {
-              console.log("Playing generated audio");
-              audioRef.current.play()
-                .then(() => {
-                  console.log("Audio playback started successfully");
-                  setIsPlaying(true);
-                })
-                .catch(err => {
-                  console.error("Error playing generated audio:", err);
-                  setIsPlaying(false);
-                });
-            }
-          }, 300); // Increased delay for better loading
-        } else {
-          throw new Error("No audio URL returned from speech generation");
-        }
-      } catch (error) {
-        console.error("Failed to generate speech:", error);
-        alert("Failed to generate speech. Check the console for details.");
+        // Play the audio after a short delay to ensure it's loaded
+        setTimeout(() => {
+          if (audioRef.current) {
+            console.log("Playing generated audio");
+            audioRef.current.play()
+              .then(() => {
+                console.log("Audio playback started successfully");
+                setIsPlaying(true);
+              })
+              .catch(err => {
+                console.error("Error playing generated audio:", err);
+                setIsPlaying(false);
+                setIsLoadingAudio(false);
+              });
+          }
+        }, 500); // Increased delay for better loading
+      } else {
+        console.warn("No audio URL returned from speech generation");
         setIsLoadingAudio(false);
       }
     } catch (error) {

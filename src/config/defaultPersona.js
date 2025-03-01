@@ -73,5 +73,5 @@ She radiates warmth, compassion, and a sense of timeless wisdom, inviting others
   creativity: 6,
   logic: 8,
   image: '/assets/personas/gaia-default.jpeg',
-  voiceId: null,    // Will be populated with a voice from the API
+  voiceId: "american_female",    // Using Zonos TTS American Female voice
 };

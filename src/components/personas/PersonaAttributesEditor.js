@@ -85,14 +85,13 @@ const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
                   </option>
                 ))
               )}
-              {/* Add some recommended voices in case API fails */}
-              <optgroup label="Recommended Voices">
-                <option value="luna">Luna</option>
-                <option value="aura">Aura</option>
-                <option value="quartz">Quartz</option>
-                <option value="af_nova">Nova (Female)</option>
-                <option value="af_bella">Bella (Female)</option>
-                <option value="am_adam">Adam (Male)</option>
+              {/* Add Zonos voices as fallback */}
+              <optgroup label="Zonos Voices">
+                <option value="american_female">American Female</option>
+                <option value="american_male">American Male</option>
+                <option value="british_female">British Female</option>
+                <option value="british_male">British Male</option>
+                <option value="random">Random Voice</option>
               </optgroup>
             </select>
           </div>
