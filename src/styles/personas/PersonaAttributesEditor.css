@@ -117,8 +117,8 @@
   background-color: #4752c4;
 }
 
-/* Voice selection styles */
-.voice-selection {
+/* Voice section styles */
+.voice-section {
   background-color: #2f3136;
   padding: 16px;
   border-radius: 8px;
@@ -126,10 +126,45 @@
   border: 1px solid #202225;
 }
 
-.voice-selection h3 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
+.voice-description {
   color: #b9bbbe;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.voice-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.voice-engine-selector, 
+.voice-id-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.voice-engine-selector label,
+.voice-id-selector label {
+  color: #b9bbbe;
+  font-weight: 500;
+}
+
+.voice-engine-selector select,
+.voice-id-selector select {
+  padding: 8px 12px;
+  background-color: #40444b;
+  color: #dcddde;
+  border: 1px solid #202225;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+}
+
+.voice-engine-selector select:focus,
+.voice-id-selector select:focus {
+  border-color: #5865f2;
 }
 
 /* TTS Engine Selector */

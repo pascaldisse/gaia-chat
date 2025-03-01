@@ -201,58 +201,78 @@ export const getVoices = async () => {
  * @returns {Array<string>} Array of sentences
  */
 export const splitTextIntoSentences = (text) => {
-  // Basic sentence splitter - splits on periods, question marks, and exclamation points
-  // followed by a space or line break
-  const sentenceRegex = /[.!?]+[\s\n]+/g;
-  const sentences = text.split(sentenceRegex);
+  console.log("Splitting text into sentences:", text.substring(0, 50) + "...");
   
-  // Filter out empty sentences and ensure they end with punctuation
-  const processedSentences = sentences
-    .map((sentence, index, arr) => {
-      // Trim whitespace
-      const trimmed = sentence.trim();
-      if (!trimmed) return null;
-      
-      // If this isn't the last sentence and doesn't end with punctuation,
-      // add the punctuation that was removed by the split
-      if (index < arr.length - 1) {
-        // Find the punctuation that followed this sentence
-        const match = text.match(new RegExp(`${trimmed}([.!?]+)`, 'i'));
-        if (match && match[1]) {
-          return trimmed + match[1];
-        }
-      }
-      
-      // If last sentence doesn't end with punctuation, add a period
-      if (index === arr.length - 1 && !trimmed.match(/[.!?]$/)) {
-        return trimmed + '.';
-      }
-      
-      return trimmed;
-    })
-    .filter(Boolean);
-  
-  // If sentences are too short, combine them to reduce API calls
-  const combinedSentences = [];
-  let currentChunk = '';
-  
-  processedSentences.forEach(sentence => {
-    // If adding this sentence would make the chunk too long, start a new chunk
-    if (currentChunk.length + sentence.length > 150 && currentChunk.length > 0) {
-      combinedSentences.push(currentChunk);
-      currentChunk = sentence;
-    } else {
-      // Otherwise, add this sentence to the current chunk
-      currentChunk += (currentChunk ? ' ' : '') + sentence;
+  try {
+    // SIMPLIFIED APPROACH: Just split by common sentence ending punctuation
+    // This avoids regex issues with special characters
+    if (!text || typeof text !== 'string') {
+      console.warn("Invalid text input to splitTextIntoSentences:", text);
+      return ["Error processing text"];
     }
-  });
-  
-  // Add the last chunk if it's not empty
-  if (currentChunk) {
-    combinedSentences.push(currentChunk);
+    
+    // Handle special markdown cases that cause problems
+    let cleanText = text;
+    
+    // If text starts with italic markers (like *character does action*), 
+    // just strip the markers for TTS
+    if (cleanText.startsWith('*') && cleanText.includes('*', 1)) {
+      cleanText = cleanText.replace(/^\*(.*?)\*/m, '$1');
+    }
+    
+    // Split text at sentence boundaries with simple string splitting
+    // Periods, question marks, exclamation points followed by space or newline
+    const chunks = [];
+    let currentChunk = "";
+    
+    // Pre-split to avoid processing too much text at once
+    const paragraphs = cleanText.split('\n');
+    
+    paragraphs.forEach(paragraph => {
+      // Skip empty paragraphs
+      if (!paragraph.trim()) return;
+      
+      // Simple split on common sentence-ending punctuation
+      const segments = paragraph.split(/(?<=[.!?])\s+/);
+      
+      segments.forEach(segment => {
+        const trimmed = segment.trim();
+        if (!trimmed) return;
+        
+        // Ensure each segment ends with punctuation
+        let processedSegment = trimmed;
+        if (!processedSegment.match(/[.!?]$/)) {
+          processedSegment += '.';
+        }
+        
+        // Check if adding this segment would make the chunk too long
+        if (currentChunk.length + processedSegment.length > 150 && currentChunk.length > 0) {
+          chunks.push(currentChunk);
+          currentChunk = processedSegment;
+        } else {
+          // Add to current chunk with space if needed
+          currentChunk += (currentChunk ? ' ' : '') + processedSegment;
+        }
+      });
+    });
+    
+    // Add the last chunk if not empty
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+    
+    // If we somehow ended up with no chunks, return the original text as one chunk
+    if (chunks.length === 0) {
+      return [cleanText];
+    }
+    
+    console.log(`Split text into ${chunks.length} chunks`);
+    return chunks;
+  } catch (error) {
+    console.error("Error splitting text into sentences:", error);
+    // Return a simplified version of the text as a fallback
+    return [text.substring(0, 200) + "..."];
   }
-  
-  return combinedSentences;
 };
 
 /**

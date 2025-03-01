@@ -181,6 +181,65 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
         ))}
       </div>
 
+      <div className="voice-section">
+        <h3>Persona Voice</h3>
+        <p className="voice-description">Configure the voice for Text-to-Speech when this persona speaks.</p>
+        
+        <div className="voice-settings">
+          <div className="voice-engine-selector">
+            <label htmlFor="tts-engine">TTS Engine</label>
+            <select 
+              id="tts-engine"
+              value={localStorage.getItem('tts_engine') || 'zonos'} 
+              onChange={(e) => {
+                localStorage.setItem('tts_engine', e.target.value);
+                // Force re-render to update available voices
+                onChange({...persona});
+              }}
+            >
+              <option value="zonos">Zonos (High Quality)</option>
+              <option value="kokoro">Kokoro (Fast)</option>
+            </select>
+          </div>
+          
+          <div className="voice-id-selector">
+            <label htmlFor="voice-id">Voice</label>
+            <select
+              id="voice-id"
+              value={persona.voiceId || ''} 
+              onChange={(e) => {
+                onChange({
+                  ...persona,
+                  voiceId: e.target.value || null
+                });
+              }}
+            >
+              <option value="">Default Voice</option>
+              {localStorage.getItem('tts_engine') === 'zonos' ? (
+                <>
+                  <option value="american_female">American Female</option>
+                  <option value="american_male">American Male</option>
+                  <option value="british_female">British Female</option>
+                  <option value="british_male">British Male</option>
+                  <option value="random">Random</option>
+                </>
+              ) : (
+                <>
+                  <option value="af_bella">Bella (Female)</option>
+                  <option value="af_nova">Nova (Female)</option>
+                  <option value="af_nicole">Nicole (Female)</option>
+                  <option value="am_adam">Adam (Male)</option>
+                  <option value="am_michael">Michael (Male)</option>
+                  <option value="bf_emma">Emma (British Female)</option>
+                  <option value="bm_daniel">Daniel (British Male)</option>
+                  <option value="bm_george">George (British Male)</option>
+                </>
+              )}
+            </select>
+          </div>
+        </div>
+      </div>
+      
       <div className="tools-section">
         <h3>Persona Tools</h3>
         <p className="tools-description">Configure which tools this persona can use during conversations.</p>

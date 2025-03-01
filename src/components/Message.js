@@ -68,7 +68,10 @@ const Message = ({ message, onRegenerate, personas }) => {
     }
     
     console.log(`🔊 [AUDIO-PLAY] Attempting to play audio chunk ${stableIndex + 1}/${urlsToUse.length}`);
-    console.time(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} playback`);
+    
+    // Create unique timer for each chunk playback attempt to avoid duplicate timer errors
+    const chunkTimerId = `🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} playback-${Date.now()}`;
+    console.time(chunkTimerId);
     
     // Check if audioUrls array exists and has items
     if (!urlsToUse || urlsToUse.length === 0) {
@@ -87,7 +90,38 @@ const Message = ({ message, onRegenerate, personas }) => {
     const chunkKey = `chunk-${stableIndex}`;
     if (window.playedChunks[chunkKey] && stableIndex > 0) {
       console.log(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} already played, skipping to next`);
-      setCurrentAudioIndex(stableIndex + 1);
+      
+      // Find the next unplayed chunk
+      let nextIndex = stableIndex + 1;
+      
+      // Ensure we don't create an infinite loop - count how many chunks we've checked
+      let checksCount = 0;
+      const maxChecks = urlsToUse.length * 2; // Reasonable upper limit
+      
+      // Skip ahead until we find an unplayed chunk or reach the end
+      while (window.playedChunks[`chunk-${nextIndex}`] && nextIndex < urlsToUse.length && checksCount < maxChecks) {
+        console.log(`🔊 [AUDIO-PLAY] Chunk ${nextIndex + 1} also already played, skipping ahead`);
+        nextIndex++;
+        checksCount++;
+      }
+      
+      // Check if we've reached the end or exceeded check limit
+      if (nextIndex >= urlsToUse.length || checksCount >= maxChecks) {
+        console.log(`🔊 [AUDIO-PLAY] Reached end of audio queue or maximum check limit, stopping playback`);
+        setIsPlaying(false);
+        setCurrentAudioIndex(0);
+        window.playedChunks = {}; // Reset played chunks
+        try {
+          console.timeEnd('[AUDIO-FLOW] Total audio process time');
+        } catch (e) {
+          console.log('[AUDIO-FLOW] Audio playback complete');
+        }
+        return;
+      }
+      
+      // Continue to next unplayed chunk
+      console.log(`🔊 [AUDIO-PLAY] Found next unplayed chunk ${nextIndex + 1}, continuing playback`);
+      setCurrentAudioIndex(nextIndex);
       setTimeout(() => playNextAudio(), 10);
       return;
     }
@@ -187,7 +221,7 @@ const Message = ({ message, onRegenerate, personas }) => {
         }
       } catch (error) {
         console.error(`[AUDIO-PLAY] Error playing chunk ${stableIndex + 1}:`, error);
-        console.timeEnd(`[AUDIO-PLAY] Chunk ${stableIndex + 1} playback`);
+        console.log(`[AUDIO-PLAY] Chunk ${stableIndex + 1} playback failed`);
         
         // Skip to next audio if this one fails
         console.log(`[AUDIO-PLAY] Skipping to next chunk due to error`);
@@ -205,14 +239,21 @@ const Message = ({ message, onRegenerate, personas }) => {
           window.playedChunks = {}; // Reset for next playback
         }
       }
-    }
-  };
+    };
 
   // Function to generate and play TTS audio
   const handlePlayAudio = async () => {
     console.log(`%c 🎤 HANDLEPLAYAUDIO CALLED 🎤`, 'background: #ff0000; color: white; font-size: 24px; padding: 10px;');
     console.log(`%c THIS IS THE EXPECTED ENTRY POINT`, 'background: #ff0000; color: white; font-size: 18px;');
-    alert('AUDIO PLAY TRIGGERED - CHECK CONSOLE'); // This will make it super obvious
+    
+    // Reset tracking variables to prevent loops from previous playback attempts
+    window.playedChunks = {};
+    window.audioEndEvents = [];
+    window.debugAudioProgress = [];
+    window.lastPlayedChunk = undefined;
+    
+    // Remove debug alert
+    // alert('AUDIO PLAY TRIGGERED - CHECK CONSOLE');
     
     console.log(`🔊 [AUDIO-START] Play button clicked: isPlaying=${isPlaying}, audioUrls.length=${audioUrls.length}`);
     console.log(`🔊 [AUDIO-START] Audio state:`, {
@@ -303,11 +344,45 @@ const Message = ({ message, onRegenerate, personas }) => {
       let textContent = message.content;
       console.log(`[AUDIO-FLOW] Original message length: ${textContent.length} characters`);
       
-      // Remove markdown artifacts
-      textContent = textContent.replace(/\*\*/g, ''); // Remove bold markers
-      textContent = textContent.replace(/\n/g, ' '); // Replace newlines with spaces
-      textContent = textContent.replace(/```[^`]*```/g, ''); // Remove code blocks
-      textContent = textContent.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // Replace markdown links with just text
+      try {
+        // Safe preprocessing to remove markdown without using complex regex
+        // Remove markdown artifacts more safely
+        
+        // Simple replacements first
+        textContent = textContent.replace(/\*\*/g, ''); // Remove bold markers
+        textContent = textContent.replace(/\*/g, ''); // Remove italic markers
+        textContent = textContent.replace(/\n/g, ' '); // Replace newlines with spaces
+        
+        // Handle code blocks (```code```) by replacing them with placeholder
+        let cleanText = '';
+        let inCodeBlock = false;
+        
+        for (let i = 0; i < textContent.length; i++) {
+          // Check for start/end of code block
+          if (textContent.substring(i, i + 3) === '```') {
+            inCodeBlock = !inCodeBlock;
+            i += 2; // Skip the ```
+            continue;
+          }
+          
+          // Only add text if not in code block
+          if (!inCodeBlock) {
+            cleanText += textContent[i];
+          }
+        }
+        
+        textContent = cleanText;
+        
+        // Handle markdown links by simple text replacement
+        if (textContent.includes('[') && textContent.includes('](')) {
+          const linkPattern = /\[([^\]]+)\]\([^)]+\)/g;
+          textContent = textContent.replace(linkPattern, '$1');
+        }
+      } catch (e) {
+        console.warn("[AUDIO-FLOW] Error during text preprocessing:", e);
+        // If preprocessing fails, just use plain text with minimal formatting
+        textContent = message.content.replace(/[*#`]/g, '');
+      }
       
       console.log(`[AUDIO-FLOW] Preprocessed text length: ${textContent.length} characters`);
       console.log(`[AUDIO-FLOW] Text preview: ${textContent.substring(0, 100)}...`);
@@ -484,13 +559,17 @@ const Message = ({ message, onRegenerate, personas }) => {
     const audio = audioRef.current;
     
     const handleEnded = () => {
+      console.log('🔊 [AUDIO-END] Audio chunk ended event triggered');
+      
       // Get the current stable index for more reliable tracking
       const stableIndex = window.lastPlayedChunk !== undefined ? window.lastPlayedChunk : currentAudioIndex;
+      console.log(`🔊 [AUDIO-END] Using stable index ${stableIndex} (window.lastPlayedChunk: ${window.lastPlayedChunk}, currentAudioIndex: ${currentAudioIndex})`);
       
       try {
-        console.timeEnd(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} playback`);
+        // Just log completion time without using timeEnd to avoid timer not found errors
+        console.log(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} playback complete`);
       } catch (e) {
-        console.log(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} playback complete (timer not found)`);
+        console.log(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} playback complete (error logging)`);
       }
       
       // Track all events for debugging
@@ -517,7 +596,11 @@ const Message = ({ message, onRegenerate, personas }) => {
       // If we're at the end of the queue, reset
       if (nextIndex >= currentAudioUrls.length) {
         console.log(`🔊 [AUDIO-PLAY] Reached end of audio queue (${currentAudioUrls.length} chunks), stopping playback`);
-        console.timeEnd('[AUDIO-FLOW] Total audio process time');
+        try {
+          console.timeEnd('[AUDIO-FLOW] Total audio process time');
+        } catch (e) {
+          console.log('[AUDIO-FLOW] Audio playback complete');
+        }
         setIsPlaying(false);
         setCurrentAudioIndex(0);
         
@@ -527,8 +610,30 @@ const Message = ({ message, onRegenerate, personas }) => {
       }
       
       // Otherwise proceed to next chunk
-      console.log(`🔊 [AUDIO-PLAY] Playing next chunk (${nextIndex + 1}/${currentAudioUrls.length}) in 10ms`);
-      setCurrentAudioIndex(nextIndex);
+      // Skip chunks that have already been played
+      let playableIndex = nextIndex;
+      // Ensure we don't create an infinite loop - count how many chunks we've checked
+      let checksCount = 0;
+      const maxChecks = currentAudioUrls.length * 2; // Reasonable upper limit
+      
+      // Skip ahead until we find an unplayed chunk or reach the end
+      while (window.playedChunks[`chunk-${playableIndex}`] && playableIndex < currentAudioUrls.length && checksCount < maxChecks) {
+        console.log(`🔊 [AUDIO-END] Chunk ${playableIndex + 1} already played, skipping ahead`);
+        playableIndex++;
+        checksCount++;
+      }
+      
+      // Check if we've reached the end
+      if (playableIndex >= currentAudioUrls.length || checksCount >= maxChecks) {
+        console.log(`🔊 [AUDIO-END] No more unplayed chunks, ending playback`);
+        setIsPlaying(false);
+        setCurrentAudioIndex(0);
+        window.playedChunks = {}; // Reset for next playback
+        return;
+      }
+      
+      console.log(`🔊 [AUDIO-PLAY] Playing next chunk (${playableIndex + 1}/${currentAudioUrls.length}) in 10ms`);
+      setCurrentAudioIndex(playableIndex);
       setTimeout(() => playNextAudio(), 10);
     };
     
