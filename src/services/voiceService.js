@@ -5,54 +5,132 @@ window.debugGaiaAudio = function() {
   console.log('%c GAIA AUDIO DEBUG UTILITY', 'background: purple; color: white; font-size: 20px; padding: 10px;');
   console.log('This utility will patch the running code to debug audio issues');
   
-  // Track all audio generation
-  const originalGenerateSpeech = window.gaiaOriginalGenerateSpeech = 
-    window.gaiaOriginalGenerateSpeech || window.generateSpeech;
+  // Add a more aggressive audio tracker
+  window.trackAllAudio = function() {
+    // Store original Audio class
+    window.OriginalAudio = window.OriginalAudio || window.Audio;
     
-  // Override the global generateSpeech function if we can find it
-  if (typeof window.generateSpeech === 'function') {
-    console.log('%c Found global generateSpeech function, patching it', 'background: green; color: white;');
-    window.generateSpeech = async function(text, voiceId) {
-      console.log('%c PATCHED generateSpeech called', 'background: red; color: white;');
-      console.log('Text:', text?.substring(0, 100));
-      console.log('Voice ID:', voiceId);
+    // Override Audio constructor to log all audio creation
+    window.Audio = function(...args) {
+      console.log('%c NEW AUDIO ELEMENT CREATED', 'background: red; color: white; font-size: 16px');
+      console.log('Arguments:', args);
       
-      // Store details for debugging
-      window.lastAudioGeneration = {
-        text: text?.substring(0, 100),
-        voiceId,
-        timestamp: new Date().toISOString()
+      // Create the audio element using the original constructor
+      const audio = new window.OriginalAudio(...args);
+      
+      // Track all audio elements
+      window.audioElements = window.audioElements || [];
+      window.audioElements.push(audio);
+      
+      // Override src setter
+      const originalSrcSetter = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src').set;
+      Object.defineProperty(audio, 'src', {
+        set: function(value) {
+          console.log('%c AUDIO SRC SET:', 'background: green; color: white;', value?.substring(0, 100) + '...');
+          window.lastAudioSrc = value;
+          
+          // Store in history
+          window.audioSrcHistory = window.audioSrcHistory || [];
+          window.audioSrcHistory.push({
+            timestamp: new Date().toISOString(),
+            src: value?.substring(0, 100) + '...'
+          });
+          
+          return originalSrcSetter.call(this, value);
+        }
+      });
+      
+      // Override play method
+      const originalPlay = audio.play;
+      audio.play = function() {
+        console.log('%c AUDIO PLAY CALLED', 'background: blue; color: white;');
+        console.log('Current src:', this.src?.substring(0, 100) + '...');
+        
+        window.lastPlayedAudio = {
+          timestamp: new Date().toISOString(),
+          src: this.src
+        };
+        
+        return originalPlay.call(this);
       };
       
-      // Call the original function
-      const result = await originalGenerateSpeech(text, voiceId);
-      
-      // Log and store the result
-      console.log('%c AUDIO URL GENERATED:', 'background: green; color: white;', result?.substring(0, 50) + '...');
-      window.lastAudioURL = result;
-      
-      return result;
+      return audio;
     };
     
-    console.log('Audio debug patch applied successfully. When you click the play button, details will be logged.');
-    return 'Audio debug patch applied. Check console when clicking play button.';
-  } else {
-    console.log('%c Could not find global generateSpeech function', 'background: red; color: white;');
+    console.log('%c Audio tracking applied - all new audio elements will be logged', 'background: green; color: white;');
+  };
+  
+  // Also track XMLHttpRequest to see API calls
+  window.trackXHR = function() {
+    const originalXHROpen = window.XMLHttpRequest.prototype.open;
+    const originalXHRSend = window.XMLHttpRequest.prototype.send;
     
-    // Search for possible targets
-    const possibleFunctions = [];
-    for (const key in window) {
-      if (typeof window[key] === 'function' && key.toLowerCase().includes('speech')) {
-        possibleFunctions.push(key);
+    window.XMLHttpRequest.prototype.open = function(method, url, ...args) {
+      if (url.includes('inference') || url.includes('api') || url.includes('voice') || url.includes('speech')) {
+        console.log('%c XHR OPEN:', 'background: orange; color: black;', method, url);
+        this._audioApiUrl = url;
       }
-    }
+      return originalXHROpen.call(this, method, url, ...args);
+    };
     
-    if (possibleFunctions.length > 0) {
-      console.log('Possible speech-related functions:', possibleFunctions);
-    }
+    window.XMLHttpRequest.prototype.send = function(body) {
+      if (this._audioApiUrl) {
+        console.log('%c XHR SEND to audio API:', 'background: orange; color: black;', this._audioApiUrl);
+        if (body) {
+          try {
+            const data = JSON.parse(body);
+            console.log('Request data:', data);
+            window.lastAudioRequest = {
+              url: this._audioApiUrl,
+              data: data,
+              timestamp: new Date().toISOString()
+            };
+          } catch (e) {
+            console.log('Raw body:', body);
+          }
+        }
+      }
+      return originalXHRSend.call(this, body);
+    };
     
-    return 'Could not apply audio debug patch. See console for details.';
-  }
+    console.log('%c XHR tracking applied - all API calls will be logged', 'background: orange; color: black;');
+  };
+  
+  // Track fetch API too
+  window.trackFetch = function() {
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options) {
+      if (typeof url === 'string' && (url.includes('inference') || url.includes('api') || url.includes('voice') || url.includes('speech'))) {
+        console.log('%c FETCH:', 'background: yellow; color: black;', url);
+        if (options?.body) {
+          try {
+            const data = JSON.parse(options.body);
+            console.log('Request data:', data);
+            window.lastFetchRequest = {
+              url: url,
+              data: data,
+              timestamp: new Date().toISOString()
+            };
+          } catch (e) {
+            console.log('Raw body:', options.body);
+          }
+        }
+      }
+      return originalFetch.call(this, url, options);
+    };
+    
+    console.log('%c Fetch tracking applied - all API calls will be logged', 'background: yellow; color: black;');
+  };
+  
+  // Apply all trackers
+  window.trackAllAudio();
+  window.trackXHR();
+  window.trackFetch();
+  
+  console.log('%c All audio debug features enabled. Click the play button and check the console.', 'background: purple; color: white;');
+  console.log('You can check window.lastAudioSrc and window.lastPlayedAudio after clicking play.');
+  
+  return 'Audio debugging enabled. Click play button and check console for logs.';
 };
 
 // Console instructions 
