@@ -1,172 +1,149 @@
 import React, { useState, useEffect } from 'react';
 import '../../styles/personas/PersonaAttributesEditor.css';
-import { getVoices, getTTSEngine, setTTSEngine } from '../../services/voiceService';
+import ToolsPopup from './ToolsPopup';
 
-const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
-  const [currentAttributes, setCurrentAttributes] = useState({
-    initiative: persona.initiative || 5,
-    talkativeness: persona.talkativeness || 5,
-    confidence: persona.confidence || 5,
-    curiosity: persona.curiosity || 5,
-    empathy: persona.empathy || 5,
-    creativity: persona.creativity || 5,
-    humor: persona.humor || 5,
-    adaptability: persona.adaptability || 5,
-    patience: persona.patience || 5,
-    skepticism: persona.skepticism || 5,
-    optimism: persona.optimism || 5
-  });
-  const [voiceId, setVoiceId] = useState(persona.voiceId || '');
-  const [availableVoices, setAvailableVoices] = useState([]);
-  const [isLoadingVoices, setIsLoadingVoices] = useState(false);
-  const [ttsEngine, setTtsEngineState] = useState(getTTSEngine());
+const PersonaAttributesEditor = ({ persona, onChange }) => {
+  const [showToolsPopup, setShowToolsPopup] = useState(false);
+  const [formattingExpanded, setFormattingExpanded] = useState(false);
 
-  // Fetch available voices on component mount or when TTS engine changes
+  // Initialize default format settings if not present
   useEffect(() => {
-    const fetchVoices = async () => {
-      setIsLoadingVoices(true);
-      try {
-        const voices = await getVoices();
-        setAvailableVoices(voices);
-        
-        // If the current voiceId is not compatible with the new engine, reset it
-        if (voiceId) {
-          const isVoiceCompatible = voices.some(voice => voice.voice_id === voiceId);
-          if (!isVoiceCompatible) {
-            setVoiceId('');
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch voices:', error);
-      } finally {
-        setIsLoadingVoices(false);
-      }
-    };
-
-    fetchVoices();
-  }, [ttsEngine]);
+    if (!persona.formatSettings) {
+      onChange({
+        ...persona,
+        formatSettings: { useRoleplayMarkdown: false }
+      });
+    }
+  }, [persona, onChange]);
   
-  // Handler for changing the TTS engine
-  const handleTtsEngineChange = (newEngine) => {
-    setTtsEngineState(newEngine);
-    setTTSEngine(newEngine);
-  };
-
-  const attributeLabels = {
-    initiative: 'Initiative - How quickly they jump into conversations',
-    talkativeness: 'Talkativeness - How often they speak up',
-    confidence: 'Confidence - How assertive their responses are',
-    curiosity: 'Curiosity - How often they ask questions',
-    empathy: 'Empathy - How emotionally attuned they are',
-    creativity: 'Creativity - How imaginative their responses are',
-    humor: 'Humor - How often they use wit and jokes',
-    adaptability: 'Adaptability - How well they adjust to new topics',
-    patience: 'Patience - How long they wait before responding',
-    skepticism: 'Skepticism - How likely they are to question statements',
-    optimism: 'Optimism - How positive their responses tend to be'
-  };
-
-  const handleSave = () => {
-    onSave({
-      ...currentAttributes,
-      voiceId
+  const handleAttributeChange = (attribute, value) => {
+    onChange({
+      ...persona,
+      [attribute]: parseInt(value, 10)
     });
   };
 
+  const handleFormatSettingChange = (setting, value) => {
+    onChange({
+      ...persona,
+      formatSettings: {
+        ...persona.formatSettings,
+        [setting]: value
+      }
+    });
+  };
+
+  const handleToolsPopupClose = (updatedToolConfig) => {
+    setShowToolsPopup(false);
+    
+    if (updatedToolConfig) {
+      onChange({
+        ...persona,
+        agentSettings: {
+          ...persona.agentSettings,
+          toolConfig: updatedToolConfig
+        }
+      });
+    }
+  };
+
+  const attributes = [
+    { name: 'initiative', label: 'Initiative', description: 'How likely the persona is to start conversations' },
+    { name: 'talkativeness', label: 'Talkativeness', description: 'How much the persona tends to talk' },
+    { name: 'confidence', label: 'Confidence', description: 'How sure the persona is about their statements' },
+    { name: 'curiosity', label: 'Curiosity', description: 'How interested the persona is in asking questions' },
+    { name: 'empathy', label: 'Empathy', description: 'How much the persona considers others\' feelings' },
+    { name: 'creativity', label: 'Creativity', description: 'How original and innovative the persona\'s ideas are' },
+    { name: 'humor', label: 'Humor', description: 'How often the persona uses humor in conversation' },
+    { name: 'adaptability', label: 'Adaptability', description: 'How well the persona adjusts to changing conversation topics' },
+    { name: 'patience', label: 'Patience', description: 'How tolerant the persona is of repetition or confusion' },
+    { name: 'skepticism', label: 'Skepticism', description: 'How likely the persona is to question information' },
+    { name: 'optimism', label: 'Optimism', description: 'How positively the persona views situations' }
+  ];
+
   return (
-    <div className="attributes-editor-modal">
-      <div className="attributes-content">
-        <button className="close-button" onClick={onClose}>×</button>
-        <h2>Personality Attributes</h2>
-
-        {/* Voice Selection */}
-        <div className="voice-selection">
-          <h3>Voice Settings</h3>
-          
-          {/* TTS Engine Selection */}
-          <div className="tts-engine-selector">
-            <label>TTS Engine:</label>
-            <div className="engine-options">
-              <button 
-                className={`engine-option ${ttsEngine === 'zonos' ? 'selected' : ''}`}
-                onClick={() => handleTtsEngineChange('zonos')}
-                disabled={isLoadingVoices}
-              >
-                Zonos
-              </button>
-              <button 
-                className={`engine-option ${ttsEngine === 'kokoro' ? 'selected' : ''}`}
-                onClick={() => handleTtsEngineChange('kokoro')}
-                disabled={isLoadingVoices}
-              >
-                Kokoro
-              </button>
-            </div>
-            <p className="engine-description">
-              {ttsEngine === 'zonos' 
-                ? 'Zonos offers simple voice options with fast processing.'
-                : 'Kokoro provides a wide range of high-quality voices.'
-              }
-            </p>
-          </div>
-          
-          {/* Voice Selector */}
-          <div className="voice-selector">
-            <label htmlFor="voice-select">Voice:</label>
-            <select 
-              id="voice-select"
-              value={voiceId} 
-              onChange={(e) => setVoiceId(e.target.value)}
-              disabled={isLoadingVoices}
-            >
-              <option value="">None (No TTS)</option>
-              {isLoadingVoices ? (
-                <option value="" disabled>Loading voices...</option>
-              ) : (
-                availableVoices.map(voice => (
-                  <option key={voice.voice_id} value={voice.voice_id}>
-                    {voice.name}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
-          {voiceId && (
-            <div className="voice-preview">
-              <p>Selected voice: <strong>{availableVoices.find(v => v.voice_id === voiceId)?.name || 'Custom Voice'}</strong></p>
-              <p className="voice-note">The voice will be used for text-to-speech when playing message content.</p>
-            </div>
-          )}
-        </div>
-
-        <div className="attributes-grid">
-          {Object.entries(currentAttributes).map(([key, value]) => (
-            <div key={key} className="attribute-control">
-              <label title={attributeLabels[key]}>{key}</label>
-              <div className="attribute-slider">
-                <span className="slider-label">Low</span>
+    <div className="persona-attributes-editor">
+      <div className="attribute-section">
+        <h3>Persona Attributes</h3>
+        <p className="attribute-description">Adjust these attributes to shape the persona's behavior and conversation style.</p>
+        
+        {attributes.map(attr => (
+          <div className="attribute-slider" key={attr.name}>
+            <label title={attr.description}>
+              {attr.label}
+              <div className="slider-container">
                 <input
                   type="range"
                   min="1"
                   max="10"
-                  value={value}
-                  onChange={(e) => setCurrentAttributes(prev => ({
-                    ...prev,
-                    [key]: parseInt(e.target.value)
-                  }))}
+                  value={persona[attr.name] || 5}
+                  onChange={(e) => handleAttributeChange(attr.name, e.target.value)}
                 />
-                <span className="slider-label">High</span>
-                <div className="attribute-value">{value}</div>
+                <span className="slider-value">{persona[attr.name] || 5}</span>
               </div>
-            </div>
-          ))}
-        </div>
-        <div className="modal-footer">
-          <button className="save-button" onClick={handleSave}>
-            Save Changes
-          </button>
-        </div>
+            </label>
+          </div>
+        ))}
       </div>
+
+      <div className="tools-section">
+        <h3>Persona Tools</h3>
+        <p className="tools-description">Configure which tools this persona can use during conversations.</p>
+        <button 
+          className="configure-tools-button" 
+          onClick={() => setShowToolsPopup(true)}
+        >
+          Configure Tools
+        </button>
+      </div>
+      
+      <div className="formatting-section">
+        <h3 onClick={() => setFormattingExpanded(!formattingExpanded)} style={{ cursor: 'pointer' }}>
+          Message Formatting {formattingExpanded ? '▼' : '►'}
+        </h3>
+        
+        {formattingExpanded && (
+          <>
+            <p className="formatting-description">
+              Configure how this persona's messages are displayed in chat.
+            </p>
+            
+            <div className="format-option">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={persona.formatSettings?.useRoleplayMarkdown || false}
+                  onChange={(e) => handleFormatSettingChange('useRoleplayMarkdown', e.target.checked)}
+                />
+                Use Roleplay Markdown
+              </label>
+              <p className="format-description">
+                Converts roleplay tags like &lt;speech&gt; and &lt;action&gt; into formatted markdown.
+              </p>
+              
+              {persona.formatSettings?.useRoleplayMarkdown && (
+                <div className="format-example">
+                  <h4>Example:</h4>
+                  <pre>{`<speech as="Character">Hello there!</speech>
+<action as="Character">waves hand excitedly</action>`}</pre>
+                  <p>Will be displayed as:</p>
+                  <div className="example-output">
+                    <p><strong>Character:</strong> Hello there!</p>
+                    <p><em>Character waves hand excitedly</em></p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {showToolsPopup && (
+        <ToolsPopup
+          persona={persona}
+          onClose={handleToolsPopupClose}
+        />
+      )}
     </div>
   );
 };

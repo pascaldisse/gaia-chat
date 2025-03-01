@@ -176,6 +176,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   width: auto;
   max-width: 90%;
+  justify-content: center;
 }
 
 .view-toggle button {

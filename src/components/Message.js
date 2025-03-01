@@ -283,6 +283,32 @@ const Message = ({ message, onRegenerate, personas }) => {
       return <ReactMarkdown>{`*${thinkContent}*`}</ReactMarkdown>;
     }
     
+    // Check if roleplay markdown formatting is enabled
+    if (persona?.formatSettings?.useRoleplayMarkdown) {
+      // Format roleplay tags into markdown
+      let formattedContent = message.content;
+      
+      // Replace <speech> tags with formatted text
+      formattedContent = formattedContent.replace(/<speech as="([^"]+)"[^>]*>([^<]+)<\/speech>/g, (match, character, text) => {
+        return `**${character}:** ${text}\n\n`;
+      });
+      
+      // Replace <action> tags with italic text
+      formattedContent = formattedContent.replace(/<action as="([^"]+)"[^>]*>([^<]+)<\/action>/g, (match, character, text) => {
+        return `*${character} ${text}*\n\n`;
+      });
+      
+      // Replace <function> tags with code blocks
+      formattedContent = formattedContent.replace(/<function>([^<]+)<\/function>/g, (match, code) => {
+        return `\`\`\`\n${code}\n\`\`\`\n\n`;
+      });
+      
+      // Remove <yield> tags
+      formattedContent = formattedContent.replace(/<yield to="User" \/>/g, '');
+      
+      return <ReactMarkdown>{formattedContent}</ReactMarkdown>;
+    }
+    
     // Default markdown rendering
     return <ReactMarkdown>{message.content}</ReactMarkdown>;
   };

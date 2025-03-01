@@ -454,6 +454,199 @@ export const personaDB = {
       console.error('Error assigning personas to user:', error);
       return 0;
     }
+  },
+
+  // New Store-related methods
+  
+  // Get all published personas for the store
+  async getStorePersonas(includeNsfw = false) {
+    try {
+      const db = await dbPromise;
+      const allPersonas = await db.getAll(PERSONA_STORE);
+      
+      // Filter to only published personas
+      let storePersonas = allPersonas.filter(persona => persona.published);
+      
+      // Filter out NSFW content if not included
+      if (!includeNsfw) {
+        storePersonas = storePersonas.filter(persona => !persona.isNsfw);
+      }
+      
+      return storePersonas;
+    } catch (error) {
+      console.error('Error getting store personas:', error);
+      return [];
+    }
+  },
+  
+  // Get personas by category
+  async getPersonasByCategory(category, includeNsfw = false) {
+    try {
+      const db = await dbPromise;
+      const allPersonas = await db.getAll(PERSONA_STORE);
+      
+      // Filter by category and published status
+      let categoryPersonas = allPersonas.filter(
+        persona => persona.published && persona.category === category
+      );
+      
+      // Filter out NSFW content if not included
+      if (!includeNsfw) {
+        categoryPersonas = categoryPersonas.filter(persona => !persona.isNsfw);
+      }
+      
+      return categoryPersonas;
+    } catch (error) {
+      console.error('Error getting personas by category:', error);
+      return [];
+    }
+  },
+  
+  // Get partner-created personas
+  async getPartnerPersonas(includeNsfw = false) {
+    try {
+      const db = await dbPromise;
+      const allPersonas = await db.getAll(PERSONA_STORE);
+      
+      // Filter to only published partner personas
+      let partnerPersonas = allPersonas.filter(
+        persona => persona.published && persona.partnerCreated
+      );
+      
+      // Filter out NSFW content if not included
+      if (!includeNsfw) {
+        partnerPersonas = partnerPersonas.filter(persona => !persona.isNsfw);
+      }
+      
+      return partnerPersonas;
+    } catch (error) {
+      console.error('Error getting partner personas:', error);
+      return [];
+    }
+  },
+  
+  // Get user-created personas for the store (not created by the current user)
+  async getUserCreatedPersonas(currentUserId, includeNsfw = false) {
+    try {
+      const db = await dbPromise;
+      const allPersonas = await db.getAll(PERSONA_STORE);
+      
+      // Filter to only published user personas that aren't created by the current user
+      let userPersonas = allPersonas.filter(
+        persona => persona.published && 
+                  persona.userId && 
+                  persona.userId !== currentUserId && 
+                  !persona.partnerCreated
+      );
+      
+      // Filter out NSFW content if not included
+      if (!includeNsfw) {
+        userPersonas = userPersonas.filter(persona => !persona.isNsfw);
+      }
+      
+      return userPersonas;
+    } catch (error) {
+      console.error('Error getting user-created personas:', error);
+      return [];
+    }
+  },
+  
+  // Search personas by name, description, or tags
+  async searchPersonas(query, includeNsfw = false) {
+    try {
+      const db = await dbPromise;
+      const allPersonas = await db.getAll(PERSONA_STORE);
+      
+      // Filter to only published personas
+      let searchResults = allPersonas.filter(persona => persona.published);
+      
+      // Filter out NSFW content if not included
+      if (!includeNsfw) {
+        searchResults = searchResults.filter(persona => !persona.isNsfw);
+      }
+      
+      // Search by name, description, or tags
+      if (query && query.trim() !== '') {
+        const searchTerm = query.toLowerCase().trim();
+        searchResults = searchResults.filter(persona => 
+          (persona.name && persona.name.toLowerCase().includes(searchTerm)) ||
+          (persona.description && persona.description.toLowerCase().includes(searchTerm)) ||
+          (persona.tags && persona.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
+        );
+      }
+      
+      return searchResults;
+    } catch (error) {
+      console.error('Error searching personas:', error);
+      return [];
+    }
+  },
+  
+  // Update download count for a persona
+  async incrementDownloads(personaId) {
+    try {
+      const db = await dbPromise;
+      const persona = await db.get(PERSONA_STORE, personaId);
+      
+      if (!persona) {
+        throw new Error('Persona not found');
+      }
+      
+      // Increment download count
+      persona.downloads = (persona.downloads || 0) + 1;
+      await db.put(PERSONA_STORE, persona);
+      
+      return persona.downloads;
+    } catch (error) {
+      console.error('Error incrementing downloads:', error);
+      throw error;
+    }
+  },
+  
+  // Publish a persona to the store
+  async publishPersona(personaId, userId) {
+    try {
+      const db = await dbPromise;
+      const persona = await db.get(PERSONA_STORE, personaId);
+      
+      // Check if persona exists and belongs to the user
+      if (!persona || (persona.userId !== userId)) {
+        throw new Error('Persona not found or not owned by user');
+      }
+      
+      // Mark as published
+      persona.published = true;
+      persona.updatedAt = Date.now();
+      
+      await db.put(PERSONA_STORE, persona);
+      return persona;
+    } catch (error) {
+      console.error('Error publishing persona:', error);
+      throw error;
+    }
+  },
+  
+  // Unpublish a persona from the store
+  async unpublishPersona(personaId, userId) {
+    try {
+      const db = await dbPromise;
+      const persona = await db.get(PERSONA_STORE, personaId);
+      
+      // Check if persona exists and belongs to the user
+      if (!persona || (persona.userId !== userId)) {
+        throw new Error('Persona not found or not owned by user');
+      }
+      
+      // Mark as unpublished
+      persona.published = false;
+      persona.updatedAt = Date.now();
+      
+      await db.put(PERSONA_STORE, persona);
+      return persona;
+    } catch (error) {
+      console.error('Error unpublishing persona:', error);
+      throw error;
+    }
   }
 };
 
@@ -1131,6 +1324,7 @@ export const userDB = {
         updatedAt: Date.now(),
         lastLogin: Date.now(),
         settings: userData.settings || {},
+        isAdmin: userData.isAdmin || false,
         isActive: true
       };
       
@@ -1264,6 +1458,7 @@ export const userDB = {
         username: updates.username ? updates.username.toLowerCase() : user.username,
         displayName: updates.displayName || user.displayName,
         passwordHash: updates.passwordHash || user.passwordHash,
+        isAdmin: updates.isAdmin !== undefined ? updates.isAdmin : user.isAdmin,
         settings: {
           ...user.settings,
           ...(updates.settings || {})

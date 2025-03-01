@@ -1,0 +1,127 @@
+.user-list-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 20px;
+  background-color: #36393f;
+  color: #dcddde;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.user-list-container h2 {
+  color: #ffffff;
+  font-size: 24px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid #202225;
+  padding-bottom: 10px;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  color: #dcddde;
+  border: 1px solid #202225;
+}
+
+.user-table th,
+.user-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #202225;
+}
+
+.user-table th {
+  background-color: #2f3136;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.user-table tbody tr {
+  background-color: #40444b;
+}
+
+.user-table tbody tr:nth-child(even) {
+  background-color: #36393f;
+}
+
+.user-table tbody tr:hover {
+  background-color: #4f545c;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.role-badge.admin {
+  background-color: #5865f2;
+  color: white;
+}
+
+.role-badge.user {
+  background-color: #4f545c;
+  color: #dcddde;
+}
+
+.role-toggle-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.role-toggle-btn.promote {
+  background-color: #5865f2;
+  color: white;
+}
+
+.role-toggle-btn.promote:hover {
+  background-color: #4752c4;
+}
+
+.role-toggle-btn.demote {
+  background-color: #f04747;
+  color: white;
+}
+
+.role-toggle-btn.demote:hover {
+  background-color: #d03d3d;
+}
+
+.success-message {
+  background-color: rgba(59, 165, 93, 0.2);
+  border-left: 4px solid #3ba55d;
+  color: #3ba55d;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@media (max-width: 768px) {
+  .user-list-container {
+    padding: 15px;
+    margin: 15px auto;
+  }
+  
+  .user-table th,
+  .user-table td {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  
+  .user-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}

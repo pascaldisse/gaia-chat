@@ -23,7 +23,17 @@ export default class Persona {
       isDefault = false,
       isSystem = false,
       userId = null,
-      agentSettings = null
+      agentSettings = null,
+      category = 'general',
+      isNsfw = false,
+      description = '',
+      creator = '',
+      tags = [],
+      downloads = 0,
+      rating = 0,
+      published = false,
+      partnerCreated = false,
+      formatSettings = { useRoleplayMarkdown: false }
     }) {
       this.id = id;
       this.name = name;
@@ -51,6 +61,18 @@ export default class Persona {
       this.isSystem = isSystem;   // Marks as system-wide, not tied to user
       this.userId = userId;       // Links to user if user-created
       
+      // Store attributes
+      this.category = category;   // Category in the store
+      this.isNsfw = isNsfw;       // Flag for NSFW content
+      this.description = description; // Longer description for store listing
+      this.creator = creator;     // Creator name or username
+      this.tags = tags;           // Array of tags for searching
+      this.downloads = downloads; // Number of downloads/uses
+      this.rating = rating;       // Average rating (0-5)
+      this.published = published; // Whether published to store
+      this.partnerCreated = partnerCreated; // Whether created by partner
+      this.formatSettings = formatSettings; // Format settings for message rendering
+
       // Initialize agent settings if provided
       if (agentSettings) {
         this.agentSettings = agentSettings;

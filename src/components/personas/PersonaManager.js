@@ -21,6 +21,20 @@ const defaultToolConfig = {
   diceRoll: false
 };
 
+// Store categories
+export const PERSONA_CATEGORIES = {
+  GENERAL: 'general',
+  PRODUCTIVITY: 'productivity',
+  CREATIVE: 'creative',
+  ENTERTAINMENT: 'entertainment',
+  EDUCATION: 'education',
+  ROLEPLAY: 'roleplay',
+  GAMING: 'gaming',
+  CODING: 'coding',
+  PROFESSIONAL: 'professional',
+  OTHER: 'other'
+};
+
 const defaultAgentSettings = {
   maxIterations: 3,
   toolConfig: defaultToolConfig
@@ -52,6 +66,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   const [imageSource, setImageSource] = useState('url'); // 'url' or 'file'
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [files, setFiles] = useState([]);
+  const [showPublishOptions, setShowPublishOptions] = useState(false);
 
   useEffect(() => {
     if (persona) {
@@ -335,12 +350,20 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
               </button>
             )}
             {currentPersona.id !== DEFAULT_PERSONA_ID && (
-              <button 
-                className="delete-button"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                Delete
-              </button>
+              <>
+                <button 
+                  className="delete-button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Delete
+                </button>
+                <button
+                  className="publish-button"
+                  onClick={() => setShowPublishOptions(true)}
+                >
+                  {currentPersona.published ? 'Manage Publishing' : 'Publish to Store'}
+                </button>
+              </>
             )}
             <button className="save-button" onClick={handleSave}>Save</button>
           </div>
@@ -390,6 +413,134 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
           onUpdate={handleToolsUpdate}
           onClose={() => setShowToolsPopup(false)}
         />
+      )}
+      
+      {showPublishOptions && (
+        <div className="modal-overlay">
+          <div className="publish-options-modal">
+            <h3>Publish to Persona Store</h3>
+            
+            <div className="publish-form">
+              <div className="form-group">
+                <label>Description (visible in store)</label>
+                <textarea
+                  value={currentPersona.description || ''}
+                  onChange={(e) => setCurrentPersona(prev => ({
+                    ...prev,
+                    description: e.target.value
+                  }))}
+                  placeholder="Provide a description of your persona for other users"
+                  rows={4}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Creator Name</label>
+                <input
+                  type="text"
+                  value={currentPersona.creator || ''}
+                  onChange={(e) => setCurrentPersona(prev => ({
+                    ...prev,
+                    creator: e.target.value
+                  }))}
+                  placeholder="Your name or username"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Category</label>
+                <select
+                  value={currentPersona.category || PERSONA_CATEGORIES.GENERAL}
+                  onChange={(e) => setCurrentPersona(prev => ({
+                    ...prev,
+                    category: e.target.value
+                  }))}
+                >
+                  {Object.entries(PERSONA_CATEGORIES).map(([key, value]) => (
+                    <option key={value} value={value}>
+                      {key.charAt(0) + key.slice(1).toLowerCase().replace('_', ' ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="form-group">
+                <label>Tags (comma separated)</label>
+                <input
+                  type="text"
+                  value={(currentPersona.tags || []).join(', ')}
+                  onChange={(e) => setCurrentPersona(prev => ({
+                    ...prev,
+                    tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)
+                  }))}
+                  placeholder="AI, Assistant, Helper, etc."
+                />
+              </div>
+              
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={currentPersona.isNsfw || false}
+                    onChange={(e) => setCurrentPersona(prev => ({
+                      ...prev,
+                      isNsfw: e.target.checked
+                    }))}
+                  />
+                  <span>Contains NSFW content</span>
+                </label>
+                <p className="helper-text">
+                  Check this box if your persona contains adult or sensitive content
+                </p>
+              </div>
+            </div>
+            
+            <div className="publish-actions">
+              <button
+                className="cancel-button"
+                onClick={() => setShowPublishOptions(false)}
+              >
+                Cancel
+              </button>
+              
+              {currentPersona.published ? (
+                <button
+                  className="unpublish-button"
+                  onClick={async () => {
+                    try {
+                      await personaDB.unpublishPersona(currentPersona.id, currentPersona.userId);
+                      setCurrentPersona(prev => ({...prev, published: false}));
+                      setShowPublishOptions(false);
+                      alert('Your persona has been unpublished from the store.');
+                    } catch (error) {
+                      console.error('Error unpublishing persona:', error);
+                      alert('Failed to unpublish persona. Please try again.');
+                    }
+                  }}
+                >
+                  Unpublish from Store
+                </button>
+              ) : (
+                <button
+                  className="publish-button"
+                  onClick={async () => {
+                    try {
+                      await personaDB.publishPersona(currentPersona.id, currentPersona.userId);
+                      setCurrentPersona(prev => ({...prev, published: true}));
+                      setShowPublishOptions(false);
+                      alert('Your persona has been published to the store!');
+                    } catch (error) {
+                      console.error('Error publishing persona:', error);
+                      alert('Failed to publish persona. Please try again.');
+                    }
+                  }}
+                >
+                  Publish to Store
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
