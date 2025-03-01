@@ -305,9 +305,11 @@ const Message = ({ message, onRegenerate, personas }) => {
           setAudioUrl(null);
           
           // For demo, show an error message
-          console.warn("Failed to play audio - likely a CORS issue with the fallback service");
+          console.warn("Failed to play audio - likely an issue with the audio format or CORS");
+          
+          // We'll just show a message instead
+          console.warn("Falling back to no audio");
         }}
-        crossOrigin="anonymous" // Add CORS support for external URLs
       />
     );
   };
