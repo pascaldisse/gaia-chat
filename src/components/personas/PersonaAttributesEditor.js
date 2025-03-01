@@ -4,6 +4,12 @@ import ToolsPopup from './ToolsPopup';
 import FormatRuleEditor from './FormatRuleEditor';
 
 const PersonaAttributesEditor = ({ persona, onChange }) => {
+  // Prevent event propagation to parent containers
+  const stopPropagation = (e) => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
+  };
   const [showToolsPopup, setShowToolsPopup] = useState(false);
   const [formattingExpanded, setFormattingExpanded] = useState(false);
   const [customFormattingExpanded, setCustomFormattingExpanded] = useState(false);
@@ -151,7 +157,7 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
   ];
 
   return (
-    <div className="persona-attributes-editor">
+    <div className="persona-attributes-editor" onClick={stopPropagation}>
       <div className="attribute-section">
         <h3>Persona Attributes</h3>
         <p className="attribute-description">Adjust these attributes to shape the persona's behavior and conversation style.</p>
@@ -187,7 +193,10 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
       </div>
       
       <div className="formatting-section">
-        <h3 onClick={() => setFormattingExpanded(!formattingExpanded)} style={{ cursor: 'pointer' }}>
+        <h3 onClick={(e) => {
+          stopPropagation(e);
+          setFormattingExpanded(!formattingExpanded);
+        }} style={{ cursor: 'pointer' }}>
           Message Formatting {formattingExpanded ? '▼' : '►'}
         </h3>
         
@@ -255,7 +264,10 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
               
               {persona.formatSettings?.customFormatting && (
                 <div className="custom-formatting-section">
-                  <h4 onClick={() => setCustomFormattingExpanded(!customFormattingExpanded)} style={{ cursor: 'pointer' }}>
+                  <h4 onClick={(e) => {
+                    stopPropagation(e);
+                    setCustomFormattingExpanded(!customFormattingExpanded);
+                  }} style={{ cursor: 'pointer' }}>
                     Format Rules {customFormattingExpanded ? '▼' : '►'}
                   </h4>
                   

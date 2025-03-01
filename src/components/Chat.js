@@ -585,7 +585,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           id: Date.now(),
           content: `👤 Added ${newUsers.length === 1 ? 'user' : 'users'} to chat: ${usernames}`,
           isUser: false,
-          isCommand: true
+          isCommand: true,
+          // Use the default persona for system messages if available
+          personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
         }]);
         
         // Add each new user as a participant in the database
@@ -823,7 +825,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         content: `Generating ${options.style} image with ${options.model}: "${options.prompt}"...`,
         isUser: false,
         isCommand: true,
-        imageData: null
+        imageData: null,
+        // Use the default persona for system messages if available
+        personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
       }]);
 
       const requestBody = {
@@ -921,7 +925,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       setCurrentChat(prev => [...prev, {
         id: Date.now(),
         content: `Error: ${error.message}`,
-        isUser: false
+        isUser: false,
+        // Use the default persona for system messages if available
+        personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
       }]);
     }
     setIsLoading(false);
@@ -952,7 +958,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           id: Date.now(),
           content: `👤 Removed user from chat: ${userName}`,
           isUser: false,
-          isCommand: true
+          isCommand: true,
+          // Use the default persona for system messages if available
+          personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
         }]);
         
         console.log(`Removed user ${userId} from chat ${selectedChatId}`);
@@ -1088,7 +1096,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           id: statusMessageId,
           content: `📎 Uploading and processing file: ${file.name}...`,
           isUser: false,
-          isCommand: true
+          isCommand: true,
+          // Use the default persona for system messages if available
+          personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
         }]);
         
         // Choose the correct reading method based on file type
@@ -1189,7 +1199,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           id: Date.now(),
           content: `❌ Error uploading file: ${error.message}`,
           isUser: false,
-          isCommand: true
+          isCommand: true,
+          // Use the default persona for system messages if available
+          personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
         }]);
         setIsLoading(false);
       }
@@ -1212,7 +1224,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       id: Date.now(),
       content: `🗑️ Deleted file: ${file.name}`,
       isUser: false,
-      isCommand: true
+      isCommand: true,
+      // Use the default persona for system messages if available
+      personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
     };
     setCurrentChat(prev => [...prev, deleteMessage]);
   };

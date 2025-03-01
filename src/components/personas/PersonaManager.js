@@ -150,6 +150,10 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
       ...prev,
       ...attributes
     }));
+    // Modal will be closed by the Save button
+  };
+  
+  const closeAttributesEditor = () => {
     setShowAttributesEditor(false);
   };
 
@@ -371,18 +375,20 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
       </div>
       
       {showAttributesEditor && (
-        <div className="attributes-editor-modal">
+        <div className="attributes-editor-modal" onClick={(e) => e.stopPropagation()}>
           <div className="attributes-content">
             <h2>Edit Personality & Formatting</h2>
-            <PersonaAttributesEditor
-              persona={currentPersona}
-              onChange={handleAttributesSave}
-            />
+            <div className="attributes-editor-container">
+              <PersonaAttributesEditor
+                persona={currentPersona}
+                onChange={handleAttributesSave}
+              />
+            </div>
             <div className="modal-footer">
-              <button className="cancel-button" onClick={() => setShowAttributesEditor(false)}>
+              <button className="cancel-button" onClick={closeAttributesEditor}>
                 Cancel
               </button>
-              <button className="save-button" onClick={() => setShowAttributesEditor(false)}>
+              <button className="save-button" onClick={closeAttributesEditor}>
                 Save Changes
               </button>
             </div>

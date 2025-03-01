@@ -1,389 +1,311 @@
 .message {
-    margin-bottom: 20px;
-    max-width: 80%;
-    position: relative;
-  }
-  
-  .message.user {
-    margin-left: auto;
-  }
-  
-  .message.assistant {
-    margin-right: auto;
+  margin-bottom: 20px;
+  max-width: 80%;
+  position: relative;
+}
+
+.message.user {
+  margin-left: auto;
+}
+
+.message.assistant {
+  margin-right: auto;
+}
+
+.message-content {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background-color: #40444b;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  color: #dcddde;
+  line-height: 1.4;
+  transition: background-color 0.2s;
+}
+
+/* Media queries for messages on mobile */
+@media (max-width: 768px) {
+  .message {
+    max-width: 85%;
+    margin-bottom: 16px;
   }
   
   .message-content {
-    padding: 12px 16px;
-    border-radius: 8px;
-    background-color: #40444b;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    color: #dcddde;
-    line-height: 1.4;
-    transition: background-color 0.2s;
+    padding: 10px 14px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .message {
+    max-width: 90%;
   }
   
-  /* Media queries for messages on mobile */
-  @media (max-width: 768px) {
-    .message {
-      max-width: 85%;
-      margin-bottom: 16px;
-    }
-    
-    .message-content {
-      padding: 10px 14px;
-      font-size: 15px;
-    }
+  .message-content {
+    padding: 8px 12px;
+    font-size: 14px;
   }
-  
-  @media (max-width: 480px) {
-    .message {
-      max-width: 90%;
-      margin-bottom: 14px;
-    }
-    
-    .message-content {
-      padding: 8px 12px;
-      font-size: 14px;
-    }
-    
-    .message-actions {
-      flex-wrap: wrap;
-    }
-    
-    .persona-header {
-      font-size: 0.8em;
-    }
-    
-    .persona-avatar {
-      width: 26px;
-      height: 26px;
-    }
-  }
-  
-  .user .message-content {
-    background-color: #5865f2;
-    color: white;
+}
+
+.regenerate-button {
+  margin-left: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #2f3136;
+  border: 1px solid #202225;
+  color: #b9bbbe;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.regenerate-button:hover {
+  background-color: #40444b;
+  border-color: #5865f2;
+}
+
+.message-actions {
+  display: flex;
+  margin-top: 6px;
+  gap: 5px;
+}
+
+.copy-button {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #2f3136;
+  border: 1px solid #202225;
+  color: #b9bbbe;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.copy-button:hover {
+  background-color: #40444b;
+  border-color: #5865f2;
+}
+
+.user .copy-button {
+  color: #b9bbbe;
+  border-color: #5865f2;
+}
+
+.persona-header {
+  color: #b9bbbe;
+  font-size: 0.85em;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.persona-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #202225;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.persona-name {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: #666;
+}
+
+/* Add this new style for GAIA's avatar */
+.message .persona-header img[alt="GAIA"] {
+  border-color: #00868b; /* Dark turquoise color */
+  border-width: 3px;
+}
+
+/* Tool usage styling */
+.tool-usage {
+  background: #36393f;
+  border: 1px solid #202225;
+  border-radius: 8px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  overflow: hidden;
+}
+
+.tool-header {
+  background: #2f3136;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #202225;
+}
+
+.tool-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-icon {
+  font-size: 18px;
+}
+
+.tool-name {
+  font-weight: 500;
+}
+
+.tool-toggle {
+  background: none;
+  border: none;
+  color: #dcddde;
+  cursor: pointer;
+  font-size: 16px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-details, .tool-summary {
+  padding: 12px;
+}
+
+.tool-usage.dice-roll {
+  background: linear-gradient(to bottom, #36393f, #2f3136);
+  border-color: #6c46a3;
+}
+
+.dice-roll .tool-header {
+  background: #4b367c;
+  color: white;
+}
+
+.file-content-preview {
+  background: #36393f;
+  border: 1px solid #202225;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.file-meta {
+  background: #2f3136;
+  padding: 10px;
+  font-size: 0.9em;
+  color: #dcddde;
+  border-bottom: 1px solid #202225;
+}
+
+.parsed-text {
+  padding: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-family: monospace;
+  font-size: 0.85em;
+  color: #dcddde;
+}
+
+@keyframes spin {
+  from {transform:rotate(0deg);}
+  to {transform:rotate(360deg);}
+}
+
+/* Voice button styles */
+.voice-button {
+  background: #2f3136;
+  border: 1px solid #202225;
+  color: #b9bbbe;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.voice-button:hover {
+  background-color: #40444b;
+  border-color: #5865f2;
+}
+
+.voice-button:active {
+  transform: scale(0.98);
+}
+
+.voice-button.playing {
+  color: #5865f2;
+  background-color: rgba(88, 101, 242, 0.1);
+  border-color: #5865f2;
+}
+
+.voice-button.loading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Format button styles */
+.format-button {
+  background: #2f3136;
+  border: 1px solid #202225;
+  color: #b9bbbe;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.format-button:hover {
+  background-color: #40444b;
+  border-color: #00a670;
+  color: #00a670;
+}
+
+.format-button:active {
+  transform: scale(0.98);
+}
+
+/* Tool debug info in development mode */
+.tool-debug-info {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8em;
+}
+
+.tools-label {
+  color: #8e9297;
+}
+
+.tool-badge {
+  background: #4f545c;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Media queries for buttons on mobile */
+@media (max-width: 480px) {
+  .play-voice-button, .voice-button, .regenerate-button, 
+  .copy-button, .format-button {
+    width: 24px;
+    height: 24px;
+    font-size: 0.9em;
+    padding: 4px;
   }
   
   .message-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
+    gap: 3px;
   }
-
-  .thinking {
-    font-style: italic;
-    color: #888;
-  }
-  
-  .copy-button,
-  .regenerate-button {
-    background: #2f3136;
-    border: 1px solid #202225;
-    color: #b9bbbe;
-    cursor: pointer;
-    font-size: 14px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  }
-  
-  .regenerate-button {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  
-  .copy-button:hover,
-  .regenerate-button:hover {
-    background-color: #40444b;
-    border-color: #5865f2;
-  }
-  
-  .user .copy-button {
-    color: #b9bbbe;
-    border-color: #5865f2;
-  }
-  
-  .persona-header {
-    color: #b9bbbe;
-    font-size: 0.85em;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .persona-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #202225;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  
-  .persona-name {
-    font-size: 0.9em;
-    font-weight: 500;
-    color: #666;
-  }
-  
-  /* Add this new style for GAIA's avatar */
-  .message .persona-header img[alt="GAIA"] {
-    border-color: #00868b; /* Dark turquoise color */
-    border-width: 3px;
-  }
-  
-  /* Tool usage styling */
-  .tool-usage {
-    background-color: #36393f;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin: 5px 0;
-    border-left: 3px solid #5865f2;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  
-  .tool-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #5865f2;
-  }
-  
-  .tool-header-left {
-    display: flex;
-    align-items: center;
-  }
-  
-  .tool-icon {
-    margin-right: 8px;
-    font-size: 1.2em;
-  }
-  
-  .tool-name {
-    font-size: 1.0em;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-  
-  /* Media queries for tool usage on mobile */
-  @media (max-width: 768px) {
-    .tool-usage {
-      padding: 8px 10px;
-      margin: 4px 0;
-    }
-    
-    .tool-header {
-      margin-bottom: 6px;
-    }
-    
-    .tool-name {
-      font-size: 0.9em;
-    }
-    
-    .tool-details {
-      font-size: 0.75em;
-      max-height: 150px;
-      padding: 6px;
-    }
-    
-    .tool-badge {
-      font-size: 0.75em;
-      padding: 1px 4px;
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .tool-usage {
-      padding: 6px 8px;
-    }
-    
-    .tool-icon {
-      font-size: 1em;
-      margin-right: 6px;
-    }
-    
-    .tool-name {
-      font-size: 0.8em;
-    }
-    
-    .tool-details {
-      font-size: 0.7em;
-      max-height: 120px;
-    }
-  }
-  
-  .tool-toggle {
-    background: none;
-    border: none;
-    color: #7289da;
-    cursor: pointer;
-    font-size: 1.1em;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 24px;
-    width: 24px;
-    border-radius: 50%;
-  }
-  
-  .tool-toggle:hover {
-    background-color: rgba(114, 137, 218, 0.1);
-  }
-  
-  .tool-details {
-    background-color: #2f3136;
-    border-radius: 4px;
-    padding: 8px;
-    margin-top: 8px;
-    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-    font-size: 0.85em;
-    color: #dcddde;
-    white-space: pre-wrap;
-    overflow-x: auto;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-  
-  .tool-summary {
-    margin-top: 6px;
-    color: #b9bbbe;
-    font-size: 0.9em;
-  }
-  
-  /* Special styling for dice roll tool */
-  .tool-usage.dice-roll {
-    background-color: #2f3136;
-    border-left: 3px solid #ed4245;
-  }
-  
-  .dice-roll .tool-header {
-    color: #ed4245;
-  }
-  
-  .dice-roll code {
-    background-color: #202225;
-    border-radius: 3px;
-    padding: 2px 4px;
-    color: #dcddde;
-  }
-  
-  /* Tool debugging display */
-  .tool-debug-info {
-    display: flex;
-    align-items: center;
-    margin-left: 10px;
-    font-size: 0.75em;
-  }
-  
-  .tools-label {
-    margin-right: 5px;
-    color: #999;
-  }
-  
-  .tool-badge {
-    background-color: #2c2f33;
-    color: #00b0f4;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 0.85em;
-    margin-right: 4px;
-    border: 1px solid #40444b;
-  }
-  
-  /* Voice playback button styles */
-  .play-voice-button {
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    margin-left: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-    padding: 0;
-    color: #7289da;
-  }
-  
-  .play-voice-button:hover {
-    background-color: rgba(114, 137, 218, 0.1);
-  }
-  
-  .play-voice-button:active {
-    transform: scale(0.95);
-  }
-  
-  .play-voice-button.playing {
-    color: #5865f2;
-    background-color: rgba(88, 101, 242, 0.1);
-  }
-  
-  .play-voice-button.loading {
-    opacity: 0.6;
-    cursor: wait;
-  }
-  
-  .loading-indicator {
-    animation: spin 1s infinite linear;
-    display: inline-block;
-  }
-  
-  @keyframes spin {
-    from {transform:rotate(0deg);}
-    to {transform:rotate(360deg);}
-  }
-  
-  /* Voice button styles */
-  .voice-button {
-    background: #2f3136;
-    border: 1px solid #202225;
-    color: #b9bbbe;
-    cursor: pointer;
-    font-size: 14px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    transition: all 0.2s ease;
-  }
-  
-  .voice-button:hover {
-    background-color: #40444b;
-    border-color: #5865f2;
-  }
-  
-  .voice-button:active {
-    transform: scale(0.98);
-  }
-  
-  .voice-button.playing {
-    color: #5865f2;
-    background-color: rgba(88, 101, 242, 0.1);
-    border-color: #5865f2;
-  }
-  
-  .voice-button.loading {
-    opacity: 0.6;
-    cursor: wait;
-  }
-  
-  /* Media queries for voice button on mobile */
-  @media (max-width: 480px) {
-    .play-voice-button, .voice-button {
-      width: 24px;
-      height: 24px;
-      font-size: 0.9em;
-      padding: 4px 8px;
-    }
-  }
+}

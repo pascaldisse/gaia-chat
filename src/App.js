@@ -28,7 +28,7 @@ function AppContent() {
   const [editingPersona, setEditingPersona] = useState(null);
   const [activePersonas, setActivePersonas] = useState([]);
   const [activeUsers, setActiveUsers] = useState([]);
-  const [viewMode, setViewMode] = useState('chat'); // 'chat' or 'agentflow'
+  const [viewMode, setViewMode] = useState('chat'); // 'chat', 'agentflow', 'store', 'admin', 'formatter'
   const [sidebarVisible, setSidebarVisible] = useState(false); // Control sidebar visibility
 
   // Load chat history from database

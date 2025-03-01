@@ -24,6 +24,12 @@
   color: #dcddde;
 }
 
+.attributes-editor-container {
+  max-height: 70vh;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
 .attributes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

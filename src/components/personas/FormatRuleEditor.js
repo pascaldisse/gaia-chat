@@ -3,6 +3,10 @@ import '../../styles/personas/FormatRuleEditor.css';
 
 // Component for editing a single format rule
 const FormatRuleEditor = ({ rule, index, onUpdate, onRemove }) => {
+  // Prevent event propagation to parent containers
+  const stopPropagation = (e) => {
+    e.stopPropagation();
+  };
   const [localRule, setLocalRule] = useState({...rule});
   const [showPreview, setShowPreview] = useState(false);
   const [previewText, setPreviewText] = useState(`${rule.startTag || '<tag>'}Example content${rule.endTag || '</tag>'}`);
@@ -40,10 +44,13 @@ const FormatRuleEditor = ({ rule, index, onUpdate, onRemove }) => {
   };
   
   return (
-    <div className="format-rule-editor">
+    <div className="format-rule-editor" onClick={stopPropagation}>
       <div className="rule-header">
         <h4>Rule #{index + 1}{localRule.name ? `: ${localRule.name}` : ''}</h4>
-        <button className="remove-rule-btn" onClick={() => onRemove(index)}>Remove</button>
+        <button className="remove-rule-btn" onClick={(e) => {
+          stopPropagation(e);
+          onRemove(index);
+        }}>Remove</button>
       </div>
       
       <div className="rule-fields">
@@ -137,7 +144,10 @@ const FormatRuleEditor = ({ rule, index, onUpdate, onRemove }) => {
       <div className="rule-preview">
         <div className="preview-header">
           <h4>Preview</h4>
-          <button className="toggle-preview-btn" onClick={() => setShowPreview(!showPreview)}>
+          <button className="toggle-preview-btn" onClick={(e) => {
+            stopPropagation(e);
+            setShowPreview(!showPreview);
+          }}>
             {showPreview ? 'Hide' : 'Show'}
           </button>
         </div>

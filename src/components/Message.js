@@ -10,6 +10,8 @@ const Message = ({ message, onRegenerate, personas }) => {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [formatted, setFormatted] = useState(false);
+  const [formattedContent, setFormattedContent] = useState('');
   const audioRef = useRef(null);
 
   // Function to generate and play TTS audio
@@ -147,7 +149,111 @@ const Message = ({ message, onRegenerate, personas }) => {
     }
   }, [audioUrl]);
 
+  // Function to apply formatting based on persona rules
+  const applyFormatting = () => {
+    console.log("Message.js: Starting format operation...");
+    console.log("Message.js: Persona:", persona?.name || "Unknown");
+    console.log("Message.js: Original message:", message.content);
+    
+    if (!persona) {
+      console.log("Message.js: No persona found for personaId:", message.personaId);
+      return;
+    }
+    
+    let formattedText = message.content;
+    
+    // Apply custom format rules if they exist
+    if (persona?.formatSettings?.customFormatting && persona?.formatSettings?.formatRules) {
+      console.log("Message.js: Using custom formatting with rules:", persona.formatSettings.formatRules);
+      const formatRules = persona.formatSettings.formatRules || [];
+      
+      // Apply each format rule 
+      formatRules.forEach(rule => {
+        if (rule.enabled) {
+          console.log("Message.js: Applying rule:", rule.name);
+          // Create a regex that can match incomplete tags during streaming
+          const startTagEscaped = rule.startTag ? rule.startTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
+          const endTagEscaped = rule.endTag ? rule.endTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
+          
+          // Only process if we have a start tag
+          if (startTagEscaped) {
+            // For complete tags (start + content + end)
+            if (endTagEscaped) {
+              const fullTagPattern = new RegExp(`${startTagEscaped}(.*?)${endTagEscaped}`, 'gs');
+              const matches = formattedText.match(fullTagPattern);
+              console.log("Message.js: Matches for pattern", fullTagPattern, ":", matches);
+              
+              // Replace complete tags
+              formattedText = formattedText.replace(fullTagPattern, (match, content) => {
+                console.log("Message.js: Replacing match:", match, "with format:", rule.markdownFormat.replace('{{content}}', content));
+                return rule.markdownFormat.replace('{{content}}', content);
+              });
+            }
+          }
+        }
+      });
+    }
+    
+    // Apply roleplay markdown support
+    if (persona?.formatSettings?.useRoleplayMarkdown) {
+      console.log("Message.js: Applying roleplay markdown formatting");
+      
+      try {
+        // Replace <speech> tags with formatted text
+        formattedText = formattedText.replace(/<speech as="([^"]+)"[^>]*>([\s\S]*?)<\/speech>/g, (match, character, text) => {
+          console.log("Message.js: Found speech tag for character:", character);
+          return `**${character}:** ${text.trim()}\n\n`;
+        });
+        
+        // Fallback for incomplete speech tags during streaming
+        formattedText = formattedText.replace(/<speech as="([^"]+)"[^>]*>([\s\S]*)$/g, (match, character, text) => {
+          console.log("Message.js: Found incomplete speech tag for character:", character);
+          return `**${character}:** ${text.trim()}\n\n`;
+        });
+        
+        // Replace <action> tags with italic text
+        formattedText = formattedText.replace(/<action as="([^"]+)"[^>]*>([\s\S]*?)<\/action>/g, (match, character, text) => {
+          console.log("Message.js: Found action tag for character:", character);
+          return `*${character} ${text.trim()}*\n\n`;
+        });
+        
+        // Fallback for incomplete action tags during streaming
+        formattedText = formattedText.replace(/<action as="([^"]+)"[^>]*>([\s\S]*)$/g, (match, character, text) => {
+          console.log("Message.js: Found incomplete action tag for character:", character);
+          return `*${character} ${text.trim()}*\n\n`;
+        });
+        
+        // Replace <function> tags with code blocks
+        formattedText = formattedText.replace(/<function>([\s\S]*?)<\/function>/g, (match, code) => {
+          console.log("Message.js: Found function tag");
+          return `\`\`\`\n${code.trim()}\n\`\`\`\n\n`;
+        });
+        
+        // Fallback for incomplete function tags during streaming
+        formattedText = formattedText.replace(/<function>([\s\S]*)$/g, (match, code) => {
+          console.log("Message.js: Found incomplete function tag");
+          return `\`\`\`\n${code.trim()}\n\`\`\`\n\n`;
+        });
+        
+        // Remove <yield> tags
+        formattedText = formattedText.replace(/<yield[^>]*\/>/g, '');
+        formattedText = formattedText.replace(/<yield[^>]*>.*?<\/yield>/g, '');
+      } catch (err) {
+        console.error("Error in roleplay markdown formatting:", err);
+      }
+    }
+    
+    console.log("Message.js: Formatted result:", formattedText);
+    setFormattedContent(formattedText);
+    setFormatted(true);
+  };
+
   const renderContent = () => {
+    // If formatted view is active, show formatted content
+    if (formatted && formattedContent) {
+      return <ReactMarkdown>{formattedContent}</ReactMarkdown>;
+    }
+    
     // Handle file content display
     if (message.fileData?.parsedText) {
       return (
@@ -283,76 +389,6 @@ const Message = ({ message, onRegenerate, personas }) => {
       return <ReactMarkdown>{`*${thinkContent}*`}</ReactMarkdown>;
     }
     
-    // Check if custom formatting is enabled
-    if (persona?.formatSettings?.customFormatting || persona?.formatSettings?.useRoleplayMarkdown) {
-      // Format tags into markdown based on persona format settings
-      let formattedContent = message.content;
-
-      // Apply custom format rules if they exist
-      if (persona?.formatSettings?.customFormatting && persona?.formatSettings?.formatRules) {
-        const formatRules = persona.formatSettings.formatRules || [];
-        
-        // Apply each format rule 
-        formatRules.forEach(rule => {
-          if (rule.enabled) {
-            // Create a regex that can match incomplete tags during streaming
-            const startTagEscaped = rule.startTag ? rule.startTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
-            const endTagEscaped = rule.endTag ? rule.endTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
-            
-            // Only process if we have a start tag
-            if (startTagEscaped) {
-              const openTagPattern = new RegExp(startTagEscaped, 'g');
-              
-              // For complete tags (start + content + end)
-              if (endTagEscaped) {
-                const fullTagPattern = new RegExp(`${startTagEscaped}(.*?)${endTagEscaped}`, 'gs');
-                
-                // Replace complete tags
-                formattedContent = formattedContent.replace(fullTagPattern, (match, content) => {
-                  return rule.markdownFormat.replace('{{content}}', content);
-                });
-              }
-              
-              // For incomplete tags during streaming (only start tag, no end tag yet)
-              if (rule.renderIncomplete) {
-                // This regex finds start tags that aren't followed by end tags
-                const incompleteTagPattern = new RegExp(`${startTagEscaped}([^${endTagEscaped}]*)$`, 'gs');
-                
-                formattedContent = formattedContent.replace(incompleteTagPattern, (match, content) => {
-                  return rule.incompleteMarkdown ? 
-                    rule.incompleteMarkdown.replace('{{content}}', content) : 
-                    match;
-                });
-              }
-            }
-          }
-        });
-      }
-      
-      // Legacy roleplay markdown support
-      if (persona?.formatSettings?.useRoleplayMarkdown) {
-        // Replace <speech> tags with formatted text - now handles multi-line content for streaming
-        formattedContent = formattedContent.replace(/<speech as="([^"]+)"[^>]*>([\s\S]*?)(?:<\/speech>|$)/g, (match, character, text) => {
-          return `**${character}:** ${text}\n\n`;
-        });
-        
-        // Replace <action> tags with italic text - now handles multi-line content for streaming
-        formattedContent = formattedContent.replace(/<action as="([^"]+)"[^>]*>([\s\S]*?)(?:<\/action>|$)/g, (match, character, text) => {
-          return `*${character} ${text}*\n\n`;
-        });
-        
-        // Replace <function> tags with code blocks - now handles multi-line content for streaming
-        formattedContent = formattedContent.replace(/<function>([\s\S]*?)(?:<\/function>|$)/g, (match, code) => {
-          return `\`\`\`\n${code}\n\`\`\`\n\n`;
-        });
-        
-        // Remove <yield> tags
-        formattedContent = formattedContent.replace(/<yield to="User" \/>/g, '');
-      }
-      
-      return <ReactMarkdown>{formattedContent}</ReactMarkdown>;
-    }
-    
     // Default markdown rendering
     return <ReactMarkdown>{message.content}</ReactMarkdown>;
   };
@@ -416,27 +452,31 @@ const Message = ({ message, onRegenerate, personas }) => {
       </div>
       <div className="message-actions">
         <CopyToClipboard text={message.content}>
-          <button className="copy-button">Copy</button>
+          <button className="copy-button" title="Copy to clipboard">
+            <span role="img" aria-label="Copy">📋</span>
+          </button>
         </CopyToClipboard>
         {!message.isUser && !message.isCommand && !message.isToolUsage && (
           <>
-            <button className="regenerate-button" onClick={() => onRegenerate(message)}>
-              🔄 Regenerate
+            <button className="regenerate-button" onClick={() => onRegenerate(message)} title="Regenerate response">
+              <span role="img" aria-label="Regenerate">🔄</span>
             </button>
-            {/* Always show the play button for assistant messages, regardless of voice setting */}
             <button 
               className={`voice-button ${isPlaying ? 'playing' : ''} ${isLoadingAudio ? 'loading' : ''}`}
               onClick={handlePlayAudio}
               disabled={isLoadingAudio}
-              aria-label={isPlaying ? "Pause voice" : "Play voice"}
+              title={isPlaying ? "Pause voice" : "Play voice"}
             >
               {isLoadingAudio ? (
                 <span className="loading-indicator">⏳</span>
               ) : isPlaying ? (
-                <span>⏸️ Pause</span>
+                <span role="img" aria-label="Pause">⏸️</span>
               ) : (
-                <span>🔊 Play</span>
+                <span role="img" aria-label="Play">🔊</span>
               )}
+            </button>
+            <button className="format-button" onClick={applyFormatting} title="Format message">
+              <span role="img" aria-label="Format">✨</span>
             </button>
           </>
         )}
