@@ -235,6 +235,63 @@
   border-radius: 8px;
 }
 
+/* Styling for GAIA's locked fields */
+.image-locked-message {
+  margin-top: 8px;
+  color: #b9bbbe;
+  font-style: italic;
+  font-size: 0.9em;
+  text-align: center;
+}
+
+.prompt-edit-notice {
+  margin-bottom: 10px;
+  padding: 8px;
+  background-color: rgba(255, 184, 76, 0.1);
+  border-left: 3px solid #ffb84c;
+  border-radius: 4px;
+  color: #ffb84c;
+  font-size: 0.9em;
+}
+
+.prompt-hidden-message {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: rgba(88, 101, 242, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  text-align: center;
+  color: #dcddde;
+}
+
+.lock-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+  color: #5865f2;
+}
+
+.prompt-tip {
+  margin-top: 10px;
+  font-size: 0.9em;
+  font-style: italic;
+  color: #b9bbbe;
+}
+
+.default-persona-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 15px 0;
+}
+
+/* Make the disabled fields visually distinct but not "disabled-looking" */
+input:disabled {
+  background-color: #383b44;
+  border-color: #4752c4;
+  opacity: 0.9;
+  cursor: not-allowed;
+}
+
 .current-tools {
   display: flex;
   flex-wrap: wrap;

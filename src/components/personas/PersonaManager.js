@@ -103,9 +103,20 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   const handleSave = async () => {
     console.log('PersonaManager: Saving persona with data:', currentPersona);
     
+    // For GAIA, ensure we preserve the name, image, and system prompt
+    let personaToSave = {...currentPersona};
+    
+    if (personaToSave.id === DEFAULT_PERSONA_ID) {
+      // Get the original GAIA config to preserve name, image, and system prompt
+      console.log('Preserving GAIA default name, image and system prompt');
+      personaToSave.name = GAIA_CONFIG.name;
+      personaToSave.image = GAIA_CONFIG.image;
+      personaToSave.systemPrompt = GAIA_CONFIG.systemPrompt; // Preserve the system prompt
+    }
+    
     // Create a complete persona object including all properties
     const updatedPersona = new Persona({
-      ...currentPersona,
+      ...personaToSave,
       updatedAt: Date.now()
     });
     
@@ -200,40 +211,53 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
             />
             
             <div className="image-upload-section">
-              <div className="image-source-toggle">
-                <button 
-                  className={`source-button ${imageSource === 'url' ? 'active' : ''}`}
-                  onClick={() => setImageSource('url')}
-                >
-                  URL
-                </button>
-                <button 
-                  className={`source-button ${imageSource === 'file' ? 'active' : ''}`}
-                  onClick={() => setImageSource('file')}
-                >
-                  Upload File
-                </button>
-              </div>
-
-              {imageSource === 'url' ? (
-                <input 
-                  value={currentPersona.image}
-                  onChange={(e) => setCurrentPersona({ ...currentPersona, image: e.target.value })}
-                  placeholder="Image URL"
-                />
-              ) : (
-                <input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.webp"
-                  onChange={handleImageUpload}
-                  className="file-input"
-                />
-              )}
-
-              {currentPersona.image && (
-                <div className="image-preview">
-                  <img src={currentPersona.image} alt="Persona" />
+              {currentPersona.id === DEFAULT_PERSONA_ID ? (
+                /* For GAIA: Only show the image preview, not editable */
+                <div className="default-persona-image">
+                  <div className="image-preview">
+                    <img src={currentPersona.image} alt="Persona" />
+                    <div className="image-locked-message">Image is locked for default persona</div>
+                  </div>
                 </div>
+              ) : (
+                /* For all other personas: Allow image editing */
+                <>
+                  <div className="image-source-toggle">
+                    <button 
+                      className={`source-button ${imageSource === 'url' ? 'active' : ''}`}
+                      onClick={() => setImageSource('url')}
+                    >
+                      URL
+                    </button>
+                    <button 
+                      className={`source-button ${imageSource === 'file' ? 'active' : ''}`}
+                      onClick={() => setImageSource('file')}
+                    >
+                      Upload File
+                    </button>
+                  </div>
+
+                  {imageSource === 'url' ? (
+                    <input 
+                      value={currentPersona.image}
+                      onChange={(e) => setCurrentPersona({ ...currentPersona, image: e.target.value })}
+                      placeholder="Image URL"
+                    />
+                  ) : (
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      onChange={handleImageUpload}
+                      className="file-input"
+                    />
+                  )}
+
+                  {currentPersona.image && (
+                    <div className="image-preview">
+                      <img src={currentPersona.image} alt="Persona" />
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -245,13 +269,22 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
                 <option key={key} value={value}>{key}</option>
               ))}
             </select>
-            <textarea
-              value={currentPersona.systemPrompt}
-              onChange={(e) => setCurrentPersona({ ...currentPersona, systemPrompt: e.target.value })}
-              placeholder="System Prompt"
-              rows={6}
-              disabled={currentPersona.id === DEFAULT_PERSONA_ID ? false : false}
-            />
+            <div className="system-prompt-section">
+              {currentPersona.id === DEFAULT_PERSONA_ID ? (
+                <div className="prompt-hidden-message">
+                  <div className="lock-icon">🔒</div>
+                  <p>GAIA's system prompt is protected and cannot be viewed or edited directly.</p>
+                  <p className="prompt-tip">You can still customize GAIA's personality, voice, and tools below.</p>
+                </div>
+              ) : (
+                <textarea
+                  value={currentPersona.systemPrompt}
+                  onChange={(e) => setCurrentPersona({ ...currentPersona, systemPrompt: e.target.value })}
+                  placeholder="System Prompt"
+                  rows={6}
+                />
+              )}
+            </div>
             <button 
               className="edit-attributes-button"
               onClick={() => setShowAttributesEditor(true)}

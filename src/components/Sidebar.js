@@ -62,7 +62,7 @@ const Sidebar = ({
               <div 
                 key={persona.id}
                 className={`persona-item ${selectedPersonaId === persona.id ? 'selected' : ''} ${persona.id === DEFAULT_PERSONA_ID ? 'gaia-persona' : ''}`}
-                onClick={() => persona.isDefault ? null : onEditPersona(persona)}
+                onClick={() => onEditPersona(persona)}
               >
                 <img 
                   src={persona.image || '/default-avatar.png'} 

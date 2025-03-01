@@ -213,6 +213,30 @@
   border-left: 3px solid #5865f2;
 }
 
+.default-persona-image {
+  display: flex;
+  justify-content: center;
+  margin: 15px 0;
+}
+
+.image-locked-message {
+  margin-top: 8px;
+  color: #b9bbbe;
+  font-style: italic;
+  font-size: 0.9em;
+  text-align: center;
+}
+
+.prompt-edit-notice {
+  margin-bottom: 10px;
+  padding: 8px;
+  background-color: rgba(255, 184, 76, 0.1);
+  border-left: 3px solid #ffb84c;
+  border-radius: 4px;
+  color: #ffb84c;
+  font-size: 0.9em;
+}
+
 .voice-preview p {
   margin: 0;
   padding: 0;
