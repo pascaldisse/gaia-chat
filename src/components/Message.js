@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import '../styles/Message.css';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import ReactMarkdown from 'react-markdown';
-import { generateSpeech } from '../services/voiceService';
+import { generateSpeech, getTTSEngine } from '../services/voiceService';
 
 const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
@@ -40,23 +40,40 @@ const Message = ({ message, onRegenerate, personas }) => {
     }
     
     // Otherwise, generate new audio
-    // Use the correct Zonos TTS voice IDs
-    // Default to random voice if none is set
-    let voiceToUse = "random";
+    // Get the current TTS engine
+    const currentEngine = getTTSEngine();
     
-    // In production, this would use the persona's configured voice:
-    // const voiceToUse = persona?.voiceId || "random";
+    // Use the persona's voice ID if it's set, or use a default for the current engine
+    let voiceToUse = persona?.voiceId || null;
     
-    // For demonstration, assign specific voices based on persona name
-    if (persona) {
-      if (persona.name === "GAIA") {
-        voiceToUse = "american_female"; // American female voice for GAIA
-      } else if (persona.name.includes("Science")) {
-        voiceToUse = "british_male"; // British male voice for Science personas
-      } else if (persona.name.includes("Art")) {
-        voiceToUse = "british_female"; // British female voice for Art personas
-      } else if (persona.name.includes("Business")) {
-        voiceToUse = "american_male"; // American male voice for Business personas
+    // If no voice is set, use a default based on the engine and persona type
+    if (!voiceToUse) {
+      if (currentEngine === 'zonos') {
+        // Zonos defaults
+        if (persona?.name === "GAIA") {
+          voiceToUse = "american_female";
+        } else if (persona?.name?.includes("Science")) {
+          voiceToUse = "british_male";
+        } else if (persona?.name?.includes("Art")) {
+          voiceToUse = "british_female";
+        } else if (persona?.name?.includes("Business")) {
+          voiceToUse = "american_male";
+        } else {
+          voiceToUse = "random";
+        }
+      } else {
+        // Kokoro defaults
+        if (persona?.name === "GAIA") {
+          voiceToUse = "af_nova";
+        } else if (persona?.name?.includes("Science")) {
+          voiceToUse = "bm_daniel";
+        } else if (persona?.name?.includes("Art")) {
+          voiceToUse = "bf_emma";
+        } else if (persona?.name?.includes("Business")) {
+          voiceToUse = "am_michael";
+        } else {
+          voiceToUse = "af_bella";
+        }
       }
     }
     

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../../styles/personas/PersonaAttributesEditor.css';
-import { getVoices } from '../../services/voiceService';
+import { getVoices, getTTSEngine, setTTSEngine } from '../../services/voiceService';
 
 const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
   const [currentAttributes, setCurrentAttributes] = useState({
@@ -19,14 +19,23 @@ const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
   const [voiceId, setVoiceId] = useState(persona.voiceId || '');
   const [availableVoices, setAvailableVoices] = useState([]);
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
+  const [ttsEngine, setTtsEngineState] = useState(getTTSEngine());
 
-  // Fetch available voices on component mount
+  // Fetch available voices on component mount or when TTS engine changes
   useEffect(() => {
     const fetchVoices = async () => {
       setIsLoadingVoices(true);
       try {
         const voices = await getVoices();
         setAvailableVoices(voices);
+        
+        // If the current voiceId is not compatible with the new engine, reset it
+        if (voiceId) {
+          const isVoiceCompatible = voices.some(voice => voice.voice_id === voiceId);
+          if (!isVoiceCompatible) {
+            setVoiceId('');
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch voices:', error);
       } finally {
@@ -35,7 +44,13 @@ const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
     };
 
     fetchVoices();
-  }, []);
+  }, [ttsEngine]);
+  
+  // Handler for changing the TTS engine
+  const handleTtsEngineChange = (newEngine) => {
+    setTtsEngineState(newEngine);
+    setTTSEngine(newEngine);
+  };
 
   const attributeLabels = {
     initiative: 'Initiative - How quickly they jump into conversations',
@@ -67,6 +82,35 @@ const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
         {/* Voice Selection */}
         <div className="voice-selection">
           <h3>Voice Settings</h3>
+          
+          {/* TTS Engine Selection */}
+          <div className="tts-engine-selector">
+            <label>TTS Engine:</label>
+            <div className="engine-options">
+              <button 
+                className={`engine-option ${ttsEngine === 'zonos' ? 'selected' : ''}`}
+                onClick={() => handleTtsEngineChange('zonos')}
+                disabled={isLoadingVoices}
+              >
+                Zonos
+              </button>
+              <button 
+                className={`engine-option ${ttsEngine === 'kokoro' ? 'selected' : ''}`}
+                onClick={() => handleTtsEngineChange('kokoro')}
+                disabled={isLoadingVoices}
+              >
+                Kokoro
+              </button>
+            </div>
+            <p className="engine-description">
+              {ttsEngine === 'zonos' 
+                ? 'Zonos offers simple voice options with fast processing.'
+                : 'Kokoro provides a wide range of high-quality voices.'
+              }
+            </p>
+          </div>
+          
+          {/* Voice Selector */}
           <div className="voice-selector">
             <label htmlFor="voice-select">Voice:</label>
             <select 
@@ -85,14 +129,6 @@ const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
                   </option>
                 ))
               )}
-              {/* Add Zonos voices as fallback */}
-              <optgroup label="Zonos Voices">
-                <option value="american_female">American Female</option>
-                <option value="american_male">American Male</option>
-                <option value="british_female">British Female</option>
-                <option value="british_male">British Male</option>
-                <option value="random">Random Voice</option>
-              </optgroup>
             </select>
           </div>
           {voiceId && (

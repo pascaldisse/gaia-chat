@@ -1,71 +1,133 @@
 import axios from 'axios';
 
-// Zonos TTS API from Zyphra
-const TTS_ENDPOINT = "https://api.deepinfra.com/v1/inference/Zyphra/Zonos-v0.1-hybrid";
+// TTS API endpoints
+const TTS_ENDPOINTS = {
+  zonos: "https://api.deepinfra.com/v1/inference/Zyphra/Zonos-v0.1-hybrid",
+  kokoro: "https://api.deepinfra.com/v1/inference/hexgrad/Kokoro-82M"
+};
 
 // API Key - in a real application, this should be stored securely
 const API_KEY = "Bearer u5q1opMM9uw9x84EJLtxqaQ6HcnXbUAq";
 
+// Get current TTS engine preference from localStorage, default to zonos
+export const getTTSEngine = () => {
+  return localStorage.getItem('tts_engine') || 'zonos';
+};
+
+// Set TTS engine preference in localStorage
+export const setTTSEngine = (engine) => {
+  localStorage.setItem('tts_engine', engine);
+  return engine;
+};
+
 /**
- * Get available voices for Zonos TTS
+ * Get available voices based on the selected TTS engine
  * @returns {Promise<Array>} Array of voice objects
  */
 export const getVoices = async () => {
-  // Default voices from Zonos TTS
-  const defaultVoices = [
-    { voice_id: "american_female", name: "American Female" },
-    { voice_id: "american_male", name: "American Male" },
-    { voice_id: "british_female", name: "British Female" },
-    { voice_id: "british_male", name: "British Male" },
-    { voice_id: "random", name: "Random Voice" }
-  ];
+  const engine = getTTSEngine();
   
-  try {
+  // Select voices based on engine
+  if (engine === 'zonos') {
+    // Zonos TTS voices
+    const zonosVoices = [
+      { voice_id: "american_female", name: "American Female", engine: 'zonos' },
+      { voice_id: "american_male", name: "American Male", engine: 'zonos' },
+      { voice_id: "british_female", name: "British Female", engine: 'zonos' },
+      { voice_id: "british_male", name: "British Male", engine: 'zonos' },
+      { voice_id: "random", name: "Random Voice", engine: 'zonos' }
+    ];
+    
     console.log("Using Zonos TTS voices");
-    return defaultVoices;
-  } catch (error) {
-    console.error("Error with voice options:", error);
-    return defaultVoices;
+    return zonosVoices;
+  } else {
+    // Kokoro TTS voices
+    const kokoroVoices = [
+      { voice_id: "af_bella", name: "Bella (Female)", engine: 'kokoro' },
+      { voice_id: "af_nova", name: "Nova (Female)", engine: 'kokoro' },
+      { voice_id: "af_nicole", name: "Nicole (Female)", engine: 'kokoro' },
+      { voice_id: "am_adam", name: "Adam (Male)", engine: 'kokoro' },
+      { voice_id: "am_michael", name: "Michael (Male)", engine: 'kokoro' },
+      { voice_id: "bf_emma", name: "Emma (British Female)", engine: 'kokoro' },
+      { voice_id: "bm_daniel", name: "Daniel (British Male)", engine: 'kokoro' },
+      { voice_id: "bm_george", name: "George (British Male)", engine: 'kokoro' }
+    ];
+    
+    console.log("Using Kokoro TTS voices");
+    return kokoroVoices;
   }
 };
 
 /**
- * Generate TTS audio from text using Zonos TTS API
+ * Generate TTS audio from text
  * @param {string} text - Text to convert to speech
  * @param {string} voiceId - Voice ID to use for TTS
  * @returns {Promise<string>} Audio URL
  */
 export const generateSpeech = async (text, voiceId) => {
   try {
-    console.log(`Generating speech for voice ID: ${voiceId}`);
+    // Determine which engine to use
+    // Either from localStorage preference or derive from voiceId formatting
+    let engine = getTTSEngine();
     
-    // If no voice ID is provided, use a default one
-    if (!voiceId || !["american_female", "american_male", "british_female", "british_male", "random"].includes(voiceId)) {
-      console.warn("No valid voice ID provided, using default voice");
-      voiceId = "random"; // Default Zonos voice
+    // Override engine based on voiceId if it clearly matches a specific engine's format
+    if (voiceId) {
+      if (["american_female", "american_male", "british_female", "british_male", "random"].includes(voiceId)) {
+        engine = 'zonos';
+      } else if (voiceId.startsWith('af_') || voiceId.startsWith('am_') || voiceId.startsWith('bf_') || voiceId.startsWith('bm_')) {
+        engine = 'kokoro';
+      }
     }
+    
+    console.log(`Generating speech using ${engine} engine for voice ID: ${voiceId}`);
     
     // For API limits, limit text length
     const truncatedText = text.length > 300 ? text.substring(0, 300) + "..." : text;
     
-    console.log(`Making TTS API request to Zonos TTS endpoint`);
+    // Prepare request based on selected engine
+    let requestData, endpoint;
     
-    // Post to the Zonos TTS endpoint with the correct parameters
-    const response = await axios.post(TTS_ENDPOINT, 
-      {
+    if (engine === 'zonos') {
+      // If no voice ID is provided for Zonos, use a default one
+      if (!voiceId || !["american_female", "american_male", "british_female", "british_male", "random"].includes(voiceId)) {
+        console.warn("No valid Zonos voice ID provided, using default voice");
+        voiceId = "random"; // Default Zonos voice
+      }
+      
+      endpoint = TTS_ENDPOINTS.zonos;
+      requestData = {
         text: truncatedText,
         preset_voice: voiceId,
         language: "en-us",
         output_format: "mp3"
-      }, 
-      {
-        headers: {
-          "Authorization": API_KEY,
-          "Content-Type": "application/json"
-        },
-        timeout: 30000 // 30 second timeout
+      };
+      
+      console.log(`Making TTS API request to Zonos TTS endpoint`);
+    } else {
+      // If no voice ID is provided for Kokoro, use a default one
+      if (!voiceId || !(voiceId.startsWith('af_') || voiceId.startsWith('am_') || voiceId.startsWith('bf_') || voiceId.startsWith('bm_'))) {
+        console.warn("No valid Kokoro voice ID provided, using default voice");
+        voiceId = "af_bella"; // Default Kokoro voice
       }
-    );
+      
+      endpoint = TTS_ENDPOINTS.kokoro;
+      requestData = {
+        text: truncatedText,
+        preset_voice: [voiceId], // Kokoro expects an array of voices
+        output_format: "mp3"
+      };
+      
+      console.log(`Making TTS API request to Kokoro TTS endpoint`);
+    }
+    
+    // Make the request to the selected endpoint
+    const response = await axios.post(endpoint, requestData, {
+      headers: {
+        "Authorization": API_KEY,
+        "Content-Type": "application/json"
+      },
+      timeout: 30000 // 30 second timeout
+    });
     
     console.log("TTS response received:", response.status);
     
@@ -84,9 +146,47 @@ export const generateSpeech = async (text, voiceId) => {
           return createFallbackAudio();
         }
         
-        // Let's use our fallback audio generator instead
-        console.log("Using generated fallback audio");
-        return createFallbackAudio();
+        // Check if the audio data is already a data URL
+        if (typeof response.data.audio === 'string' && response.data.audio.startsWith('data:audio/')) {
+          console.log("Audio data is already a data URL, using directly");
+          return response.data.audio;
+        }
+        
+        // Handle base64 format
+        console.log("Converting audio data to blob URL");
+        
+        // The Zonos API response seems to include audio data as base64
+        // Let's convert it to a Blob and create a URL
+        try {
+          // If it's a base64 string without the data URL prefix
+          if (typeof response.data.audio === 'string') {
+            // Extract just the base64 part if it's a data URL
+            const base64Data = response.data.audio.includes('base64,') 
+              ? response.data.audio.split('base64,')[1] 
+              : response.data.audio;
+              
+            // Convert to blob
+            const byteCharacters = atob(base64Data);
+            const byteArrays = [];
+            
+            for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+              const slice = byteCharacters.slice(offset, offset + 512);
+              
+              const byteNumbers = new Array(slice.length);
+              for (let i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+              }
+              
+              const byteArray = new Uint8Array(byteNumbers);
+              byteArrays.push(byteArray);
+            }
+            
+            const blob = new Blob(byteArrays, { type: 'audio/mp3' });
+            return URL.createObjectURL(blob);
+          }
+        } catch (e) {
+          console.error("Error converting base64 to blob:", e);
+        }
       } catch (error) {
         console.error("Error processing audio data:", error);
         
