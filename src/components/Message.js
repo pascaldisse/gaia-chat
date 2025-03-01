@@ -3,6 +3,7 @@ import '../styles/Message.css';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import ReactMarkdown from 'react-markdown';
 import { generateSpeech, getTTSEngine } from '../services/voiceService';
+import { applyFormatting as formatText } from './MessageFormatter';
 
 const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
@@ -149,103 +150,35 @@ const Message = ({ message, onRegenerate, personas }) => {
     }
   }, [audioUrl]);
 
+  // No imports needed here
+
   // Function to apply formatting based on persona rules
   const applyFormatting = () => {
     console.log("Message.js: Starting format operation...");
     console.log("Message.js: Persona:", persona?.name || "Unknown");
-    console.log("Message.js: Original message:", message.content);
     
     if (!persona) {
       console.log("Message.js: No persona found for personaId:", message.personaId);
       return;
     }
     
-    let formattedText = message.content;
-    
-    // Apply custom format rules if they exist
-    if (persona?.formatSettings?.customFormatting && persona?.formatSettings?.formatRules) {
-      console.log("Message.js: Using custom formatting with rules:", persona.formatSettings.formatRules);
-      const formatRules = persona.formatSettings.formatRules || [];
+    try {
+      // Use the new formatter module, enable debugging in dev mode
+      const formattedText = formatText(
+        message.content,
+        persona.formatSettings,
+        process.env.NODE_ENV === 'development'
+      );
       
-      // Apply each format rule 
-      formatRules.forEach(rule => {
-        if (rule.enabled) {
-          console.log("Message.js: Applying rule:", rule.name);
-          // Create a regex that can match incomplete tags during streaming
-          const startTagEscaped = rule.startTag ? rule.startTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
-          const endTagEscaped = rule.endTag ? rule.endTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
-          
-          // Only process if we have a start tag
-          if (startTagEscaped) {
-            // For complete tags (start + content + end)
-            if (endTagEscaped) {
-              const fullTagPattern = new RegExp(`${startTagEscaped}(.*?)${endTagEscaped}`, 'gs');
-              const matches = formattedText.match(fullTagPattern);
-              console.log("Message.js: Matches for pattern", fullTagPattern, ":", matches);
-              
-              // Replace complete tags
-              formattedText = formattedText.replace(fullTagPattern, (match, content) => {
-                console.log("Message.js: Replacing match:", match, "with format:", rule.markdownFormat.replace('{{content}}', content));
-                return rule.markdownFormat.replace('{{content}}', content);
-              });
-            }
-          }
-        }
-      });
+      console.log("Message.js: Formatting complete");
+      setFormattedContent(formattedText);
+      setFormatted(true);
+    } catch (err) {
+      console.error("Message.js: Error in formatting:", err);
+      // In case of error, set the original text as formatted content
+      setFormattedContent(message.content);
+      setFormatted(true);
     }
-    
-    // Apply roleplay markdown support
-    if (persona?.formatSettings?.useRoleplayMarkdown) {
-      console.log("Message.js: Applying roleplay markdown formatting");
-      
-      try {
-        // Replace <speech> tags with formatted text
-        formattedText = formattedText.replace(/<speech as="([^"]+)"[^>]*>([\s\S]*?)<\/speech>/g, (match, character, text) => {
-          console.log("Message.js: Found speech tag for character:", character);
-          return `**${character}:** ${text.trim()}\n\n`;
-        });
-        
-        // Fallback for incomplete speech tags during streaming
-        formattedText = formattedText.replace(/<speech as="([^"]+)"[^>]*>([\s\S]*)$/g, (match, character, text) => {
-          console.log("Message.js: Found incomplete speech tag for character:", character);
-          return `**${character}:** ${text.trim()}\n\n`;
-        });
-        
-        // Replace <action> tags with italic text
-        formattedText = formattedText.replace(/<action as="([^"]+)"[^>]*>([\s\S]*?)<\/action>/g, (match, character, text) => {
-          console.log("Message.js: Found action tag for character:", character);
-          return `*${character} ${text.trim()}*\n\n`;
-        });
-        
-        // Fallback for incomplete action tags during streaming
-        formattedText = formattedText.replace(/<action as="([^"]+)"[^>]*>([\s\S]*)$/g, (match, character, text) => {
-          console.log("Message.js: Found incomplete action tag for character:", character);
-          return `*${character} ${text.trim()}*\n\n`;
-        });
-        
-        // Replace <function> tags with code blocks
-        formattedText = formattedText.replace(/<function>([\s\S]*?)<\/function>/g, (match, code) => {
-          console.log("Message.js: Found function tag");
-          return `\`\`\`\n${code.trim()}\n\`\`\`\n\n`;
-        });
-        
-        // Fallback for incomplete function tags during streaming
-        formattedText = formattedText.replace(/<function>([\s\S]*)$/g, (match, code) => {
-          console.log("Message.js: Found incomplete function tag");
-          return `\`\`\`\n${code.trim()}\n\`\`\`\n\n`;
-        });
-        
-        // Remove <yield> tags
-        formattedText = formattedText.replace(/<yield[^>]*\/>/g, '');
-        formattedText = formattedText.replace(/<yield[^>]*>.*?<\/yield>/g, '');
-      } catch (err) {
-        console.error("Error in roleplay markdown formatting:", err);
-      }
-    }
-    
-    console.log("Message.js: Formatted result:", formattedText);
-    setFormattedContent(formattedText);
-    setFormatted(true);
   };
 
   const renderContent = () => {
