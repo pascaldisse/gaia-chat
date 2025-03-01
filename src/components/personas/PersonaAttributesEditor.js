@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../../styles/personas/PersonaAttributesEditor.css';
+import { getVoices } from '../../services/voiceService';
 
 const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
   const [currentAttributes, setCurrentAttributes] = useState({
@@ -15,6 +16,26 @@ const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
     skepticism: persona.skepticism || 5,
     optimism: persona.optimism || 5
   });
+  const [voiceId, setVoiceId] = useState(persona.voiceId || '');
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [isLoadingVoices, setIsLoadingVoices] = useState(false);
+
+  // Fetch available voices on component mount
+  useEffect(() => {
+    const fetchVoices = async () => {
+      setIsLoadingVoices(true);
+      try {
+        const voices = await getVoices();
+        setAvailableVoices(voices);
+      } catch (error) {
+        console.error('Failed to fetch voices:', error);
+      } finally {
+        setIsLoadingVoices(false);
+      }
+    };
+
+    fetchVoices();
+  }, []);
 
   const attributeLabels = {
     initiative: 'Initiative - How quickly they jump into conversations',
@@ -30,11 +51,59 @@ const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
     optimism: 'Optimism - How positive their responses tend to be'
   };
 
+  const handleSave = () => {
+    onSave({
+      ...currentAttributes,
+      voiceId
+    });
+  };
+
   return (
     <div className="attributes-editor-modal">
       <div className="attributes-content">
         <button className="close-button" onClick={onClose}>×</button>
         <h2>Personality Attributes</h2>
+
+        {/* Voice Selection */}
+        <div className="voice-selection">
+          <h3>Voice Settings</h3>
+          <div className="voice-selector">
+            <label htmlFor="voice-select">Voice:</label>
+            <select 
+              id="voice-select"
+              value={voiceId} 
+              onChange={(e) => setVoiceId(e.target.value)}
+              disabled={isLoadingVoices}
+            >
+              <option value="">None (No TTS)</option>
+              {isLoadingVoices ? (
+                <option value="" disabled>Loading voices...</option>
+              ) : (
+                availableVoices.map(voice => (
+                  <option key={voice.voice_id} value={voice.voice_id}>
+                    {voice.name}
+                  </option>
+                ))
+              )}
+              {/* Add some recommended voices in case API fails */}
+              <optgroup label="Recommended Voices">
+                <option value="luna">Luna</option>
+                <option value="aura">Aura</option>
+                <option value="quartz">Quartz</option>
+                <option value="af_nova">Nova (Female)</option>
+                <option value="af_bella">Bella (Female)</option>
+                <option value="am_adam">Adam (Male)</option>
+              </optgroup>
+            </select>
+          </div>
+          {voiceId && (
+            <div className="voice-preview">
+              <p>Selected voice: <strong>{availableVoices.find(v => v.voice_id === voiceId)?.name || 'Custom Voice'}</strong></p>
+              <p className="voice-note">The voice will be used for text-to-speech when playing message content.</p>
+            </div>
+          )}
+        </div>
+
         <div className="attributes-grid">
           {Object.entries(currentAttributes).map(([key, value]) => (
             <div key={key} className="attribute-control">
@@ -58,7 +127,7 @@ const PersonaAttributesEditor = ({ persona, onSave, onClose }) => {
           ))}
         </div>
         <div className="modal-footer">
-          <button className="save-button" onClick={() => onSave(currentAttributes)}>
+          <button className="save-button" onClick={handleSave}>
             Save Changes
           </button>
         </div>

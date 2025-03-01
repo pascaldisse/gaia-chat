@@ -1,11 +1,138 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../styles/Message.css';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import ReactMarkdown from 'react-markdown';
+import { generateSpeech } from '../services/voiceService';
 
 const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
-  const [showToolDetails, setShowToolDetails] = React.useState(false);
+  const [showToolDetails, setShowToolDetails] = useState(false);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
+
+  // Function to generate and play TTS audio
+  const handlePlayAudio = async () => {
+    // If already playing, pause
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      return;
+    }
+    
+    // If we have already generated the audio
+    if (audioUrl) {
+      console.log("Using cached audio URL:", audioUrl);
+      try {
+        await audioRef.current.play();
+        console.log("Audio playback started");
+        setIsPlaying(true);
+      } catch (err) {
+        console.error("Error playing cached audio:", err);
+        setIsPlaying(false);
+        // Clear cached URL to try regenerating
+        setAudioUrl(null);
+        // Try again with fresh audio
+        handlePlayAudio();
+      }
+      return;
+    }
+    
+    // Otherwise, generate new audio
+    // Use the correct DeepInfra voice IDs
+    // Default to Luna voice if none is set
+    let voiceToUse = "luna";
+    
+    // In production, this would use the persona's configured voice:
+    // const voiceToUse = persona?.voiceId || "luna";
+    
+    // For demonstration, assign specific voices based on persona name
+    if (persona) {
+      if (persona.name === "GAIA") {
+        voiceToUse = "af_nova"; // Nova voice for GAIA
+      } else if (persona.name.includes("Science")) {
+        voiceToUse = "bm_daniel"; // Daniel voice for Science personas
+      } else if (persona.name.includes("Art")) {
+        voiceToUse = "af_bella"; // Bella voice for Art personas
+      } else if (persona.name.includes("Business")) {
+        voiceToUse = "am_michael"; // Michael voice for Business personas
+      }
+    }
+    
+    console.log("Generating new audio for message from persona:", persona?.name || "Unknown", "using voiceId:", voiceToUse);
+    
+    setIsLoadingAudio(true);
+    try {
+      // Get plain text content without markdown for better speech
+      let textContent = message.content;
+      
+      // Remove markdown artifacts
+      textContent = textContent.replace(/\*\*/g, ''); // Remove bold markers
+      textContent = textContent.replace(/\n/g, ' '); // Replace newlines with spaces
+      textContent = textContent.replace(/```[^`]*```/g, ''); // Remove code blocks
+      textContent = textContent.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // Replace markdown links with just text
+      
+      console.log("Sending text to TTS:", textContent.substring(0, 50) + "...");
+      
+      try {
+        // Generate speech using the voice ID
+        const url = await generateSpeech(textContent, voiceToUse);
+        console.log("Generated audio URL:", url ? (typeof url === 'string' ? url.substring(0, 50) + "..." : "[blob URL]") : "null");
+        
+        if (url) {
+          setAudioUrl(url);
+          
+          // Play the audio after a short delay to ensure it's loaded
+          setTimeout(() => {
+            if (audioRef.current) {
+              console.log("Playing generated audio");
+              audioRef.current.play()
+                .then(() => {
+                  console.log("Audio playback started successfully");
+                  setIsPlaying(true);
+                })
+                .catch(err => {
+                  console.error("Error playing generated audio:", err);
+                  setIsPlaying(false);
+                });
+            }
+          }, 300); // Increased delay for better loading
+        } else {
+          throw new Error("No audio URL returned from speech generation");
+        }
+      } catch (error) {
+        console.error("Failed to generate speech:", error);
+        alert("Failed to generate speech. Check the console for details.");
+        setIsLoadingAudio(false);
+      }
+    } catch (error) {
+      console.error("Error in audio processing:", error);
+      setIsLoadingAudio(false);
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  };
+
+  // Handle audio playback events
+  useEffect(() => {
+    const audio = audioRef.current;
+    
+    const handleEnded = () => {
+      setIsPlaying(false);
+    };
+    
+    if (audio) {
+      audio.addEventListener('ended', handleEnded);
+      return () => {
+        audio.removeEventListener('ended', handleEnded);
+        // Cleanup audio URL when component unmounts
+        if (audioUrl) {
+          URL.revokeObjectURL(audioUrl);
+        }
+      };
+    }
+  }, [audioUrl]);
 
   const renderContent = () => {
     // Handle file content display
@@ -168,6 +295,27 @@ const Message = ({ message, onRegenerate, personas }) => {
     );
   };
 
+  // Hidden audio element for TTS playback
+  const renderAudio = () => {
+    return (
+      <audio 
+        ref={audioRef} 
+        src={audioUrl} 
+        onEnded={() => setIsPlaying(false)}
+        onError={(e) => {
+          console.error("Audio playback error:", e);
+          setIsPlaying(false);
+          // Clear the URL on error to force regeneration next time
+          setAudioUrl(null);
+          
+          // For demo, show an error message
+          console.warn("Failed to play audio - likely a CORS issue with the fallback service");
+        }}
+        crossOrigin="anonymous" // Add CORS support for external URLs
+      />
+    );
+  };
+
   return (
     <div className={`message ${message.isUser ? 'user' : 'assistant'}`}>
       {persona && (
@@ -179,15 +327,33 @@ const Message = ({ message, onRegenerate, personas }) => {
       )}
       <div className="message-content">
         {renderContent()}
+        {renderAudio()}
       </div>
       <div className="message-actions">
         <CopyToClipboard text={message.content}>
           <button className="copy-button">Copy</button>
         </CopyToClipboard>
-        {!message.isUser && !message.isCommand && (
-          <button className="regenerate-button" onClick={() => onRegenerate(message)}>
-            🔄 Regenerate
-          </button>
+        {!message.isUser && !message.isCommand && !message.isToolUsage && (
+          <>
+            <button className="regenerate-button" onClick={() => onRegenerate(message)}>
+              🔄 Regenerate
+            </button>
+            {/* Always show the play button for assistant messages, regardless of voice setting */}
+            <button 
+              className={`voice-button ${isPlaying ? 'playing' : ''} ${isLoadingAudio ? 'loading' : ''}`}
+              onClick={handlePlayAudio}
+              disabled={isLoadingAudio}
+              aria-label={isPlaying ? "Pause voice" : "Play voice"}
+            >
+              {isLoadingAudio ? (
+                <span className="loading-indicator">⏳</span>
+              ) : isPlaying ? (
+                <span>⏸️ Pause</span>
+              ) : (
+                <span>🔊 Play</span>
+              )}
+            </button>
+          </>
         )}
       </div>
     </div>

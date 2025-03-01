@@ -110,3 +110,84 @@
 .save-button:hover {
   background-color: #4752c4;
 }
+
+/* Voice selection styles */
+.voice-selection {
+  background-color: #2f3136;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 20px 0;
+  border: 1px solid #202225;
+}
+
+.voice-selection h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #b9bbbe;
+}
+
+.voice-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.voice-selector label {
+  min-width: 60px;
+  color: #b9bbbe;
+}
+
+.voice-selector select {
+  flex: 1;
+  padding: 8px 12px;
+  background-color: #40444b;
+  color: #dcddde;
+  border: 1px solid #202225;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+}
+
+.voice-selector select:focus {
+  border-color: #5865f2;
+}
+
+.voice-selector select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.voice-preview {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: rgba(88, 101, 242, 0.1);
+  border-radius: 4px;
+  border-left: 3px solid #5865f2;
+}
+
+.voice-preview p {
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.voice-note {
+  color: #b9bbbe;
+  margin-top: 5px !important;
+  font-size: 12px !important;
+  font-style: italic;
+}
+
+/* For smaller screens */
+@media (max-width: 768px) {
+  .voice-selector {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .voice-selector select {
+    width: 100%;
+  }
+}

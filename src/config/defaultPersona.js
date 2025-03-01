@@ -72,5 +72,6 @@ She radiates warmth, compassion, and a sense of timeless wisdom, inviting others
   empathy: 7,
   creativity: 6,
   logic: 8,
-  image: '/assets/personas/gaia-default.jpeg' 
+  image: '/assets/personas/gaia-default.jpeg',
+  voiceId: null,    // Will be populated with a voice from the API
 };

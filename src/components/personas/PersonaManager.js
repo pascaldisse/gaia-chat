@@ -119,6 +119,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   };
 
   const handleAttributesSave = (attributes) => {
+    console.log('PersonaManager: Saving attributes with voice:', attributes);
     setCurrentPersona(prev => ({
       ...prev,
       ...attributes
@@ -255,7 +256,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
               className="edit-attributes-button"
               onClick={() => setShowAttributesEditor(true)}
             >
-              Edit Personality Attributes
+              Edit Personality & Voice
             </button>
           </div>
           <div className="tools-section">

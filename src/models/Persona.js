@@ -7,6 +7,7 @@ export default class Persona {
       exampleDialogue = [],
       knowledgeFiles = [],
       image = '',
+      voiceId = null,
       initiative = 5,
       talkativeness = 5,
       confidence = 5,
@@ -31,6 +32,7 @@ export default class Persona {
       this.exampleDialogue = exampleDialogue;
       this.knowledgeFiles = knowledgeFiles;
       this.image = image;
+      this.voiceId = voiceId;     // Voice ID for TTS
       this.createdAt = Date.now();
       this.updatedAt = Date.now();
       this.initiative = initiative;
