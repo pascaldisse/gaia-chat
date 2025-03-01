@@ -35,20 +35,19 @@ const Message = ({ message, onRegenerate, personas }) => {
 
   // Function to play next audio in queue
   const playNextAudio = async () => {
-    console.log(`🔊 [AUDIO-PLAY] playNextAudio called, index ${currentAudioIndex + 1}`);
+    // FIXED: Use indices consistently and accurately track completion
+    window.debugAudioProgress = window.debugAudioProgress || [];
+    window.debugAudioProgress.push({
+      time: new Date().toISOString(),
+      function: 'playNextAudio',
+      index: currentAudioIndex,
+      isPlaying
+    });
     
-    // Check if this is an initial playback and handle accordingly
-    if (window._initialAudioPlayback) {
-      console.log('🔊 [AUDIO-PLAY] Initial playback detected - ensuring we start from index 0');
-      window._initialAudioPlayback = false; // Clear the flag
-      
-      // Make sure we're at index 0 for the first playback
-      if (currentAudioIndex !== 0) {
-        console.log('🔊 [AUDIO-PLAY] Resetting index to 0 for initial playback');
-        setCurrentAudioIndex(0);
-        return; // The state update will trigger another call to this function
-      }
-    }
+    console.log(`🔊 [AUDIO-PLAY] playNextAudio called, current index: ${currentAudioIndex}`);
+    
+    // FIXED: Make sure we're working with stable, consistent state
+    const stableIndex = currentAudioIndex;
     
     // Try to use window backup if state is empty (fallback mechanism)
     let urlsToUse = audioUrls;
@@ -61,8 +60,15 @@ const Message = ({ message, onRegenerate, personas }) => {
       }
     }
     
-    console.log(`🔊 [AUDIO-PLAY] Attempting to play audio chunk ${currentAudioIndex + 1}/${urlsToUse.length}`);
-    console.time(`🔊 [AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
+    // Validate index bounds
+    if (stableIndex < 0 || stableIndex >= urlsToUse.length) {
+      console.error(`🔊 [AUDIO-PLAY] Index out of bounds: ${stableIndex} (array length: ${urlsToUse.length})`);
+      setIsPlaying(false);
+      return;
+    }
+    
+    console.log(`🔊 [AUDIO-PLAY] Attempting to play audio chunk ${stableIndex + 1}/${urlsToUse.length}`);
+    console.time(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} playback`);
     
     // Check if audioUrls array exists and has items
     if (!urlsToUse || urlsToUse.length === 0) {
@@ -73,6 +79,21 @@ const Message = ({ message, onRegenerate, personas }) => {
       setIsPlaying(false);
       return;
     }
+    
+    // FIXED: Track which chunks have been played to prevent duplicates
+    window.playedChunks = window.playedChunks || {};
+    
+    // If we've already played this chunk and we're not at index 0, skip to next
+    const chunkKey = `chunk-${stableIndex}`;
+    if (window.playedChunks[chunkKey] && stableIndex > 0) {
+      console.log(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} already played, skipping to next`);
+      setCurrentAudioIndex(stableIndex + 1);
+      setTimeout(() => playNextAudio(), 10);
+      return;
+    }
+    
+    // Mark this chunk as played
+    window.playedChunks[chunkKey] = true;
     
     // Log full array for debugging - using multiple methods to ensure visibility
     console.log(`🔊 [AUDIO-PLAY] FULL AUDIO URLS ARRAY (stringified):`, JSON.stringify(urlsToUse));
@@ -105,33 +126,33 @@ const Message = ({ message, onRegenerate, personas }) => {
       console.log(`🔊 [AUDIO-PLAY] URL[${i}]: ${urlPreview}${i === currentAudioIndex ? ' (current)' : ''}`);
     });
     
-    if (currentAudioIndex < urlsToUse.length) {
-      try {
-        // Debug info about current audio state
-        console.log(`🔊 [AUDIO-CURRENT] Playing chunk ${currentAudioIndex + 1}/${urlsToUse.length}`);
-        console.log(`🔊 [AUDIO-CURRENT] Current URL: ${urlsToUse[currentAudioIndex] ? 
-          (typeof urlsToUse[currentAudioIndex] === 'string' ? 
-            urlsToUse[currentAudioIndex].substring(0, 50) + '...' : 
-            `non-string: ${typeof urlsToUse[currentAudioIndex]}`) : 
-          'null/undefined'}`);
+    // FIXED: We already validated the index above, so we know it's in bounds
+    try {
+      // Debug info about current audio state
+      console.log(`🔊 [AUDIO-CURRENT] Playing chunk ${stableIndex + 1}/${urlsToUse.length}`);
+      console.log(`🔊 [AUDIO-CURRENT] Current URL: ${urlsToUse[stableIndex] ? 
+        (typeof urlsToUse[stableIndex] === 'string' ? 
+          urlsToUse[stableIndex].substring(0, 50) + '...' : 
+          `non-string: ${typeof urlsToUse[stableIndex]}`) : 
+        'null/undefined'}`);
+      
+      if (audioRef.current) {
+        console.log(`🔊 [AUDIO-PLAY] Setting source to chunk ${stableIndex + 1}/${urlsToUse.length}`);
+        console.time(`🔊 [AUDIO-PLAY] Audio load time for chunk ${stableIndex + 1}`);
         
-        if (audioRef.current) {
-          console.log(`🔊 [AUDIO-PLAY] Setting source to chunk ${currentAudioIndex + 1}/${urlsToUse.length}`);
-          console.time(`🔊 [AUDIO-PLAY] Audio load time for chunk ${currentAudioIndex + 1}`);
-          
-          // Debug verification before setting source
-          if (!urlsToUse[currentAudioIndex]) {
-            console.error(`🔊 [AUDIO-ERROR] URL at index ${currentAudioIndex} is null or undefined!`);
-            throw new Error(`Invalid audio URL at index ${currentAudioIndex}`);
-          }
-          
-          audioRef.current.src = urlsToUse[currentAudioIndex];
-          console.log(`🔊 [AUDIO-CURRENT] Set audio element src to: ${urlsToUse[currentAudioIndex].substring(0, 50)}...`);
+        // Debug verification before setting source
+        if (!urlsToUse[stableIndex]) {
+          console.error(`🔊 [AUDIO-ERROR] URL at index ${stableIndex} is null or undefined!`);
+          throw new Error(`Invalid audio URL at index ${stableIndex}`);
+        }
+        
+        audioRef.current.src = urlsToUse[stableIndex];
+        console.log(`🔊 [AUDIO-CURRENT] Set audio element src to: ${urlsToUse[stableIndex].substring(0, 50)}...`);
           
           // Listen for the canplaythrough event to measure load time
           const loadPromise = new Promise(resolve => {
             const loadHandler = () => {
-              console.timeEnd(`[AUDIO-PLAY] Audio load time for chunk ${currentAudioIndex + 1}`);
+              console.timeEnd(`[AUDIO-PLAY] Audio load time for chunk ${stableIndex + 1}`);
               console.log(`🔊 [AUDIO-CURRENT] Audio can play through - ready to start playback`);
               audioRef.current.removeEventListener('canplaythrough', loadHandler);
               resolve();
@@ -141,36 +162,49 @@ const Message = ({ message, onRegenerate, personas }) => {
             // Set a timeout in case canplaythrough doesn't fire
             setTimeout(() => {
               audioRef.current.removeEventListener('canplaythrough', loadHandler);
-              console.log(`[AUDIO-PLAY] Chunk ${currentAudioIndex + 1} load timeout, proceeding anyway`);
+              console.log(`[AUDIO-PLAY] Chunk ${stableIndex + 1} load timeout, proceeding anyway`);
               resolve();
             }, 2000);
           });
           
           await loadPromise;
-          console.time(`[AUDIO-PLAY] Play() call for chunk ${currentAudioIndex + 1}`);
+          console.time(`[AUDIO-PLAY] Play() call for chunk ${stableIndex + 1}`);
           console.log(`🔊 [AUDIO-CURRENT] Starting playback now...`);
-          await audioRef.current.play();
-          console.timeEnd(`[AUDIO-PLAY] Play() call for chunk ${currentAudioIndex + 1}`);
           
-          console.log(`[AUDIO-PLAY] Successfully started playing chunk ${currentAudioIndex + 1}/${audioUrls.length}`);
-          setIsPlaying(true);
+          try {
+            await audioRef.current.play();
+            console.timeEnd(`[AUDIO-PLAY] Play() call for chunk ${stableIndex + 1}`);
+            
+            console.log(`[AUDIO-PLAY] Successfully started playing chunk ${stableIndex + 1}/${urlsToUse.length}`);
+            window.lastPlayedChunk = stableIndex;
+            setIsPlaying(true);
+          } catch (playError) {
+            console.error(`[AUDIO-PLAY] Error in play() call:`, playError);
+            // Skip to next audio if this one fails
+            setCurrentAudioIndex(stableIndex + 1);
+            setTimeout(() => playNextAudio(), 100);
+          }
         }
       } catch (error) {
-        console.error(`[AUDIO-PLAY] Error playing chunk ${currentAudioIndex + 1}:`, error);
-        console.timeEnd(`[AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
+        console.error(`[AUDIO-PLAY] Error playing chunk ${stableIndex + 1}:`, error);
+        console.timeEnd(`[AUDIO-PLAY] Chunk ${stableIndex + 1} playback`);
         
         // Skip to next audio if this one fails
         console.log(`[AUDIO-PLAY] Skipping to next chunk due to error`);
-        setCurrentAudioIndex(prevIndex => prevIndex + 1);
-        setTimeout(playNextAudio, 100);
+        const nextIndex = stableIndex + 1;
+        
+        if (nextIndex < urlsToUse.length) {
+          setCurrentAudioIndex(nextIndex);
+          setTimeout(playNextAudio, 100);
+        } else {
+          // We've reached the end
+          console.log(`[AUDIO-PLAY] That was the last chunk, ending playback`);
+          console.timeEnd('[AUDIO-FLOW] Total audio process time');
+          setIsPlaying(false);
+          setCurrentAudioIndex(0);
+          window.playedChunks = {}; // Reset for next playback
+        }
       }
-    } else {
-      // End of queue
-      console.log(`🔊 [AUDIO-PLAY] Reached end of audio queue (${urlsToUse.length} chunks), resetting index`);
-      console.timeEnd(`🔊 [AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
-      console.timeEnd('[AUDIO-FLOW] Total audio process time');
-      setIsPlaying(false);
-      setCurrentAudioIndex(0);
     }
   };
 
@@ -394,7 +428,18 @@ const Message = ({ message, onRegenerate, personas }) => {
         const audioUrlsToUse = [...urls];
         console.log(`🔊 [AUDIO-URLS] Setting state with ${audioUrlsToUse.length} URLs`);
         
-        // Set state
+        // Reset tracking variables for a fresh start
+        window.playedChunks = {};
+        window.audioEndEvents = [];
+        window.debugAudioProgress = [];
+        window.lastPlayedChunk = undefined;
+        
+        // Set a session ID to track the entire playback sequence
+        window.audioSessionId = Date.now();
+        
+        console.log(`🔊 [AUDIO-FIX] Starting new audio session ${window.audioSessionId}`);
+        
+        // Set state ONCE
         setAudioUrls(audioUrlsToUse);
         setCurrentAudioIndex(0);
         
@@ -405,34 +450,21 @@ const Message = ({ message, onRegenerate, personas }) => {
         });
         
         // Start playing the first audio file with more logging
-        console.log(`🔊 [AUDIO-PLAY] Starting playback in 300ms with ${audioUrlsToUse.length} URLs`);
+        console.log(`🔊 [AUDIO-PLAY] Starting playback in 100ms with ${audioUrlsToUse.length} URLs`);
         console.time('🔊 [AUDIO-PLAY] Time to first audio');
         
+        // Set the global backup immediately
+        window._debugAudioUrls = audioUrlsToUse;
+        
+        // Use a delay to ensure React has updated state before playing
         setTimeout(() => {
           console.timeEnd('🔊 [AUDIO-PLAY] Time to first audio');
           console.log('🔊 [AUDIO-PLAY] Timeout elapsed, starting playback');
-          console.log('🔊 [AUDIO-PLAY] Using URLs array:', audioUrlsToUse);
           
-          // Important: Set state again right before playing to ensure it's current
-          setAudioUrls(audioUrlsToUse);
-          
-          // BUGFIX: Only set index to 0 if not already at 0 (prevents duplicate playback of first chunk)
-          // setCurrentAudioIndex(0); - removing this line to prevent duplicate playback
-          
-          // Use a global variable as a fallback to ensure the audio array is available
-          window._debugAudioUrls = audioUrlsToUse;
-          
-          // Add a flag to track whether we're in an initial playback
-          window._initialAudioPlayback = true;
-          
-          console.log('🔊 [AUDIO-PLAY] Set backup array to window._debugAudioUrls');
-          setTimeout(() => {
-            console.log('🔊 [AUDIO-PLAY] About to call playNextAudio()');
-            console.log('🔊 [AUDIO-PLAY] Current audioUrls state:', audioUrls);
-            console.log('🔊 [AUDIO-PLAY] Backup array:', window._debugAudioUrls);
-            playNextAudio();
-          }, 100);
-        }, 300);
+          // CRITICAL FIX: Only call playNextAudio, don't set state again
+          console.log('🔊 [AUDIO-PLAY] Starting playback sequence - current index is 0');
+          playNextAudio();
+        }, 100);
       } else {
         console.warn("[AUDIO-FLOW] No audio URLs returned from speech generation");
         console.timeEnd('[AUDIO-FLOW] Total audio process time');
@@ -452,29 +484,52 @@ const Message = ({ message, onRegenerate, personas }) => {
     const audio = audioRef.current;
     
     const handleEnded = () => {
-      console.timeEnd(`🔊 [AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
+      // Get the current stable index for more reliable tracking
+      const stableIndex = window.lastPlayedChunk !== undefined ? window.lastPlayedChunk : currentAudioIndex;
+      
+      try {
+        console.timeEnd(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} playback`);
+      } catch (e) {
+        console.log(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1} playback complete (timer not found)`);
+      }
+      
+      // Track all events for debugging
+      window.audioEndEvents = window.audioEndEvents || [];
+      window.audioEndEvents.push({
+        timestamp: new Date().toISOString(),
+        index: stableIndex,
+        nextIndex: stableIndex + 1
+      });
       
       // Get the current state of audio URLs (might have changed since component render)
       const currentAudioUrls = window._debugAudioUrls || audioUrls;
       
-      // Move to the next audio in the queue
-      setCurrentAudioIndex(prevIndex => {
-        const nextIndex = prevIndex + 1;
-        console.log(`🔊 [AUDIO-PLAY] Chunk ${prevIndex + 1}/${currentAudioUrls.length} ended, moving to chunk ${nextIndex + 1}`);
+      // Calculate next index
+      const nextIndex = stableIndex + 1;
+      
+      // Record which chunks have been played
+      window.playedChunks = window.playedChunks || {};
+      window.playedChunks[`chunk-${stableIndex}`] = true;
+      
+      // Log detailed information
+      console.log(`🔊 [AUDIO-PLAY] Chunk ${stableIndex + 1}/${currentAudioUrls.length} ended, considering next chunk ${nextIndex + 1}`);
+      
+      // If we're at the end of the queue, reset
+      if (nextIndex >= currentAudioUrls.length) {
+        console.log(`🔊 [AUDIO-PLAY] Reached end of audio queue (${currentAudioUrls.length} chunks), stopping playback`);
+        console.timeEnd('[AUDIO-FLOW] Total audio process time');
+        setIsPlaying(false);
+        setCurrentAudioIndex(0);
         
-        // If we're at the end of the queue, reset
-        if (nextIndex >= currentAudioUrls.length) {
-          console.log(`🔊 [AUDIO-PLAY] Reached end of audio queue (${currentAudioUrls.length} chunks), stopping playback`);
-          console.timeEnd('[AUDIO-FLOW] Total audio process time');
-          setIsPlaying(false);
-          return 0;
-        }
-        
-        // Otherwise play the next audio
-        console.log(`🔊 [AUDIO-PLAY] Playing next chunk (${nextIndex + 1}/${currentAudioUrls.length}) in 100ms`);
-        setTimeout(() => playNextAudio(), 100);
-        return nextIndex;
-      });
+        // Reset for next playback
+        window.playedChunks = {};
+        return;
+      }
+      
+      // Otherwise proceed to next chunk
+      console.log(`🔊 [AUDIO-PLAY] Playing next chunk (${nextIndex + 1}/${currentAudioUrls.length}) in 10ms`);
+      setCurrentAudioIndex(nextIndex);
+      setTimeout(() => playNextAudio(), 10);
     };
     
     const handleTimeUpdate = () => {
