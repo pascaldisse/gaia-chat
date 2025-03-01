@@ -327,6 +327,71 @@
   margin: 5px 0;
 }
 
+/* Custom formatting rules */
+.custom-formatting-section {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #202225;
+  border-radius: 6px;
+}
+
+.custom-formatting-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #b9bbbe;
+  font-size: 16px;
+}
+
+.add-rule-button {
+  width: 100%;
+  background-color: #5865f2;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+.add-rule-button:hover {
+  background-color: #4752c4;
+}
+
+.template-section {
+  margin-top: 20px;
+  border-top: 1px solid #40444b;
+  padding-top: 16px;
+}
+
+.template-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #b9bbbe;
+  font-size: 14px;
+}
+
+.template-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.template-button {
+  background-color: #4f545c;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.template-button:hover {
+  background-color: #5865f2;
+}
+
 /* For smaller screens */
 @media (max-width: 768px) {
   .voice-selector {

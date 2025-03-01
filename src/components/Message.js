@@ -283,28 +283,72 @@ const Message = ({ message, onRegenerate, personas }) => {
       return <ReactMarkdown>{`*${thinkContent}*`}</ReactMarkdown>;
     }
     
-    // Check if roleplay markdown formatting is enabled
-    if (persona?.formatSettings?.useRoleplayMarkdown) {
-      // Format roleplay tags into markdown
+    // Check if custom formatting is enabled
+    if (persona?.formatSettings?.customFormatting || persona?.formatSettings?.useRoleplayMarkdown) {
+      // Format tags into markdown based on persona format settings
       let formattedContent = message.content;
+
+      // Apply custom format rules if they exist
+      if (persona?.formatSettings?.customFormatting && persona?.formatSettings?.formatRules) {
+        const formatRules = persona.formatSettings.formatRules || [];
+        
+        // Apply each format rule 
+        formatRules.forEach(rule => {
+          if (rule.enabled) {
+            // Create a regex that can match incomplete tags during streaming
+            const startTagEscaped = rule.startTag ? rule.startTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
+            const endTagEscaped = rule.endTag ? rule.endTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
+            
+            // Only process if we have a start tag
+            if (startTagEscaped) {
+              const openTagPattern = new RegExp(startTagEscaped, 'g');
+              
+              // For complete tags (start + content + end)
+              if (endTagEscaped) {
+                const fullTagPattern = new RegExp(`${startTagEscaped}(.*?)${endTagEscaped}`, 'gs');
+                
+                // Replace complete tags
+                formattedContent = formattedContent.replace(fullTagPattern, (match, content) => {
+                  return rule.markdownFormat.replace('{{content}}', content);
+                });
+              }
+              
+              // For incomplete tags during streaming (only start tag, no end tag yet)
+              if (rule.renderIncomplete) {
+                // This regex finds start tags that aren't followed by end tags
+                const incompleteTagPattern = new RegExp(`${startTagEscaped}([^${endTagEscaped}]*)$`, 'gs');
+                
+                formattedContent = formattedContent.replace(incompleteTagPattern, (match, content) => {
+                  return rule.incompleteMarkdown ? 
+                    rule.incompleteMarkdown.replace('{{content}}', content) : 
+                    match;
+                });
+              }
+            }
+          }
+        });
+      }
       
-      // Replace <speech> tags with formatted text
-      formattedContent = formattedContent.replace(/<speech as="([^"]+)"[^>]*>([^<]+)<\/speech>/g, (match, character, text) => {
-        return `**${character}:** ${text}\n\n`;
-      });
-      
-      // Replace <action> tags with italic text
-      formattedContent = formattedContent.replace(/<action as="([^"]+)"[^>]*>([^<]+)<\/action>/g, (match, character, text) => {
-        return `*${character} ${text}*\n\n`;
-      });
-      
-      // Replace <function> tags with code blocks
-      formattedContent = formattedContent.replace(/<function>([^<]+)<\/function>/g, (match, code) => {
-        return `\`\`\`\n${code}\n\`\`\`\n\n`;
-      });
-      
-      // Remove <yield> tags
-      formattedContent = formattedContent.replace(/<yield to="User" \/>/g, '');
+      // Legacy roleplay markdown support
+      if (persona?.formatSettings?.useRoleplayMarkdown) {
+        // Replace <speech> tags with formatted text - now handles multi-line content for streaming
+        formattedContent = formattedContent.replace(/<speech as="([^"]+)"[^>]*>([\s\S]*?)(?:<\/speech>|$)/g, (match, character, text) => {
+          return `**${character}:** ${text}\n\n`;
+        });
+        
+        // Replace <action> tags with italic text - now handles multi-line content for streaming
+        formattedContent = formattedContent.replace(/<action as="([^"]+)"[^>]*>([\s\S]*?)(?:<\/action>|$)/g, (match, character, text) => {
+          return `*${character} ${text}*\n\n`;
+        });
+        
+        // Replace <function> tags with code blocks - now handles multi-line content for streaming
+        formattedContent = formattedContent.replace(/<function>([\s\S]*?)(?:<\/function>|$)/g, (match, code) => {
+          return `\`\`\`\n${code}\n\`\`\`\n\n`;
+        });
+        
+        // Remove <yield> tags
+        formattedContent = formattedContent.replace(/<yield to="User" \/>/g, '');
+      }
       
       return <ReactMarkdown>{formattedContent}</ReactMarkdown>;
     }

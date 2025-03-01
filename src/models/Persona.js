@@ -33,7 +33,11 @@ export default class Persona {
       rating = 0,
       published = false,
       partnerCreated = false,
-      formatSettings = { useRoleplayMarkdown: false }
+      formatSettings = { 
+        useRoleplayMarkdown: false,
+        customFormatting: false,
+        formatRules: []
+      }
     }) {
       this.id = id;
       this.name = name;

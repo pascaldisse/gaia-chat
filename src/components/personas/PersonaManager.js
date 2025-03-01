@@ -304,7 +304,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
               className="edit-attributes-button"
               onClick={() => setShowAttributesEditor(true)}
             >
-              Edit Personality & Voice
+              Edit Personality, Formatting & Voice
             </button>
           </div>
           <div className="tools-section">
@@ -371,11 +371,23 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
       </div>
       
       {showAttributesEditor && (
-        <PersonaAttributesEditor
-          persona={currentPersona}
-          onSave={handleAttributesSave}
-          onClose={() => setShowAttributesEditor(false)}
-        />
+        <div className="attributes-editor-modal">
+          <div className="attributes-content">
+            <h2>Edit Personality & Formatting</h2>
+            <PersonaAttributesEditor
+              persona={currentPersona}
+              onChange={handleAttributesSave}
+            />
+            <div className="modal-footer">
+              <button className="cancel-button" onClick={() => setShowAttributesEditor(false)}>
+                Cancel
+              </button>
+              <button className="save-button" onClick={() => setShowAttributesEditor(false)}>
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showDeleteConfirm && (

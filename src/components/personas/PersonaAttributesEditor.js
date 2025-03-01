@@ -1,17 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import '../../styles/personas/PersonaAttributesEditor.css';
 import ToolsPopup from './ToolsPopup';
+import FormatRuleEditor from './FormatRuleEditor';
 
 const PersonaAttributesEditor = ({ persona, onChange }) => {
   const [showToolsPopup, setShowToolsPopup] = useState(false);
   const [formattingExpanded, setFormattingExpanded] = useState(false);
+  const [customFormattingExpanded, setCustomFormattingExpanded] = useState(false);
+
+  // Default format rules templates to offer
+  const formatRuleTemplates = [
+    {
+      name: "Speech",
+      startTag: "<speech>",
+      endTag: "</speech>",
+      markdownFormat: "**{{content}}**",
+      renderIncomplete: true,
+      incompleteMarkdown: "*typing...*",
+      enabled: true
+    },
+    {
+      name: "Action",
+      startTag: "<action>",
+      endTag: "</action>",
+      markdownFormat: "*{{content}}*",
+      renderIncomplete: true,
+      incompleteMarkdown: "*{{content}}*",
+      enabled: true
+    },
+    {
+      name: "Function",
+      startTag: "<function>",
+      endTag: "</function>",
+      markdownFormat: "```\n{{content}}\n```",
+      renderIncomplete: false,
+      enabled: true
+    },
+    {
+      name: "Speech with Character",
+      startTag: '<speech as="',
+      endTag: '</speech>',
+      markdownFormat: "**{{content}}**",
+      renderIncomplete: false,
+      enabled: false
+    }
+  ];
 
   // Initialize default format settings if not present
   useEffect(() => {
     if (!persona.formatSettings) {
       onChange({
         ...persona,
-        formatSettings: { useRoleplayMarkdown: false }
+        formatSettings: { 
+          useRoleplayMarkdown: false,
+          customFormatting: false,
+          formatRules: []
+        }
       });
     }
   }, [persona, onChange]);
@@ -45,6 +89,51 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
         }
       });
     }
+  };
+  
+  const addFormatRule = (template = null) => {
+    const newRule = template || {
+      name: `Rule ${(persona.formatSettings?.formatRules?.length || 0) + 1}`,
+      startTag: "<tag>",
+      endTag: "</tag>",
+      markdownFormat: "**{{content}}**",
+      renderIncomplete: false,
+      enabled: true
+    };
+    
+    onChange({
+      ...persona,
+      formatSettings: {
+        ...persona.formatSettings,
+        formatRules: [...(persona.formatSettings?.formatRules || []), newRule]
+      }
+    });
+  };
+  
+  const updateFormatRule = (index, updatedRule) => {
+    const updatedRules = [...(persona.formatSettings?.formatRules || [])];
+    updatedRules[index] = updatedRule;
+    
+    onChange({
+      ...persona,
+      formatSettings: {
+        ...persona.formatSettings,
+        formatRules: updatedRules
+      }
+    });
+  };
+  
+  const removeFormatRule = (index) => {
+    const updatedRules = [...(persona.formatSettings?.formatRules || [])];
+    updatedRules.splice(index, 1);
+    
+    onChange({
+      ...persona,
+      formatSettings: {
+        ...persona.formatSettings,
+        formatRules: updatedRules
+      }
+    });
   };
 
   const attributes = [
@@ -125,12 +214,88 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
                 <div className="format-example">
                   <h4>Example:</h4>
                   <pre>{`<speech as="Character">Hello there!</speech>
-<action as="Character">waves hand excitedly</action>`}</pre>
+<action as="Character">waves hand excitedly</action>
+<function>generate_image("description")</function>`}</pre>
                   <p>Will be displayed as:</p>
                   <div className="example-output">
                     <p><strong>Character:</strong> Hello there!</p>
                     <p><em>Character waves hand excitedly</em></p>
+                    <p><code>generate_image("description")</code></p>
                   </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="format-option">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={persona.formatSettings?.customFormatting || false}
+                  onChange={(e) => {
+                    // If enabling custom formatting for the first time, add some default rules
+                    if (e.target.checked && (!persona.formatSettings?.formatRules || persona.formatSettings.formatRules.length === 0)) {
+                      onChange({
+                        ...persona,
+                        formatSettings: {
+                          ...persona.formatSettings,
+                          customFormatting: true,
+                          formatRules: [formatRuleTemplates[0], formatRuleTemplates[1]]
+                        }
+                      });
+                    } else {
+                      handleFormatSettingChange('customFormatting', e.target.checked)
+                    }
+                  }}
+                />
+                Use Custom Tag Formatting
+              </label>
+              <p className="format-description">
+                Define custom formatting rules for specific HTML-like tags.
+              </p>
+              
+              {persona.formatSettings?.customFormatting && (
+                <div className="custom-formatting-section">
+                  <h4 onClick={() => setCustomFormattingExpanded(!customFormattingExpanded)} style={{ cursor: 'pointer' }}>
+                    Format Rules {customFormattingExpanded ? '▼' : '►'}
+                  </h4>
+                  
+                  {customFormattingExpanded && (
+                    <>
+                      <p>Define how specific tags should be formatted in chat messages.</p>
+                      
+                      {/* Rule editors */}
+                      {persona.formatSettings?.formatRules?.map((rule, index) => (
+                        <FormatRuleEditor
+                          key={index}
+                          rule={rule}
+                          index={index}
+                          onUpdate={updateFormatRule}
+                          onRemove={removeFormatRule}
+                        />
+                      ))}
+                      
+                      {/* Add rule button */}
+                      <button className="add-rule-button" onClick={() => addFormatRule()}>
+                        + Add Custom Rule
+                      </button>
+                      
+                      {/* Template buttons */}
+                      <div className="template-section">
+                        <h4>Add from templates:</h4>
+                        <div className="template-buttons">
+                          {formatRuleTemplates.map((template, index) => (
+                            <button 
+                              key={index}
+                              className="template-button"
+                              onClick={() => addFormatRule({...template})}
+                            >
+                              {template.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

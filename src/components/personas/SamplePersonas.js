@@ -39,7 +39,46 @@ FORMAT YOUR RESPONSES USING THESE TAGS:
     downloads: 18756,
     rating: 4.7,
     isNsfw: true,
-    formatSettings: { useRoleplayMarkdown: true }
+    formatSettings: { 
+      useRoleplayMarkdown: true,
+      customFormatting: true,
+      formatRules: [
+        {
+          name: "Speech with Attributes",
+          startTag: '<speech as="Succubus"',
+          endTag: '</speech>',
+          markdownFormat: "**Succubus:** {{content}}",
+          renderIncomplete: true,
+          incompleteMarkdown: "**Succubus:** *typing...*",
+          enabled: true
+        },
+        {
+          name: "Action",
+          startTag: '<action as="Succubus"',
+          endTag: '</action>',
+          markdownFormat: "*{{content}}*",
+          renderIncomplete: true,
+          incompleteMarkdown: "*{{content}}*",
+          enabled: true
+        },
+        {
+          name: "Function",
+          startTag: '<function>',
+          endTag: '</function>',
+          markdownFormat: "```\n{{content}}\n```",
+          renderIncomplete: false,
+          enabled: true
+        },
+        {
+          name: "Yield",
+          startTag: '<yield to="User" />',
+          endTag: '',
+          markdownFormat: "",
+          renderIncomplete: false,
+          enabled: true
+        }
+      ]
+    }
   }),
   
   // Other Partner personas
@@ -211,7 +250,55 @@ FORMAT YOUR RESPONSES USING THESE TAGS:
     downloads: 5324,
     rating: 4.9,
     isNsfw: false,
-    formatSettings: { useRoleplayMarkdown: true },
+    formatSettings: { 
+      useRoleplayMarkdown: true,
+      customFormatting: true,
+      formatRules: [
+        {
+          name: "Narrator Speech",
+          startTag: '<speech as="Narrator"',
+          endTag: '</speech>',
+          markdownFormat: "**Narrator:** {{content}}",
+          renderIncomplete: true,
+          incompleteMarkdown: "**Narrator:** *typing...*",
+          enabled: true
+        },
+        {
+          name: "NPC Speech",
+          startTag: '<speech as="',
+          endTag: '</speech>',
+          markdownFormat: "**{{content}}**",
+          renderIncomplete: true,
+          incompleteMarkdown: "***typing...***",
+          enabled: true
+        },
+        {
+          name: "Action",
+          startTag: '<action as="',
+          endTag: '</action>',
+          markdownFormat: "*{{content}}*",
+          renderIncomplete: true,
+          incompleteMarkdown: "*{{content}}*",
+          enabled: true
+        },
+        {
+          name: "Function",
+          startTag: '<function>',
+          endTag: '</function>',
+          markdownFormat: "```\n{{content}}\n```",
+          renderIncomplete: false,
+          enabled: true
+        },
+        {
+          name: "Yield",
+          startTag: '<yield to="User" />',
+          endTag: '',
+          markdownFormat: "",
+          renderIncomplete: false,
+          enabled: true
+        }
+      ]
+    },
     agentSettings: {
       toolConfig: {
         diceRoll: true,
