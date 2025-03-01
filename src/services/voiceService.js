@@ -1,5 +1,64 @@
 import axios from 'axios';
 
+// Add a debug utility function that can be called from the console
+window.debugGaiaAudio = function() {
+  console.log('%c GAIA AUDIO DEBUG UTILITY', 'background: purple; color: white; font-size: 20px; padding: 10px;');
+  console.log('This utility will patch the running code to debug audio issues');
+  
+  // Track all audio generation
+  const originalGenerateSpeech = window.gaiaOriginalGenerateSpeech = 
+    window.gaiaOriginalGenerateSpeech || window.generateSpeech;
+    
+  // Override the global generateSpeech function if we can find it
+  if (typeof window.generateSpeech === 'function') {
+    console.log('%c Found global generateSpeech function, patching it', 'background: green; color: white;');
+    window.generateSpeech = async function(text, voiceId) {
+      console.log('%c PATCHED generateSpeech called', 'background: red; color: white;');
+      console.log('Text:', text?.substring(0, 100));
+      console.log('Voice ID:', voiceId);
+      
+      // Store details for debugging
+      window.lastAudioGeneration = {
+        text: text?.substring(0, 100),
+        voiceId,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Call the original function
+      const result = await originalGenerateSpeech(text, voiceId);
+      
+      // Log and store the result
+      console.log('%c AUDIO URL GENERATED:', 'background: green; color: white;', result?.substring(0, 50) + '...');
+      window.lastAudioURL = result;
+      
+      return result;
+    };
+    
+    console.log('Audio debug patch applied successfully. When you click the play button, details will be logged.');
+    return 'Audio debug patch applied. Check console when clicking play button.';
+  } else {
+    console.log('%c Could not find global generateSpeech function', 'background: red; color: white;');
+    
+    // Search for possible targets
+    const possibleFunctions = [];
+    for (const key in window) {
+      if (typeof window[key] === 'function' && key.toLowerCase().includes('speech')) {
+        possibleFunctions.push(key);
+      }
+    }
+    
+    if (possibleFunctions.length > 0) {
+      console.log('Possible speech-related functions:', possibleFunctions);
+    }
+    
+    return 'Could not apply audio debug patch. See console for details.';
+  }
+};
+
+// Console instructions 
+console.log('%c To debug audio issues, run this in the console:', 'background: blue; color: white; font-size: 16px;');
+console.log('%c window.debugGaiaAudio()', 'background: black; color: white; font-size: 14px;');
+
 // TTS API endpoints
 const TTS_ENDPOINTS = {
   zonos: "https://api.deepinfra.com/v1/inference/Zyphra/Zonos-v0.1-hybrid",
@@ -59,12 +118,84 @@ export const getVoices = async () => {
 };
 
 /**
+ * Split text into sentences for chunked TTS processing
+ * @param {string} text - Text to split into sentences
+ * @returns {Array<string>} Array of sentences
+ */
+export const splitTextIntoSentences = (text) => {
+  // Basic sentence splitter - splits on periods, question marks, and exclamation points
+  // followed by a space or line break
+  const sentenceRegex = /[.!?]+[\s\n]+/g;
+  const sentences = text.split(sentenceRegex);
+  
+  // Filter out empty sentences and ensure they end with punctuation
+  const processedSentences = sentences
+    .map((sentence, index, arr) => {
+      // Trim whitespace
+      const trimmed = sentence.trim();
+      if (!trimmed) return null;
+      
+      // If this isn't the last sentence and doesn't end with punctuation,
+      // add the punctuation that was removed by the split
+      if (index < arr.length - 1) {
+        // Find the punctuation that followed this sentence
+        const match = text.match(new RegExp(`${trimmed}([.!?]+)`, 'i'));
+        if (match && match[1]) {
+          return trimmed + match[1];
+        }
+      }
+      
+      // If last sentence doesn't end with punctuation, add a period
+      if (index === arr.length - 1 && !trimmed.match(/[.!?]$/)) {
+        return trimmed + '.';
+      }
+      
+      return trimmed;
+    })
+    .filter(Boolean);
+  
+  // If sentences are too short, combine them to reduce API calls
+  const combinedSentences = [];
+  let currentChunk = '';
+  
+  processedSentences.forEach(sentence => {
+    // If adding this sentence would make the chunk too long, start a new chunk
+    if (currentChunk.length + sentence.length > 150 && currentChunk.length > 0) {
+      combinedSentences.push(currentChunk);
+      currentChunk = sentence;
+    } else {
+      // Otherwise, add this sentence to the current chunk
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
+    }
+  });
+  
+  // Add the last chunk if it's not empty
+  if (currentChunk) {
+    combinedSentences.push(currentChunk);
+  }
+  
+  return combinedSentences;
+};
+
+/**
  * Generate TTS audio from text
  * @param {string} text - Text to convert to speech
  * @param {string} voiceId - Voice ID to use for TTS
  * @returns {Promise<string>} Audio URL
  */
 export const generateSpeech = async (text, voiceId) => {
+  console.log('%c 🎙️ GENERATE SPEECH CALLED', 'background: #ff00ff; color: white; font-size: 20px; padding: 8px;');
+  console.log('%c Text:', 'background: #ff00ff; color: white;', text?.substring(0, 100) + '...');
+  console.log('%c Voice ID:', 'background: #ff00ff; color: white;', voiceId);
+  
+  // Store this for debugging
+  if (!window.audioGenerationCalls) window.audioGenerationCalls = [];
+  window.audioGenerationCalls.push({
+    timestamp: new Date().toISOString(),
+    text: text?.substring(0, 100) + '...',
+    voiceId
+  });
+  
   try {
     // Determine which engine to use
     // Either from localStorage preference or derive from voiceId formatting
@@ -81,7 +212,7 @@ export const generateSpeech = async (text, voiceId) => {
     
     console.log(`Generating speech using ${engine} engine for voice ID: ${voiceId}`);
     
-    // For API limits, limit text length
+    // For API limits, limit text length 
     const truncatedText = text.length > 300 ? text.substring(0, 300) + "..." : text;
     
     // Prepare request based on selected engine
@@ -136,6 +267,17 @@ export const generateSpeech = async (text, voiceId) => {
     console.log("Full response:", response.data);
     
     if (response.data && response.data.audio) {
+      console.log('%c 🎵 AUDIO DATA RECEIVED FROM API', 'background: #00ff00; color: black; font-size: 20px; padding: 8px;');
+      
+      // Store this for debugging
+      if (!window.audioAPIResponses) window.audioAPIResponses = [];
+      window.audioAPIResponses.push({
+        timestamp: new Date().toISOString(),
+        hasAudio: !!response.data.audio,
+        audioType: typeof response.data.audio,
+        audioLength: typeof response.data.audio === 'string' ? response.data.audio.length : 'unknown'
+      });
+      
       console.log("Audio data received in response");
       
       try {
@@ -160,6 +302,17 @@ export const generateSpeech = async (text, voiceId) => {
         try {
           // If it's a base64 string without the data URL prefix
           if (typeof response.data.audio === 'string') {
+            console.log('%c 🔊 RETURNING AUDIO URL', 'background: purple; color: white; font-size: 20px; padding: 8px;');
+            
+            // Store in a global variable for debugging
+            window.lastGeneratedAudioURL = response.data.audio.substring(0, 100) + '...';
+            
+            // If it's already a data URL, just return it directly
+            if (response.data.audio.startsWith('data:audio')) {
+              console.log('%c RETURNING DATA URL DIRECTLY', 'background: purple; color: white;');
+              return response.data.audio;
+            }
+            
             // Extract just the base64 part if it's a data URL
             const base64Data = response.data.audio.includes('base64,') 
               ? response.data.audio.split('base64,')[1] 
@@ -182,7 +335,9 @@ export const generateSpeech = async (text, voiceId) => {
             }
             
             const blob = new Blob(byteArrays, { type: 'audio/mp3' });
-            return URL.createObjectURL(blob);
+            const url = URL.createObjectURL(blob);
+            console.log('%c RETURNING BLOB URL', 'background: purple; color: white;', url);
+            return url;
           }
         } catch (e) {
           console.error("Error converting base64 to blob:", e);
@@ -213,6 +368,122 @@ export const generateSpeech = async (text, voiceId) => {
     // Instead of throwing, return fallback audio
     console.log("API call failed. Using fallback audio.");
     return createFallbackAudio();
+  }
+};
+
+/**
+ * Generate TTS audio for multiple text chunks in parallel
+ * @param {Array<string>} textChunks - Array of text chunks to convert to speech
+ * @param {string} voiceId - Voice ID to use for TTS
+ * @returns {Promise<Array<string>>} Array of audio URLs
+ */
+export const generateSpeechChunks = async (textChunks, voiceId) => {
+  console.log(`[AUDIO-API] Generating speech for ${textChunks.length} chunks in parallel`);
+  
+  // Handle case with empty chunks array
+  if (!textChunks || textChunks.length === 0) {
+    console.warn(`[AUDIO-API] No text chunks provided to generateSpeechChunks`);
+    return [];
+  }
+  
+  // Handle case with single chunk - ensure we still return an array
+  if (textChunks.length === 1) {
+    console.log(`[AUDIO-API] Only one chunk, processing directly`);
+    try {
+      const url = await generateSpeech(textChunks[0], voiceId);
+      console.log(`[AUDIO-API] Generated single audio chunk`);
+      console.log(`[AUDIO-API] Single chunk URL: ${url ? url.substring(0, 50) + '...' : 'undefined'}`);
+      
+      // Always return an array even for a single item
+      const result = [url];
+      console.log(`[AUDIO-API] Returning array with single URL, length: ${result.length}`);
+      console.log(`[AUDIO-API] Array content:`, JSON.stringify(result));
+      return result;
+    } catch (err) {
+      console.error(`[AUDIO-API] Failed to generate single audio chunk:`, err);
+      const fallback = await createFallbackAudio();
+      return [fallback];
+    }
+  }
+  
+  try {
+    // Very direct debug
+    console.log(`%c 🔊 GENERATING SPEECH FOR ${textChunks.length} CHUNKS`, 'background: #00ff00; color: black; font-size: 16px');
+    console.log(`%c First chunk:`, 'background: #00ff00; color: black', textChunks[0]);
+    
+    // Add to window for debugging
+    window.lastAudioGeneration = {
+      timestamp: new Date().toISOString(),
+      textChunks: [...textChunks],
+      voiceId,
+      chunkCount: textChunks.length
+    };
+    
+    // Create an array of promises, each generating speech for one chunk
+    const promises = textChunks.map((chunk, i) => {
+      console.log(`%c [AUDIO-API] Starting request for chunk ${i + 1}/${textChunks.length}`, 'background: #00ff00; color: black');
+      return generateSpeech(chunk, voiceId)
+        .then(url => {
+          console.log(`%c [AUDIO-API] Generated audio for chunk ${i + 1}/${textChunks.length}`, 'background: #00ff00; color: black');
+          console.log(`%c URL for chunk ${i+1}:`, 'background: #00ff00; color: black', url?.substring(0, 50) + '...');
+          
+          // Store this URL in the window debug object
+          if (!window.lastAudioGeneration.urls) window.lastAudioGeneration.urls = [];
+          window.lastAudioGeneration.urls[i] = url;
+          
+          return url;
+        })
+        .catch(err => {
+          console.error(`%c [AUDIO-API] Failed to generate audio for chunk ${i + 1}:`, 'background: #ff0000; color: white', err);
+          return createFallbackAudio();
+        });
+    });
+    
+    // Wait for all promises to resolve
+    const audioUrls = await Promise.all(promises);
+    
+    // SUPER DIRECT DEBUG - Make it impossible to miss
+    console.log(`%c !!! AUDIO URLS CREATED !!!`, 'background: #ff00ff; color: white; font-size: 24px; padding: 10px;');
+    console.log(`%c Array length: ${audioUrls.length}`, 'background: #ff00ff; color: white; font-size: 18px;');
+    
+    // Store in a global variable for debugging
+    window.lastGeneratedAudioUrls = [...audioUrls];
+    
+    // Log each URL individually with distinct styling
+    audioUrls.forEach((url, idx) => {
+      console.log(`%c URL[${idx}]`, 'background: #ff00ff; color: white; font-weight: bold;', 
+        url ? url.substring(0, 50) + '...' : 'null/undefined');
+    });
+    
+    console.log(`[AUDIO-API] Successfully generated ${audioUrls.length} audio chunks`);
+    
+    // Log the full audio URLs array to help with debugging
+    console.log('[AUDIO-API] FULL AUDIO ARRAY:', JSON.stringify(audioUrls));
+    // Force logging of array length and first item
+    console.log(`[AUDIO-API] ARRAY LENGTH: ${audioUrls.length}, FIRST ITEM: ${audioUrls[0] ? audioUrls[0].substring(0, 50) + '...' : 'undefined'}`);
+    console.table(audioUrls);
+    
+    // Log the audio URLs in a more reliable way
+    console.log(`[AUDIO-API] Audio URL summary:`);
+    audioUrls.forEach((url, i) => {
+      if (!url) {
+        console.log(`[AUDIO-API] Chunk ${i+1}: null or undefined URL`);
+      } else if (typeof url !== 'string') {
+        console.log(`[AUDIO-API] Chunk ${i+1}: non-string URL type: ${typeof url}`);
+      } else if (url.startsWith('blob:')) {
+        console.log(`[AUDIO-API] Chunk ${i+1}: Blob URL (length: ${url.length})`);
+      } else if (url.startsWith('data:audio')) {
+        console.log(`[AUDIO-API] Chunk ${i+1}: Data URL (length: ${url.length})`);
+      } else {
+        console.log(`[AUDIO-API] Chunk ${i+1}: Other URL type (length: ${url.length})`);
+      }
+    });
+    
+    return audioUrls;
+  } catch (error) {
+    console.error("[AUDIO-API] Error generating speech chunks:", error);
+    // Return at least one fallback audio URL
+    return [await createFallbackAudio()];
   }
 };
 

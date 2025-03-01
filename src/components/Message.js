@@ -2,42 +2,209 @@ import React, { useState, useEffect, useRef } from 'react';
 import '../styles/Message.css';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import ReactMarkdown from 'react-markdown';
-import { generateSpeech, getTTSEngine } from '../services/voiceService';
+import { generateSpeech, getTTSEngine, splitTextIntoSentences, generateSpeechChunks } from '../services/voiceService';
+
+// CRUCIAL UPDATE: Added debug info at top level - after imports to avoid eslint errors
+console.log('%c *** MESSAGE.JS LOADED WITH DEBUG VERSION ***', 'background: red; color: white; font-size: 24px; padding: 10px;');
+window.DEBUG_MESSAGE_LOADED = true;
 
 const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
   const [showToolDetails, setShowToolDetails] = useState(false);
-  const [audioUrl, setAudioUrl] = useState(null);
+  const [audioUrls, setAudioUrls] = useState([]);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [formatted, setFormatted] = useState(false);
   const [formattedContent, setFormattedContent] = useState('');
+  const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
   const audioRef = useRef(null);
+  const audioQueue = useRef([]);
+  const audioContext = useRef(null);
+  
+  // Log every time audioUrls changes
+  useEffect(() => {
+    console.log('🔊 [AUDIO-TRACK] audioUrls state changed:', {
+      length: audioUrls.length,
+      isEmpty: audioUrls.length === 0,
+      isArray: Array.isArray(audioUrls),
+      type: typeof audioUrls,
+      firstItem: audioUrls.length > 0 ? typeof audioUrls[0] : 'N/A',
+      preview: audioUrls.length > 0 ? audioUrls[0]?.substring(0, 30) + '...' : 'empty'
+    });
+  }, [audioUrls]);
 
-  // Function to generate and play TTS audio
-  const handlePlayAudio = async () => {
-    // If already playing, pause
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause();
+  // Function to play next audio in queue
+  const playNextAudio = async () => {
+    console.log(`🔊 [AUDIO-PLAY] playNextAudio called, index ${currentAudioIndex + 1}`);
+    
+    // Try to use window backup if state is empty (fallback mechanism)
+    let urlsToUse = audioUrls;
+    if (!audioUrls || audioUrls.length === 0) {
+      if (window._debugAudioUrls && window._debugAudioUrls.length > 0) {
+        console.log('🔊 [AUDIO-PLAY] Using backup array from window._debugAudioUrls');
+        urlsToUse = window._debugAudioUrls;
+        // Update state with backup
+        setAudioUrls(window._debugAudioUrls);
+      }
+    }
+    
+    console.log(`🔊 [AUDIO-PLAY] Attempting to play audio chunk ${currentAudioIndex + 1}/${urlsToUse.length}`);
+    console.time(`🔊 [AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
+    
+    // Check if audioUrls array exists and has items
+    if (!urlsToUse || urlsToUse.length === 0) {
+      console.error('🔊 [AUDIO-PLAY] ERROR: Audio array is empty or undefined!', {
+        stateArray: audioUrls,
+        backupArray: window._debugAudioUrls
+      });
       setIsPlaying(false);
       return;
     }
     
-    // If we have already generated the audio
-    if (audioUrl) {
-      console.log("Using cached audio URL:", audioUrl);
+    // Log full array for debugging - using multiple methods to ensure visibility
+    console.log(`🔊 [AUDIO-PLAY] FULL AUDIO URLS ARRAY (stringified):`, JSON.stringify(urlsToUse));
+    console.log(`🔊 [AUDIO-PLAY] AUDIO ARRAY LENGTH: ${urlsToUse.length}`);
+    if (urlsToUse.length > 0) {
+      console.log(`🔊 [AUDIO-PLAY] FIRST AUDIO URL (truncated): ${urlsToUse[0] ? urlsToUse[0].substring(0, 50) + '...' : 'undefined'}`);
+    }
+    // Force array display in console
+    console.table(urlsToUse);
+    
+    // Log each URL with a safe substring to avoid console errors
+    console.log(`🔊 [AUDIO-PLAY] Audio URLs array summary (${urlsToUse.length} items):`);
+    urlsToUse.forEach((url, i) => {
+      // Handle potential undefined or null URLs
+      let urlPreview;
       try {
-        await audioRef.current.play();
-        console.log("Audio playback started");
-        setIsPlaying(true);
-      } catch (err) {
-        console.error("Error playing cached audio:", err);
-        setIsPlaying(false);
-        // Clear cached URL to try regenerating
-        setAudioUrl(null);
-        // Try again with fresh audio
-        handlePlayAudio();
+        urlPreview = url ? 
+          (typeof url === 'string' ? 
+            (url.startsWith('blob:') ? 
+              `blob:${url.substring(5, 15)}...` : 
+              (url.startsWith('data:audio') ? 
+                `data:audio/${url.substring(11, 30)}...` : 
+                `other:${url.substring(0, 20)}...`)) : 
+            `non-string type: ${typeof url}`) : 
+          'null';
+      } catch (e) {
+        urlPreview = `Error getting preview: ${e.message}`;
       }
+      
+      console.log(`🔊 [AUDIO-PLAY] URL[${i}]: ${urlPreview}${i === currentAudioIndex ? ' (current)' : ''}`);
+    });
+    
+    if (currentAudioIndex < urlsToUse.length) {
+      try {
+        // Debug info about current audio state
+        console.log(`🔊 [AUDIO-CURRENT] Playing chunk ${currentAudioIndex + 1}/${urlsToUse.length}`);
+        console.log(`🔊 [AUDIO-CURRENT] Current URL: ${urlsToUse[currentAudioIndex] ? 
+          (typeof urlsToUse[currentAudioIndex] === 'string' ? 
+            urlsToUse[currentAudioIndex].substring(0, 50) + '...' : 
+            `non-string: ${typeof urlsToUse[currentAudioIndex]}`) : 
+          'null/undefined'}`);
+        
+        if (audioRef.current) {
+          console.log(`🔊 [AUDIO-PLAY] Setting source to chunk ${currentAudioIndex + 1}/${urlsToUse.length}`);
+          console.time(`🔊 [AUDIO-PLAY] Audio load time for chunk ${currentAudioIndex + 1}`);
+          
+          // Debug verification before setting source
+          if (!urlsToUse[currentAudioIndex]) {
+            console.error(`🔊 [AUDIO-ERROR] URL at index ${currentAudioIndex} is null or undefined!`);
+            throw new Error(`Invalid audio URL at index ${currentAudioIndex}`);
+          }
+          
+          audioRef.current.src = urlsToUse[currentAudioIndex];
+          console.log(`🔊 [AUDIO-CURRENT] Set audio element src to: ${urlsToUse[currentAudioIndex].substring(0, 50)}...`);
+          
+          // Listen for the canplaythrough event to measure load time
+          const loadPromise = new Promise(resolve => {
+            const loadHandler = () => {
+              console.timeEnd(`[AUDIO-PLAY] Audio load time for chunk ${currentAudioIndex + 1}`);
+              console.log(`🔊 [AUDIO-CURRENT] Audio can play through - ready to start playback`);
+              audioRef.current.removeEventListener('canplaythrough', loadHandler);
+              resolve();
+            };
+            audioRef.current.addEventListener('canplaythrough', loadHandler, { once: true });
+            
+            // Set a timeout in case canplaythrough doesn't fire
+            setTimeout(() => {
+              audioRef.current.removeEventListener('canplaythrough', loadHandler);
+              console.log(`[AUDIO-PLAY] Chunk ${currentAudioIndex + 1} load timeout, proceeding anyway`);
+              resolve();
+            }, 2000);
+          });
+          
+          await loadPromise;
+          console.time(`[AUDIO-PLAY] Play() call for chunk ${currentAudioIndex + 1}`);
+          console.log(`🔊 [AUDIO-CURRENT] Starting playback now...`);
+          await audioRef.current.play();
+          console.timeEnd(`[AUDIO-PLAY] Play() call for chunk ${currentAudioIndex + 1}`);
+          
+          console.log(`[AUDIO-PLAY] Successfully started playing chunk ${currentAudioIndex + 1}/${audioUrls.length}`);
+          setIsPlaying(true);
+        }
+      } catch (error) {
+        console.error(`[AUDIO-PLAY] Error playing chunk ${currentAudioIndex + 1}:`, error);
+        console.timeEnd(`[AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
+        
+        // Skip to next audio if this one fails
+        console.log(`[AUDIO-PLAY] Skipping to next chunk due to error`);
+        setCurrentAudioIndex(prevIndex => prevIndex + 1);
+        setTimeout(playNextAudio, 100);
+      }
+    } else {
+      // End of queue
+      console.log(`🔊 [AUDIO-PLAY] Reached end of audio queue (${urlsToUse.length} chunks), resetting index`);
+      console.timeEnd(`🔊 [AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
+      console.timeEnd('[AUDIO-FLOW] Total audio process time');
+      setIsPlaying(false);
+      setCurrentAudioIndex(0);
+    }
+  };
+
+  // Function to generate and play TTS audio
+  const handlePlayAudio = async () => {
+    console.log(`%c 🎤 HANDLEPLAYAUDIO CALLED 🎤`, 'background: #ff0000; color: white; font-size: 24px; padding: 10px;');
+    console.log(`%c THIS IS THE EXPECTED ENTRY POINT`, 'background: #ff0000; color: white; font-size: 18px;');
+    alert('AUDIO PLAY TRIGGERED - CHECK CONSOLE'); // This will make it super obvious
+    
+    console.log(`🔊 [AUDIO-START] Play button clicked: isPlaying=${isPlaying}, audioUrls.length=${audioUrls.length}`);
+    console.log(`🔊 [AUDIO-START] Audio state:`, {
+      isArray: Array.isArray(audioUrls),
+      length: audioUrls.length,
+      currentIndex: currentAudioIndex,
+      isPlaying: isPlaying,
+      isLoading: isLoadingAudio,
+      hasAudioElement: !!audioRef.current
+    });
+    console.time('[AUDIO-FLOW] Total audio process time');
+    
+    // Force log the first few URLs if they exist
+    if (audioUrls && audioUrls.length > 0) {
+      console.log(`🔊 [AUDIO-START] First audio URL: ${audioUrls[0]?.substring(0, 50)}...`);
+      if (audioUrls.length > 1) {
+        console.log(`🔊 [AUDIO-START] Second audio URL: ${audioUrls[1]?.substring(0, 50)}...`);
+      }
+    } else {
+      console.log(`🔊 [AUDIO-START] No audio URLs in state yet`);
+    }
+    
+    // If already playing, pause
+    if (isPlaying && audioRef.current) {
+      console.log(`🔊 [AUDIO-PAUSE] Pausing playback at chunk ${currentAudioIndex + 1}/${audioUrls.length}`);
+      audioRef.current.pause();
+      setIsPlaying(false);
+      console.timeEnd('[AUDIO-FLOW] Total audio process time');
+      return;
+    }
+    
+    // If we have already generated the audio
+    if (audioUrls.length > 0) {
+      console.log(`🔊 [AUDIO-RESUME] Using ${audioUrls.length} cached audio chunks`);
+      console.log(`🔊 [AUDIO-RESUME] Resuming playback from chunk ${currentAudioIndex + 1}/${audioUrls.length}`);
+      console.log(`🔊 [AUDIO-RESUME] Current URL: ${audioUrls[currentAudioIndex]?.substring(0, 50)}...`);
+      console.time('[AUDIO-FLOW] Playback start time');
+      playNextAudio();
+      console.timeEnd('[AUDIO-FLOW] Playback start time');
       return;
     }
     
@@ -79,12 +246,15 @@ const Message = ({ message, onRegenerate, personas }) => {
       }
     }
     
-    console.log("Generating new audio for message from persona:", persona?.name || "Unknown", "using voiceId:", voiceToUse);
+    console.log(`[AUDIO-FLOW] Generating new audio for message from persona: ${persona?.name || "Unknown"} using voiceId: ${voiceToUse}`);
+    console.log(`[AUDIO-FLOW] TTS engine: ${currentEngine}`);
     
     setIsLoadingAudio(true);
     try {
+      console.time('[AUDIO-FLOW] Text preprocessing');
       // Get plain text content without markdown for better speech
       let textContent = message.content;
+      console.log(`[AUDIO-FLOW] Original message length: ${textContent.length} characters`);
       
       // Remove markdown artifacts
       textContent = textContent.replace(/\*\*/g, ''); // Remove bold markers
@@ -92,37 +262,167 @@ const Message = ({ message, onRegenerate, personas }) => {
       textContent = textContent.replace(/```[^`]*```/g, ''); // Remove code blocks
       textContent = textContent.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // Replace markdown links with just text
       
-      console.log("Sending text to TTS:", textContent.substring(0, 50) + "...");
+      console.log(`[AUDIO-FLOW] Preprocessed text length: ${textContent.length} characters`);
+      console.log(`[AUDIO-FLOW] Text preview: ${textContent.substring(0, 100)}...`);
+      console.timeEnd('[AUDIO-FLOW] Text preprocessing');
       
-      // Generate speech using the Zonos TTS voice ID
-      const url = await generateSpeech(textContent, voiceToUse);
-      console.log("Generated audio URL:", url ? (typeof url === 'string' ? url.substring(0, 50) + "..." : "[blob URL]") : "null");
+      // Split text into sentences
+      console.time('[AUDIO-FLOW] Text chunking');
+      const textChunks = splitTextIntoSentences(textContent);
+      console.log(`[AUDIO-FLOW] Split text into ${textChunks.length} chunks for TTS processing`);
       
-      if (url) {
-        setAudioUrl(url);
+      // Log the first few chunks and last chunk
+      const chunkPreviewCount = Math.min(3, textChunks.length);
+      for (let i = 0; i < chunkPreviewCount; i++) {
+        console.log(`[AUDIO-FLOW] Chunk ${i+1}: "${textChunks[i]}"`);
+      }
+      if (textChunks.length > chunkPreviewCount) {
+        console.log(`[AUDIO-FLOW] ... ${textChunks.length - chunkPreviewCount} more chunks ...`);
+        console.log(`[AUDIO-FLOW] Last chunk: "${textChunks[textChunks.length-1]}"`);
+      }
+      console.timeEnd('[AUDIO-FLOW] Text chunking');
+      
+      // Generate speech for all chunks in parallel
+      console.time('[AUDIO-FLOW] Speech generation');
+      console.log(`[AUDIO-FLOW] Starting parallel TTS requests for ${textChunks.length} chunks`);
+      
+      // Ensure we always generate and log the audio array
+      let urls = [];
+      try {
+        // Generate speech for chunks
+        console.log(`%c 🎯 CALLING generateSpeechChunks with ${textChunks.length} chunks`, 'background: #0000ff; color: white; font-size: 16px');
         
-        // Play the audio after a short delay to ensure it's loaded
-        setTimeout(() => {
-          if (audioRef.current) {
-            console.log("Playing generated audio");
-            audioRef.current.play()
-              .then(() => {
-                console.log("Audio playback started successfully");
-                setIsPlaying(true);
-              })
-              .catch(err => {
-                console.error("Error playing generated audio:", err);
-                setIsPlaying(false);
-                setIsLoadingAudio(false);
-              });
+        const result = await generateSpeechChunks(textChunks, voiceToUse);
+        
+        console.log(`%c 🎯 RECEIVED RESULT FROM generateSpeechChunks`, 'background: #0000ff; color: white; font-size: 16px');
+        console.log(`%c Result type: ${typeof result}`, 'background: #0000ff; color: white');
+        console.log(`%c Result is array: ${Array.isArray(result)}`, 'background: #0000ff; color: white');
+        console.log(`%c Result length: ${result?.length || 'undefined'}`, 'background: #0000ff; color: white');
+        console.log(`%c Result value:`, 'background: #0000ff; color: white', result);
+        
+        // Store immediately in a global variable
+        window.lastReceivedAudioUrls = result;
+        
+        // Explicitly assign
+        urls = result;
+        
+        // Force log the returned URLs
+        console.log(`🔊 [AUDIO-DEBUG] RETURNED URLS TYPE: ${typeof urls}, IS ARRAY: ${Array.isArray(urls)}`);
+        console.log(`🔊 [AUDIO-DEBUG] RETURNED URLS LENGTH: ${urls ? urls.length : 'undefined'}`);
+        
+        // Try multiple logging methods to ensure we see the data
+        try {
+          console.log(`🔊 [AUDIO-DEBUG] URLS DIRECT:`, urls);
+        } catch (e) {
+          console.log(`🔊 [AUDIO-DEBUG] Error logging direct URLs:`, e);
+        }
+        
+        try {
+          console.log(`🔊 [AUDIO-DEBUG] URLS JSON:`, JSON.stringify(urls));
+        } catch (e) {
+          console.log(`🔊 [AUDIO-DEBUG] Error JSON stringifying URLs:`, e);
+        }
+        
+        try {
+          console.dir(urls);
+        } catch (e) {
+          console.log(`🔊 [AUDIO-DEBUG] Error console.dir URLs:`, e);
+        }
+        
+        // Log each URL individually to bypass any console limitations
+        if (Array.isArray(urls)) {
+          urls.forEach((url, idx) => {
+            console.log(`🔊 [AUDIO-DEBUG] URL[${idx}]: ${typeof url === 'string' ? url.substring(0, 50) + '...' : typeof url}`);
+          });
+        } else {
+          console.log(`🔊 [AUDIO-DEBUG] Cannot iterate - not an array`);
+        }
+        
+        // Ensure it's always an array
+        if (!Array.isArray(urls)) {
+          console.warn(`[AUDIO-FLOW] Converting non-array response to array`);
+          urls = urls ? [urls] : [];
+        }
+        
+        console.log(`[AUDIO-FLOW] Received ${urls.length} audio URLs`);
+      } catch (err) {
+        console.error(`[AUDIO-FLOW] Error generating speech chunks:`, err);
+        urls = [];
+      }
+      console.timeEnd('[AUDIO-FLOW] Speech generation');
+      
+      if (urls && urls.length > 0) {
+        console.log(`🔊 [AUDIO-URLS] Received ${urls.length} audio URLs from generation`);
+        console.log('🔊 [AUDIO-URLS] AUDIO ARRAY CONTENT:');
+        
+        // Log each URL individually
+        urls.forEach((url, idx) => {
+          if (url) {
+            console.log(`🔊 [AUDIO-URLS] URL[${idx}]: ${url.substring(0, 50)}...`);
+          } else {
+            console.error(`🔊 [AUDIO-URLS] URL[${idx}] is null or undefined!`);
           }
-        }, 500); // Increased delay for better loading
+        });
+        
+        // Verify each URL in the array
+        let validUrls = true;
+        urls.forEach((url, index) => {
+          if (!url) {
+            console.error(`🔊 [AUDIO-URLS] Invalid URL at index ${index}: URL is ${url}`);
+            validUrls = false;
+          }
+        });
+        
+        if (!validUrls) {
+          console.error('🔊 [AUDIO-URLS] Some URLs in the audio array are invalid');
+        }
+        
+        // Store in a local variable first - this ensures we use the same exact array for both logging and state setting 
+        const audioUrlsToUse = [...urls];
+        console.log(`🔊 [AUDIO-URLS] Setting state with ${audioUrlsToUse.length} URLs`);
+        
+        // Set state
+        setAudioUrls(audioUrlsToUse);
+        setCurrentAudioIndex(0);
+        
+        // Debug: Immediately check if state was updated
+        console.log(`🔊 [AUDIO-URLS] State audioUrls:`, {
+          stateValue: audioUrls, // This will still show old value due to closure
+          newValue: audioUrlsToUse
+        });
+        
+        // Start playing the first audio file with more logging
+        console.log(`🔊 [AUDIO-PLAY] Starting playback in 300ms with ${audioUrlsToUse.length} URLs`);
+        console.time('🔊 [AUDIO-PLAY] Time to first audio');
+        
+        setTimeout(() => {
+          console.timeEnd('🔊 [AUDIO-PLAY] Time to first audio');
+          console.log('🔊 [AUDIO-PLAY] Timeout elapsed, starting playback');
+          console.log('🔊 [AUDIO-PLAY] Using URLs array:', audioUrlsToUse);
+          
+          // Important: Set state again right before playing to ensure it's current
+          setAudioUrls(audioUrlsToUse);
+          setCurrentAudioIndex(0);
+          
+          // Use a global variable as a fallback to ensure the audio array is available
+          window._debugAudioUrls = audioUrlsToUse;
+          
+          console.log('🔊 [AUDIO-PLAY] Set backup array to window._debugAudioUrls');
+          setTimeout(() => {
+            console.log('🔊 [AUDIO-PLAY] About to call playNextAudio()');
+            console.log('🔊 [AUDIO-PLAY] Current audioUrls state:', audioUrls);
+            console.log('🔊 [AUDIO-PLAY] Backup array:', window._debugAudioUrls);
+            playNextAudio();
+          }, 100);
+        }, 300);
       } else {
-        console.warn("No audio URL returned from speech generation");
+        console.warn("[AUDIO-FLOW] No audio URLs returned from speech generation");
+        console.timeEnd('[AUDIO-FLOW] Total audio process time');
         setIsLoadingAudio(false);
       }
     } catch (error) {
-      console.error("Error in audio processing:", error);
+      console.error("[AUDIO-FLOW] Error in audio processing:", error);
+      console.timeEnd('[AUDIO-FLOW] Total audio process time');
       setIsLoadingAudio(false);
     } finally {
       setIsLoadingAudio(false);
@@ -134,20 +434,65 @@ const Message = ({ message, onRegenerate, personas }) => {
     const audio = audioRef.current;
     
     const handleEnded = () => {
-      setIsPlaying(false);
+      console.timeEnd(`🔊 [AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
+      
+      // Get the current state of audio URLs (might have changed since component render)
+      const currentAudioUrls = window._debugAudioUrls || audioUrls;
+      
+      // Move to the next audio in the queue
+      setCurrentAudioIndex(prevIndex => {
+        const nextIndex = prevIndex + 1;
+        console.log(`🔊 [AUDIO-PLAY] Chunk ${prevIndex + 1}/${currentAudioUrls.length} ended, moving to chunk ${nextIndex + 1}`);
+        
+        // If we're at the end of the queue, reset
+        if (nextIndex >= currentAudioUrls.length) {
+          console.log(`🔊 [AUDIO-PLAY] Reached end of audio queue (${currentAudioUrls.length} chunks), stopping playback`);
+          console.timeEnd('[AUDIO-FLOW] Total audio process time');
+          setIsPlaying(false);
+          return 0;
+        }
+        
+        // Otherwise play the next audio
+        console.log(`🔊 [AUDIO-PLAY] Playing next chunk (${nextIndex + 1}/${currentAudioUrls.length}) in 100ms`);
+        setTimeout(() => playNextAudio(), 100);
+        return nextIndex;
+      });
+    };
+    
+    const handleTimeUpdate = () => {
+      if (audio) {
+        const currentTime = audio.currentTime;
+        const duration = audio.duration || 0;
+        const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
+        
+        // Only log at 25%, 50%, 75% to avoid flooding the console
+        if (percent >= 25 && percent < 26 || 
+            percent >= 50 && percent < 51 || 
+            percent >= 75 && percent < 76) {
+          console.log(`[AUDIO-PLAY] Chunk ${currentAudioIndex + 1} progress: ${Math.round(percent)}%, time: ${currentTime.toFixed(1)}/${duration.toFixed(1)}s`);
+        }
+      }
     };
     
     if (audio) {
       audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('timeupdate', handleTimeUpdate);
+      
       return () => {
         audio.removeEventListener('ended', handleEnded);
-        // Cleanup audio URL when component unmounts
-        if (audioUrl) {
-          URL.revokeObjectURL(audioUrl);
-        }
+        audio.removeEventListener('timeupdate', handleTimeUpdate);
+        
+        // Cleanup audio URLs when component unmounts
+        console.log(`[AUDIO-PLAY] Cleaning up ${audioUrls.length} audio blob URLs`);
+        audioUrls.forEach((url, i) => {
+          if (url && url.startsWith('blob:')) {
+            console.log(`[AUDIO-PLAY] Revoking URL for chunk ${i + 1}`);
+            URL.revokeObjectURL(url);
+          }
+        });
       };
     }
-  }, [audioUrl]);
+  }, [audioUrls, currentAudioIndex]);
 
   // DIRECT FORMATTER FUNCTION - No external module dependencies
   const applyFormatting = () => {
@@ -448,20 +793,26 @@ const Message = ({ message, onRegenerate, personas }) => {
   const renderAudio = () => {
     return (
       <audio 
-        ref={audioRef} 
-        src={audioUrl} 
-        onEnded={() => setIsPlaying(false)}
+        ref={audioRef}
+        onLoadStart={() => console.log(`[AUDIO-PLAY] Loading started for chunk ${currentAudioIndex + 1}`)}
+        onDurationChange={(e) => console.log(`[AUDIO-PLAY] Duration determined for chunk ${currentAudioIndex + 1}: ${e.target.duration.toFixed(2)}s`)}
+        onLoadedData={() => console.log(`[AUDIO-PLAY] Data loaded for chunk ${currentAudioIndex + 1}`)}
+        onEnded={() => {}} // The ended event is handled in the useEffect
         onError={(e) => {
-          console.error("Audio playback error:", e);
-          setIsPlaying(false);
-          // Clear the URL on error to force regeneration next time
-          setAudioUrl(null);
+          console.error(`[AUDIO-PLAY] Error playing chunk ${currentAudioIndex + 1}/${audioUrls.length}:`, e);
+          console.timeEnd(`[AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
           
-          // For demo, show an error message
-          console.warn("Failed to play audio - likely an issue with the audio format or CORS");
-          
-          // We'll just show a message instead
-          console.warn("Falling back to no audio");
+          // Try to move to the next chunk if this one fails
+          if (currentAudioIndex < audioUrls.length - 1) {
+            console.warn(`[AUDIO-PLAY] Skipping to next chunk due to error (${currentAudioIndex + 1} → ${currentAudioIndex + 2}/${audioUrls.length})`);
+            setCurrentAudioIndex(currentAudioIndex + 1);
+            setTimeout(playNextAudio, 100);
+          } else {
+            // If this was the last chunk, reset playback state
+            setIsPlaying(false);
+            console.warn("[AUDIO-PLAY] Failed to play last audio chunk - playback stopped");
+            console.timeEnd('[AUDIO-FLOW] Total audio process time');
+          }
         }}
       />
     );
@@ -492,10 +843,31 @@ const Message = ({ message, onRegenerate, personas }) => {
               <span role="img" aria-label="Regenerate">🔄</span>
             </button>
             <button 
+              id="debug-voice-button"
+              data-debug="true"
               className={`voice-button ${isPlaying ? 'playing' : ''} ${isLoadingAudio ? 'loading' : ''}`}
-              onClick={handlePlayAudio}
+              onClick={(e) => {
+                // Store timestamp when clicked
+                window.lastVoiceButtonClick = {
+                  timestamp: new Date().toISOString(),
+                  target: e.target.id || e.target.className,
+                  callPath: 'Message.js button click handler'
+                };
+                
+                // Add direct debug
+                console.log(`%c 🔊 PLAY BUTTON CLICKED - DEBUG VERSION`, 'background: #ff0000; color: white; font-size: 16px');
+                
+                // Try to access the function directly for debugging
+                try {
+                  console.log(`%c Calling handlePlayAudio...`, 'background: #ff0000; color: white');
+                  handlePlayAudio();
+                } catch (err) {
+                  console.error('Error calling handlePlayAudio:', err);
+                  alert('Error calling audio function. See console.');
+                }
+              }}
               disabled={isLoadingAudio}
-              title={isPlaying ? "Pause voice" : "Play voice"}
+              title={isPlaying ? "Pause voice (debug)" : "Play voice (debug)"}
             >
               {isLoadingAudio ? (
                 <span className="loading-indicator">⏳</span>
@@ -505,8 +877,8 @@ const Message = ({ message, onRegenerate, personas }) => {
                 <span role="img" aria-label="Play">🔊</span>
               )}
             </button>
-            <button className="format-button" onClick={applyFormatting} title="Format message">
-              <span role="img" aria-label="Format">✨</span>
+            <button className="format-button" onClick={applyFormatting} title="Format message (updated)">
+              <span role="img" aria-label="Format">⭐</span>
             </button>
           </>
         )}
