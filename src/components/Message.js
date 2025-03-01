@@ -3,7 +3,6 @@ import '../styles/Message.css';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import ReactMarkdown from 'react-markdown';
 import { generateSpeech, getTTSEngine } from '../services/voiceService';
-import { applyFormatting as formatText } from './MessageFormatter';
 
 const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
@@ -150,33 +149,131 @@ const Message = ({ message, onRegenerate, personas }) => {
     }
   }, [audioUrl]);
 
-  // No imports needed here
-
-  // Function to apply formatting based on persona rules
+  // DIRECT FORMATTER FUNCTION - No external module dependencies
   const applyFormatting = () => {
     console.log("Message.js: Starting format operation...");
     console.log("Message.js: Persona:", persona?.name || "Unknown");
+    console.log("Message.js: Format settings:", JSON.stringify(persona?.formatSettings, null, 2));
     
     if (!persona) {
       console.log("Message.js: No persona found for personaId:", message.personaId);
       return;
     }
     
+    // Get the original content
+    const originalContent = message.content;
+    console.log("Message.js: Original content:", originalContent.substring(0, 100) + (originalContent.length > 100 ? '...' : ''));
+    
     try {
-      // Use the new formatter module, enable debugging in dev mode
-      const formattedText = formatText(
-        message.content,
-        persona.formatSettings,
-        process.env.NODE_ENV === 'development'
-      );
+      // Start with original content
+      let formattedText = originalContent;
       
-      console.log("Message.js: Formatting complete");
+      // Apply custom format rules if available
+      const applyCustomRules = () => {
+        // Only proceed if custom formatting is enabled
+        if (persona?.formatSettings?.customFormatting && 
+            persona?.formatSettings?.formatRules &&
+            persona.formatSettings.formatRules.length > 0) {
+          
+          console.log("Message.js: Applying custom format rules");
+          
+          // Process each rule
+          let rulesApplied = false;
+          persona.formatSettings.formatRules.forEach(rule => {
+            if (rule.enabled) {
+              console.log("Message.js: Applying rule:", rule.name);
+              
+              // Create regex patterns from the start/end tags
+              const startTagEscaped = rule.startTag ? rule.startTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
+              const endTagEscaped = rule.endTag ? rule.endTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
+              
+              if (startTagEscaped && endTagEscaped) {
+                const pattern = new RegExp(`${startTagEscaped}(.*?)${endTagEscaped}`, 'gs');
+                const matches = formattedText.match(pattern);
+                console.log("Message.js: Matches for pattern", rule.startTag, "to", rule.endTag, ":", matches);
+                
+                if (matches && matches.length > 0) {
+                  rulesApplied = true;
+                  formattedText = formattedText.replace(pattern, (match, content) => {
+                    console.log(`Message.js: Replacing rule match '${match.substring(0, 30)}...' with format '${rule.markdownFormat}'`);
+                    return rule.markdownFormat.replace('{{content}}', content);
+                  });
+                }
+              }
+            }
+          });
+          
+          return rulesApplied;
+        }
+        
+        return false;
+      };
+      
+      // Apply standard roleplay markdown formatting
+      const applyRoleplayMarkdown = () => {
+        console.log("Message.js: Applying roleplay markdown formatting");
+        
+        // Process speech tags with attributes
+        formattedText = formattedText.replace(
+          /<speech\s+[^>]*?as=["']([^"']+)["'][^>]*>([\s\S]*?)<\/speech>/gi,
+          (match, character, content) => {
+            console.log(`Message.js: Found speech tag for ${character}, content: "${content.substring(0, 30)}..."`);
+            return `**${character}:** ${content.trim()}\n\n`;
+          }
+        );
+        
+        // Process action tags with attributes
+        formattedText = formattedText.replace(
+          /<action\s+[^>]*?as=["']([^"']+)["'][^>]*>([\s\S]*?)<\/action>/gi,
+          (match, character, content) => {
+            console.log(`Message.js: Found action tag for ${character}, content: "${content.substring(0, 30)}..."`);
+            return `*${character} ${content.trim()}*\n\n`;
+          }
+        );
+        
+        // Process simple speech tags
+        formattedText = formattedText.replace(
+          /<speech>([\s\S]*?)<\/speech>/gi,
+          (match, content) => `**${content.trim()}**\n\n`
+        );
+        
+        // Process simple action tags
+        formattedText = formattedText.replace(
+          /<action>([\s\S]*?)<\/action>/gi,
+          (match, content) => `*${content.trim()}*\n\n`
+        );
+        
+        // Process function tags
+        formattedText = formattedText.replace(
+          /<function>([\s\S]*?)<\/function>/gi,
+          (match, content) => `\`\`\`\n${content.trim()}\n\`\`\`\n\n`
+        );
+        
+        // Process markdown tags
+        formattedText = formattedText.replace(
+          /<markdown>([\s\S]*?)<\/markdown>/gi,
+          (match, content) => content.trim() + '\n\n'
+        );
+        
+        // Remove yield tags
+        formattedText = formattedText.replace(/<yield[^>]*\/>/gi, '');
+        formattedText = formattedText.replace(/<yield[^>]*>.*?<\/yield>/gi, '');
+        
+        return true;
+      };
+      
+      // First try custom rules, then roleplay markdown if needed
+      const customRulesApplied = applyCustomRules();
+      if (!customRulesApplied) {
+        applyRoleplayMarkdown();
+      }
+      
+      console.log("Message.js: Formatted result:", formattedText);
       setFormattedContent(formattedText);
       setFormatted(true);
     } catch (err) {
       console.error("Message.js: Error in formatting:", err);
-      // In case of error, set the original text as formatted content
-      setFormattedContent(message.content);
+      setFormattedContent(originalContent);
       setFormatted(true);
     }
   };
