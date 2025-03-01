@@ -967,32 +967,121 @@ const Message = ({ message, onRegenerate, personas }) => {
     );
   };
 
+  // State for audio debug UI
+  const [showAudioDebug, setShowAudioDebug] = useState(false);
+  
+  // Refresh audio array state from window backup
+  const refreshAudioArray = () => {
+    if (window._debugAudioUrls && window._debugAudioUrls.length > 0) {
+      setAudioUrls([...window._debugAudioUrls]);
+      console.log(`Refreshed audio URLs array with ${window._debugAudioUrls.length} items`);
+    } else {
+      console.log("No backup audio URLs found in window._debugAudioUrls");
+    }
+  };
+  
+  // Play a specific audio chunk
+  const playSpecificChunk = (index) => {
+    if (index >= 0 && index < audioUrls.length) {
+      // Stop current playback if any
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      
+      // Set the index and start playback
+      setCurrentAudioIndex(index);
+      window.playedChunks = {}; // Reset played chunks
+      window.playedChunks[`chunk-${index}`] = true; // Mark only this one as played
+      
+      // Set audio source directly and play
+      if (audioRef.current) {
+        console.log(`Playing specific chunk ${index + 1}/${audioUrls.length}`);
+        audioRef.current.src = audioUrls[index];
+        audioRef.current.play().catch(err => {
+          console.error(`Error playing specific chunk ${index + 1}:`, err);
+        });
+      }
+    }
+  };
+  
   // Hidden audio element for TTS playback
   const renderAudio = () => {
     return (
-      <audio 
-        ref={audioRef}
-        onLoadStart={() => console.log(`[AUDIO-PLAY] Loading started for chunk ${currentAudioIndex + 1}`)}
-        onDurationChange={(e) => console.log(`[AUDIO-PLAY] Duration determined for chunk ${currentAudioIndex + 1}: ${e.target.duration.toFixed(2)}s`)}
-        onLoadedData={() => console.log(`[AUDIO-PLAY] Data loaded for chunk ${currentAudioIndex + 1}`)}
-        onEnded={() => {}} // The ended event is handled in the useEffect
-        onError={(e) => {
-          console.error(`[AUDIO-PLAY] Error playing chunk ${currentAudioIndex + 1}/${audioUrls.length}:`, e);
-          console.timeEnd(`[AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback`);
-          
-          // Try to move to the next chunk if this one fails
-          if (currentAudioIndex < audioUrls.length - 1) {
-            console.warn(`[AUDIO-PLAY] Skipping to next chunk due to error (${currentAudioIndex + 1} → ${currentAudioIndex + 2}/${audioUrls.length})`);
-            setCurrentAudioIndex(currentAudioIndex + 1);
-            setTimeout(playNextAudio, 100);
-          } else {
-            // If this was the last chunk, reset playback state
-            setIsPlaying(false);
-            console.warn("[AUDIO-PLAY] Failed to play last audio chunk - playback stopped");
-            console.timeEnd('[AUDIO-FLOW] Total audio process time');
-          }
-        }}
-      />
+      <>
+        <audio 
+          ref={audioRef}
+          onLoadStart={() => console.log(`[AUDIO-PLAY] Loading started for chunk ${currentAudioIndex + 1}`)}
+          onDurationChange={(e) => console.log(`[AUDIO-PLAY] Duration determined for chunk ${currentAudioIndex + 1}: ${e.target.duration.toFixed(2)}s`)}
+          onLoadedData={() => console.log(`[AUDIO-PLAY] Data loaded for chunk ${currentAudioIndex + 1}`)}
+          onEnded={() => {}} // The ended event is handled in the useEffect
+          onError={(e) => {
+            console.error(`[AUDIO-PLAY] Error playing chunk ${currentAudioIndex + 1}/${audioUrls.length}:`, e);
+            console.log(`[AUDIO-PLAY] Chunk ${currentAudioIndex + 1} playback failed`);
+            
+            // Try to move to the next chunk if this one fails
+            if (currentAudioIndex < audioUrls.length - 1) {
+              console.warn(`[AUDIO-PLAY] Skipping to next chunk due to error (${currentAudioIndex + 1} → ${currentAudioIndex + 2}/${audioUrls.length})`);
+              setCurrentAudioIndex(currentAudioIndex + 1);
+              setTimeout(playNextAudio, 100);
+            } else {
+              // If this was the last chunk, reset playback state
+              setIsPlaying(false);
+              console.warn("[AUDIO-PLAY] Failed to play last audio chunk - playback stopped");
+              console.log('[AUDIO-FLOW] Audio playback complete');
+            }
+          }}
+        />
+        
+        {/* Audio Debug UI */}
+        {showAudioDebug && (
+          <div className="audio-debug-ui">
+            <div className="audio-debug-header">
+              <h4>Audio Debug - {audioUrls.length} chunks</h4>
+              <div className="audio-debug-controls">
+                <button 
+                  className="refresh-audio-btn" 
+                  onClick={refreshAudioArray}
+                  title="Refresh audio array from window._debugAudioUrls"
+                >
+                  🔄 Refresh
+                </button>
+                <button 
+                  className="close-debug-btn" 
+                  onClick={() => setShowAudioDebug(false)}
+                  title="Close debug panel"
+                >
+                  ✖
+                </button>
+              </div>
+            </div>
+            
+            <div className="audio-chunks-list">
+              {audioUrls.length > 0 ? (
+                audioUrls.map((url, index) => (
+                  <div 
+                    key={`audio-chunk-${index}`} 
+                    className={`audio-chunk-item ${index === currentAudioIndex ? 'current' : ''} ${window.playedChunks && window.playedChunks[`chunk-${index}`] ? 'played' : ''}`}
+                  >
+                    <div className="chunk-info">
+                      <span className="chunk-number">#{index + 1}</span>
+                      <span className="chunk-url">{typeof url === 'string' ? (url.startsWith('blob:') ? 'Blob URL' : url.substring(0, 30) + '...') : 'Invalid URL'}</span>
+                    </div>
+                    <button 
+                      className="play-chunk-btn" 
+                      onClick={() => playSpecificChunk(index)}
+                      title={`Play chunk #${index + 1}`}
+                    >
+                      ▶
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="no-audio-chunks">No audio chunks available</div>
+              )}
+            </div>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -1055,6 +1144,18 @@ const Message = ({ message, onRegenerate, personas }) => {
                 <span role="img" aria-label="Play">🔊</span>
               )}
             </button>
+            
+            {/* Audio Debug Button - only show if we have audio URLs */}
+            {audioUrls.length > 0 && (
+              <button 
+                className={`audio-debug-button ${showAudioDebug ? 'active' : ''}`}
+                onClick={() => setShowAudioDebug(!showAudioDebug)}
+                title="Show audio chunks debug panel"
+              >
+                <span role="img" aria-label="Audio Debug">🎚️</span>
+              </button>
+            )}
+            
             <button className="format-button" onClick={applyFormatting} title="Format message (updated)">
               <span role="img" aria-label="Format">⭐</span>
             </button>
