@@ -37,6 +37,19 @@ const Message = ({ message, onRegenerate, personas }) => {
   const playNextAudio = async () => {
     console.log(`🔊 [AUDIO-PLAY] playNextAudio called, index ${currentAudioIndex + 1}`);
     
+    // Check if this is an initial playback and handle accordingly
+    if (window._initialAudioPlayback) {
+      console.log('🔊 [AUDIO-PLAY] Initial playback detected - ensuring we start from index 0');
+      window._initialAudioPlayback = false; // Clear the flag
+      
+      // Make sure we're at index 0 for the first playback
+      if (currentAudioIndex !== 0) {
+        console.log('🔊 [AUDIO-PLAY] Resetting index to 0 for initial playback');
+        setCurrentAudioIndex(0);
+        return; // The state update will trigger another call to this function
+      }
+    }
+    
     // Try to use window backup if state is empty (fallback mechanism)
     let urlsToUse = audioUrls;
     if (!audioUrls || audioUrls.length === 0) {
@@ -402,10 +415,15 @@ const Message = ({ message, onRegenerate, personas }) => {
           
           // Important: Set state again right before playing to ensure it's current
           setAudioUrls(audioUrlsToUse);
-          setCurrentAudioIndex(0);
+          
+          // BUGFIX: Only set index to 0 if not already at 0 (prevents duplicate playback of first chunk)
+          // setCurrentAudioIndex(0); - removing this line to prevent duplicate playback
           
           // Use a global variable as a fallback to ensure the audio array is available
           window._debugAudioUrls = audioUrlsToUse;
+          
+          // Add a flag to track whether we're in an initial playback
+          window._initialAudioPlayback = true;
           
           console.log('🔊 [AUDIO-PLAY] Set backup array to window._debugAudioUrls');
           setTimeout(() => {
