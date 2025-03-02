@@ -1,0 +1,13 @@
+ INFO  Accepting connections at http://localhost:3000
+ HTTP  2/21/2025 3:59:26 PM 95.91.247.96 GET /
+ HTTP  2/21/2025 3:59:26 PM 95.91.247.96 Returned 304 in 38 ms
+ HTTP  2/21/2025 3:59:26 PM 95.91.247.96 GET /static/css/main.a15248c3.css
+ HTTP  2/21/2025 3:59:26 PM 95.91.247.96 Returned 304 in 3 ms
+ HTTP  2/21/2025 3:59:27 PM 95.91.247.96 GET /static/js/main.b99acc59.js
+ HTTP  2/21/2025 3:59:27 PM 95.91.247.96 Returned 304 in 8 ms
+ HTTP  2/21/2025 3:59:27 PM 95.91.247.96 GET /favicon.ico
+ HTTP  2/21/2025 3:59:27 PM 95.91.247.96 Returned 304 in 7 ms
+ HTTP  2/21/2025 3:59:27 PM 95.91.247.96 GET /default-avatar.png
+ HTTP  2/21/2025 3:59:27 PM 95.91.247.96 Returned 304 in 3 ms
+ HTTP  2/21/2025 3:59:27 PM 95.91.247.96 GET /assets/personas/gaia-default.jpeg
+ HTTP  2/21/2025 3:59:27 PM 95.91.247.96 Returned 304 in 5 ms
