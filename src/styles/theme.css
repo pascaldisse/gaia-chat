@@ -1,0 +1,75 @@
+/* Discord Dark Theme Variables */
+:root {
+  /* Core Discord Colors */
+  --discord-primary: #36393f;        /* Main background */
+  --discord-secondary: #2f3136;      /* Secondary background (sidebar, modals) */
+  --discord-tertiary: #202225;       /* Tertiary background (borders, dividers) */
+  --discord-accent: #5865f2;         /* Primary accent color (buttons, links) */
+  --discord-accent-hover: #4752c4;   /* Accent color on hover */
+  
+  /* Text Colors */
+  --text-normal: #dcddde;            /* Primary text */
+  --text-muted: #a3a6aa;             /* Secondary text */
+  --text-link: #00aff4;              /* Link text */
+  
+  /* Interactive Elements */
+  --interactive-normal: #b9bbbe;     /* Normal interactive elements */
+  --interactive-hover: #dcddde;      /* Interactive elements on hover */
+  --interactive-active: #fff;        /* Interactive elements on active */
+  --interactive-muted: #4f5660;      /* Muted interactive elements */
+  
+  /* Status Colors */
+  --status-green: #3ba55c;           /* Success, online */
+  --status-yellow: #faa61a;          /* Warning */
+  --status-red: #ed4245;             /* Error, danger */
+  --status-purple: #9b59b6;          /* Special status */
+  
+  /* Elevation (Shadows) */
+  --elevation-low: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05);
+  --elevation-medium: 0 4px 4px rgba(0, 0, 0, 0.16);
+  --elevation-high: 0 8px 16px rgba(0, 0, 0, 0.24);
+  
+  /* Sizing & Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* Borders */
+  --border-radius-sm: 3px;
+  --border-radius-md: 5px;
+  --border-radius-lg: 8px;
+  --border-radius-xl: 12px;
+  
+  /* Typography */
+  --font-primary: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-code: 'Consolas', 'Monaco', 'Courier New', monospace;
+  
+  /* Animations */
+  --transition-short: 0.1s;
+  --transition-medium: 0.2s;
+  --transition-long: 0.3s;
+}
+
+/* Dark Mode Only Overrides */
+.discord-dark {
+  color-scheme: dark;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  :root {
+    --spacing-md: 12px;
+    --spacing-lg: 18px;
+    --spacing-xl: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --spacing-md: 10px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+  }
+}

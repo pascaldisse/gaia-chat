@@ -1,133 +1,55 @@
-/* App.css */
+/* App.css - Discord Dark Theme */
 
-.app-container {
-  display: flex;
-  height: 100vh;
-  font-family: Arial, sans-serif;
-}
-
-/* Sidebar for model selection */
-.sidebar {
-  width: 250px;
-  background-color: #2f3136;
-  padding: 20px;
-  border-right: 1px solid #202225;
-}
-
-.sidebar h2 {
-  margin-bottom: 10px;
-}
-
-/* Main chat container */
-.chat-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: #36393f;
-}
-
-/* Chat header styling */
-.chat-header {
-  background-color: #2f3136;
-  color: white;
-  padding: 15px;
-  border-bottom: 1px solid #202225;
-}
-
-/* Chat messages area */
-.chat-messages {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  background-color: #36393f;
-}
-
-/* Message styling */
-.message {
-  margin-bottom: 15px;
-  padding: 10px;
-  border-radius: 5px;
-  max-width: 70%;
-}
-
-.message.user {
-  background-color: #5865f2;
-  color: white;
-  align-self: flex-end;
-}
-
-.message.bot {
-  background-color: #fff;
-  align-self: flex-start;
-}
-
-/* Chat input area styling */
-.chat-input {
-  display: flex;
-  padding: 10px;
-  border-top: 1px solid #ddd;
-  background-color: #fff;
-}
-
-.chat-input input {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-
-.chat-input button {
-  margin-left: 10px;
-  padding: 10px 20px;
-  background-color: #007bff;
-  border: none;
-  color: white;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.chat-input button:hover {
-  background-color: #0056b3;
-}
-
+/* App Container */
 .app {
   display: flex;
   height: 100vh;
   position: relative;
   overflow: hidden;
+  background-color: var(--discord-primary);
+  color: var(--text-normal);
 }
 
-/* Hamburger Menu Button */
-.hamburger-menu {
-  position: fixed;
-  top: 15px;
-  left: 15px;
-  z-index: 1200;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: #5865f2;
-  color: white;
-  border: none;
+/* Main Chat Container */
+.chat-container {
+  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  flex-direction: column;
+  background-color: var(--discord-primary);
+  margin-left: 250px; /* Match sidebar width */
+  transition: margin-left var(--transition-long) ease;
+  width: 100%;
+  max-width: calc(100vw - 250px);
 }
 
-.hamburger-menu:hover {
-  background-color: #4752c4;
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  background-color: var(--discord-secondary);
+  padding: var(--spacing-md);
+  border-right: 1px solid var(--discord-tertiary);
+  height: 100%;
+  overflow-y: auto;
+  flex-shrink: 0;
 }
 
-/* Sidebar Container and Transitions */
+.sidebar h2 {
+  margin-bottom: var(--spacing-md);
+  color: var(--interactive-active);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
 .sidebar-container {
   position: fixed;
   top: 0;
   left: 0;
   height: 100vh;
   z-index: 1100;
-  transition: transform 0.3s ease;
+  transition: transform var(--transition-long) ease;
+  width: 250px;
+  background-color: var(--discord-secondary);
+  box-shadow: var(--elevation-high);
 }
 
 .sidebar-container.visible {
@@ -138,17 +60,59 @@
   transform: translateX(-100%);
 }
 
+/* Hamburger Menu Button */
+.hamburger-menu {
+  position: fixed;
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  z-index: 1200;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--discord-accent);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--elevation-medium);
+  transition: background-color var(--transition-short) ease;
+}
+
+.hamburger-menu:hover {
+  background-color: var(--discord-accent-hover);
+}
+
+.hamburger-menu:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--discord-accent-hover), var(--elevation-medium);
+}
+
+/* Sidebar Close Button */
 .sidebar-close {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
   background: none;
   border: none;
-  color: #dcddde;
+  color: var(--interactive-normal);
   font-size: 18px;
   cursor: pointer;
-  z-index: 10;
+  z-index: 1101;
   display: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-short) ease;
+}
+
+.sidebar-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--interactive-hover);
 }
 
 /* Overlay for clicking out on mobile */
@@ -158,68 +122,182 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
   z-index: 1050;
+  animation: fadeIn var(--transition-short) ease;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* View Toggle Buttons */
 .view-toggle {
   position: absolute;
-  top: 10px;
+  top: var(--spacing-md);
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
   display: flex;
-  gap: 10px;
-  background-color: rgba(47, 49, 54, 0.9);
-  padding: 8px 12px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  gap: var(--spacing-sm);
+  background-color: var(--discord-secondary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--elevation-medium);
   width: auto;
   max-width: 90%;
   justify-content: center;
+  border: 1px solid var(--discord-tertiary);
 }
 
 .view-toggle button {
-  background-color: #36393f;
-  color: #dcddde;
-  border: 1px solid #202225;
-  border-radius: 4px;
-  padding: 8px 16px;
+  background-color: var(--discord-tertiary);
+  color: var(--interactive-normal);
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: all var(--transition-short) ease;
   display: flex;
   align-items: center;
   white-space: nowrap;
+  min-height: 36px;
 }
 
 .view-toggle button:hover {
-  background-color: #40444b;
+  background-color: var(--interactive-muted);
+  color: var(--interactive-hover);
 }
 
 .view-toggle button.active {
-  background-color: #5865f2;
+  background-color: var(--discord-accent);
   color: white;
-  border-color: #4752c4;
+  border-color: var(--discord-accent-hover);
+}
+
+.view-toggle button svg {
+  margin-right: var(--spacing-xs);
+}
+
+/* Chat Components */
+.chat-header {
+  background-color: var(--discord-secondary);
+  color: var(--text-normal);
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--discord-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: var(--spacing-md);
+  overflow-y: auto;
+  background-color: var(--discord-primary);
+  position: relative;
+}
+
+.message {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  max-width: 85%;
+  position: relative;
+}
+
+.message.user {
+  background-color: var(--discord-accent);
+  color: white;
+  align-self: flex-end;
+  margin-left: auto;
+  border-top-right-radius: 0;
+}
+
+.message.assistant {
+  background-color: var(--discord-secondary);
+  color: var(--text-normal);
+  align-self: flex-start;
+  border-top-left-radius: 0;
+}
+
+.chat-input {
+  display: flex;
+  padding: var(--spacing-sm);
+  border-top: 1px solid var(--discord-tertiary);
+  background-color: var(--discord-secondary);
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.chat-input input {
+  flex: 1;
+  padding: var(--spacing-md);
+  border: 1px solid var(--interactive-muted);
+  border-radius: var(--border-radius-md);
+  background-color: var(--discord-tertiary);
+  color: var(--text-normal);
+  transition: border-color var(--transition-short) ease;
+}
+
+.chat-input input:focus {
+  border-color: var(--discord-accent);
+  outline: none;
+}
+
+.chat-input button {
+  margin-left: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--discord-accent);
+  border: none;
+  color: white;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-short) ease;
+}
+
+.chat-input button:hover {
+  background-color: var(--discord-accent-hover);
 }
 
 /* Media Queries for Mobile Responsiveness */
+@media (max-width: 992px) {
+  .chat-container {
+    margin-left: 0;
+    max-width: 100%;
+    padding-top: 60px; /* Make space for the view toggle */
+  }
+  
+  .sidebar-container {
+    width: 280px;
+  }
+}
+
 @media (max-width: 768px) {
   .app {
     flex-direction: column;
   }
   
+  .hamburger-menu {
+    display: flex; /* Make sure it's visible on mobile */
+  }
+  
   .view-toggle {
     position: fixed;
     top: auto;
-    bottom: 10px;
-    padding: 6px 10px;
+    bottom: var(--spacing-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
     z-index: 1001;
   }
   
   .view-toggle button {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.85rem;
+    min-height: auto;
   }
   
   .view-toggle button svg {
@@ -230,8 +308,8 @@
   
   /* Hamburger menu mobile adjustments */
   .hamburger-menu {
-    top: 10px;
-    left: 10px;
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
     width: 36px;
     height: 36px;
   }
@@ -239,16 +317,20 @@
   .sidebar-container {
     width: 85%;
     max-width: 300px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    box-shadow: var(--elevation-high);
   }
   
   .sidebar-close {
-    display: block;
+    display: flex;
   }
   
   /* Show sidebar close button for mobile only */
   .sidebar {
     padding-top: 40px; /* Make room for close button */
+  }
+  
+  .message {
+    max-width: 90%;
   }
 }
 
@@ -260,6 +342,29 @@
   
   .sidebar-container {
     width: 90%;
+  }
+  
+  .view-toggle {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .view-toggle button {
+    flex: 1 0 auto;
+    font-size: 0.8rem;
+    min-width: 80px;
+  }
+  
+  .message {
+    max-width: 95%;
+  }
+  
+  .chat-messages {
+    padding: var(--spacing-sm);
+  }
+  
+  .chat-input {
+    padding: var(--spacing-xs);
   }
 }
 

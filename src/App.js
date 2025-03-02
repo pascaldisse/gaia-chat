@@ -3,6 +3,7 @@ import Chat from './components/Chat';
 import Sidebar from './components/Sidebar';
 import AgentFlow from './components/AgentFlow/AgentFlow';
 import { chatDB, userDB } from './services/db';
+import './styles/theme.css';
 import './styles/Sidebar.css';
 import './App.css';
 import './styles/Chat.css';
