@@ -4,6 +4,12 @@ Gaia is an innovative AI chat application that implements a unique RPG-style per
 
 ![Gaia Project Banner](src/assets/banner.png)
 
+## Latest Updates
+
+- 🔊 **Improved Audio System**: Fixed audio playback issues and added new debugging tools
+- 🚀 **Server Persistence**: Enhanced restart script for continuous server operation
+- 🎭 **Expanded Persona Customization**: Updated persona attribute editors with new features
+
 ## Features
 
 - 🤖 **Multi-Persona Chat System**: Interact with multiple AI personas simultaneously
@@ -11,6 +17,8 @@ Gaia is an innovative AI chat application that implements a unique RPG-style per
 - 📚 **Knowledge Integration**: Upload and manage knowledge files for personas
 - 🎨 **Image Generation**: Create images using state-of-the-art AI models
 - 🛠️ **Customizable Tools**: Configure agent capabilities and behaviors
+- 🔊 **Enhanced Voice System**: Voice responses with multiple TTS engines and improved audio playback sequencing
+- 🎭 **Message Formatting**: Custom formatting rules for roleplay and character actions
 - ⚡ **Real-time Streaming**: Instant response streaming for better UX
 
 ## Quick Start
@@ -78,15 +86,45 @@ const persona = new Persona({
   systemPrompt: "You are a helpful AI assistant",
   model: MODELS.LLAMA3_70B,
   initiative: 7,
-  empathy: 8
+  empathy: 8,
+  voiceId: "american_female",
+  formatSettings: {
+    useRoleplayMarkdown: true,
+    customFormatting: true,
+    formatRules: [
+      {
+        name: "Speech",
+        startTag: "<speech>",
+        endTag: "</speech>",
+        markdownFormat: "**{{content}}**",
+        enabled: true
+      }
+    ]
+  }
 });
 ```
 
 ### RPG Mechanics
 Unique D20-based system for generating dynamic behaviors:
-- Attribute modifiers
+- 11 distinct attributes (initiative, talkativeness, confidence, curiosity, empathy, etc.)
+- Attribute modifiers affecting response style
 - Context-aware responses
 - Personality-driven interactions
+
+### Voice System
+Enhanced text-to-speech capabilities for more immersive experiences:
+- Multiple voice engines: Zonos (high quality) and Kokoro (fast)
+- Diverse voice options with different accents and genders
+- Persona-specific voice settings
+- Fixed audio playback sequence bugs to ensure smooth playback
+- Enhanced debug UI for voice settings and audio troubleshooting
+- Reliable audio chunk processing with improved error handling
+
+### Message Formatting
+Custom message formatting system for roleplay and structured outputs:
+- Roleplay markdown for actions and speech
+- Custom tag-based formatting
+- Templated formatting rules for different content types
 
 ## Models
 
@@ -123,6 +161,14 @@ Gaia supports multiple AI models:
 3. Run tests
    ```bash
    npm test
+   ```
+
+4. For production deployment with auto-restart
+   ```bash
+   # Start the server with persistence
+   ./restart.sh
+   
+   # The server will automatically restart if it crashes
    ```
 
 ## Contributing
