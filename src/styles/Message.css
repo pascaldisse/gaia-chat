@@ -80,7 +80,8 @@
   flex-wrap: wrap;
 }
 
-.message-button {
+/* Common button styles - these are used by other button types */
+.message-button-base {
   background-color: var(--discord-tertiary);
   border: 1px solid var(--interactive-muted);
   color: var(--interactive-normal);
@@ -95,17 +96,17 @@
   transition: all var(--transition-short) ease;
 }
 
-.message-button:hover {
+.message-button-base:hover {
   background-color: var(--interactive-muted);
   color: var(--interactive-hover);
   border-color: var(--discord-accent);
 }
 
-.message-button:active {
+.message-button-base:active {
   transform: scale(0.98);
 }
 
-.message-button.active {
+.message-button-base.active {
   color: var(--discord-accent);
   background-color: rgba(88, 101, 242, 0.1);
   border-color: var(--discord-accent);
@@ -113,24 +114,103 @@
 
 /* Button variants */
 .regenerate-button {
-  composes: message-button;
+  background-color: var(--discord-tertiary);
+  border: 1px solid var(--interactive-muted);
+  color: var(--interactive-normal);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all var(--transition-short) ease;
+}
+
+.regenerate-button:hover {
+  background-color: var(--interactive-muted);
+  color: var(--interactive-hover);
+  border-color: var(--discord-accent);
+}
+
+.regenerate-button:active {
+  transform: scale(0.98);
 }
 
 .copy-button {
-  composes: message-button;
+  background-color: var(--discord-tertiary);
+  border: 1px solid var(--interactive-muted);
+  color: var(--interactive-normal);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all var(--transition-short) ease;
+}
+
+.copy-button:hover {
+  background-color: var(--interactive-muted);
+  color: var(--interactive-hover);
+  border-color: var(--discord-accent);
+}
+
+.copy-button:active {
+  transform: scale(0.98);
 }
 
 .format-button {
-  composes: message-button;
+  background-color: var(--discord-tertiary);
+  border: 1px solid var(--interactive-muted);
+  color: var(--interactive-normal);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all var(--transition-short) ease;
 }
 
 .format-button:hover {
-  border-color: #00a670;
+  background-color: var(--interactive-muted);
   color: #00a670;
+  border-color: #00a670;
+}
+
+.format-button:active {
+  transform: scale(0.98);
 }
 
 .voice-button {
-  composes: message-button;
+  background-color: var(--discord-tertiary);
+  border: 1px solid var(--interactive-muted);
+  color: var(--interactive-normal);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all var(--transition-short) ease;
+}
+
+.voice-button:hover {
+  background-color: var(--interactive-muted);
+  color: var(--interactive-hover);
+  border-color: var(--discord-accent);
+}
+
+.voice-button:active {
+  transform: scale(0.98);
 }
 
 .voice-button.playing {
@@ -145,7 +225,18 @@
 }
 
 .audio-debug-button {
-  composes: message-button;
+  background-color: var(--discord-tertiary);
+  border: 1px solid var(--interactive-muted);
+  color: var(--interactive-normal);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all var(--transition-short) ease;
 }
 
 .audio-debug-button:hover {
