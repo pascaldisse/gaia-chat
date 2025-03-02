@@ -9,48 +9,56 @@
   align-items: center;
   justify-content: center;
   z-index: 1100;
+  /* Add pointer-events to ensure clicks work */
+  pointer-events: auto;
 }
 
 .attributes-content {
   position: relative;
-  background-color: #36393f;
-  border-radius: 12px;
-  padding: 24px;
+  background-color: var(--discord-primary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
   width: 800px;
   max-width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  border: 1px solid #202225;
-  color: #dcddde;
+  border: 1px solid var(--discord-tertiary);
+  color: var(--text-normal);
+  /* Ensure clicks work inside the content */
+  pointer-events: auto;
+  -webkit-overflow-scrolling: touch; /* Enable momentum scrolling on iOS */
+  box-shadow: var(--elevation-high);
 }
 
 .attributes-editor-container {
   max-height: 70vh;
   overflow-y: auto;
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-lg);
+  -webkit-overflow-scrolling: touch; /* Enable momentum scrolling on iOS */
 }
 
 .attributes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  margin: 24px 0;
+  gap: var(--spacing-lg);
+  margin: var(--spacing-lg) 0;
 }
 
 .attribute-control {
-  background-color: #2f3136;
-  padding: 16px;
-  border-radius: 8px;
-  border: 1px solid #202225;
+  background-color: var(--discord-secondary);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--discord-tertiary);
+  box-shadow: var(--elevation-low);
 }
 
 .attribute-control label {
   display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
+  margin-bottom: var(--spacing-sm);
+  font-weight: var(--font-weight-medium);
   text-transform: capitalize;
   cursor: help;
-  color: #b9bbbe;
+  color: var(--interactive-normal);
 }
 
 .attribute-slider {
@@ -433,15 +441,53 @@
   background-color: #5865f2;
 }
 
-/* For smaller screens */
+/* Responsive adjustments */
 @media (max-width: 768px) {
+  .attributes-content {
+    width: 95%;
+    padding: var(--spacing-md);
+  }
+  
+  .attributes-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+  
   .voice-selector {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: var(--spacing-sm);
   }
   
   .voice-selector select {
     width: 100%;
+  }
+  
+  .engine-options {
+    flex-direction: column;
+  }
+}
+
+/* iOS-specific adjustments */
+@supports (-webkit-touch-callout: none) {
+  .attributes-content {
+    /* Handle safe area insets for iOS */
+    padding-bottom: calc(var(--spacing-lg) + var(--safe-area-inset-bottom, 0px));
+  }
+  
+  /* Improve touch interaction */
+  .attribute-slider input[type="range"] {
+    height: 24px; /* Larger hit area for touch */
+  }
+  
+  .attribute-slider input[type="range"]::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+  
+  /* Better tap targets for checkboxes */
+  .checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
   }
 }

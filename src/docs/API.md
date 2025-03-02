@@ -10,6 +10,7 @@
 7. [Performance](#performance)
 8. [Best Practices](#best-practices)
 9. [Examples](#examples)
+10. [Design System](#design-system)
 
 ## Overview
 
@@ -22,6 +23,8 @@ Gaia is an AI-powered chat application that implements a unique RPG-style person
 - Image generation capabilities
 - Customizable AI agent tools
 - Real-time streaming responses
+- Enhanced voice system with multiple TTS engines
+- Audio playback sequencing and debugging
 
 ## Architecture
 
@@ -323,3 +326,20 @@ const handleFileUpload = async (file) => {
   });
   return fileId;
 }; 
+```
+
+## Design System
+
+For detailed information about Gaia's design system including UI principles, visual language, responsive design patterns, and platform-specific guidelines, please refer to our dedicated [Design System Documentation](./DESIGN.md).
+
+The design system covers:
+
+- Core design principles (Clarity, Consistency, Efficiency, Flexibility)
+- Visual language (Color system, Typography, Spacing, Elevation)
+- Responsive design approach and breakpoints
+- Accessibility guidelines
+- Component design patterns
+- Mobile-specific guidelines
+- Apple platform considerations
+
+Developers and designers should follow these guidelines to maintain a consistent user experience across all platforms and screen sizes.

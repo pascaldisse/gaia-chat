@@ -14,6 +14,7 @@
   padding: var(--spacing-lg);
   background-color: var(--discord-primary);
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* Enable momentum scrolling on iOS */
 }
 
 .message-list {
@@ -35,12 +36,27 @@
 }
 
 @media (max-width: 480px) {
+  .chat-container {
+    height: calc(100vh - 60px - var(--safe-area-inset-bottom, 0px)); /* Account for bottom navigation and safe area */
+  }
+  
   .messages {
     padding: var(--spacing-sm);
   }
   
   .message-list {
     gap: var(--spacing-sm);
+  }
+}
+
+/* Safe area padding for iOS devices */
+@supports (-webkit-touch-callout: none) {
+  .chat-container {
+    height: calc(100vh - 60px - var(--safe-area-inset-bottom, 0px));
+  }
+  
+  .input-area {
+    padding-bottom: calc(var(--spacing-md) + var(--safe-area-inset-bottom, 0px));
   }
 }
 

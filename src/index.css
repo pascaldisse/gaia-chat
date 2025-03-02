@@ -202,7 +202,7 @@ img {
 /* Base responsive font sizes */
 @media (max-width: 768px) {
   body {
-    font-size: 15px;
+    font-size: var(--font-size-base);
   }
   
   h1 { font-size: 1.5rem; }
@@ -212,7 +212,7 @@ img {
 
 @media (max-width: 480px) {
   body {
-    font-size: 14px;
+    font-size: var(--font-size-base);
   }
   
   h1 { font-size: 1.4rem; }
@@ -220,7 +220,7 @@ img {
   h3 { font-size: 1rem; }
   
   pre, code {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 }
 
@@ -236,8 +236,37 @@ img {
   /* Better tap targets on mobile */
   button,
   .button,
-  a {
+  a.interactive {
     padding: var(--spacing-sm) var(--spacing-md);
-    min-height: 44px; /* Recommended minimum touch target size */
+    min-height: var(--touch-target-size);
+    min-width: var(--touch-target-size);
+  }
+}
+
+/* Safe area handling for iOS devices */
+@supports (-webkit-touch-callout: none) {
+  .safe-area-inset {
+    padding-top: var(--safe-area-inset-top);
+    padding-bottom: var(--safe-area-inset-bottom);
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: var(--safe-area-inset-bottom);
+  }
+  
+  .safe-area-top {
+    padding-top: var(--safe-area-inset-top);
+  }
+  
+  /* Add momentum scrolling to all scrollable areas */
+  .scrollable,
+  [class*="scroll"],
+  div[style*="overflow: auto"],
+  div[style*="overflow: scroll"],
+  div[style*="overflow-y: auto"],
+  div[style*="overflow-y: scroll"] {
+    -webkit-overflow-scrolling: touch;
   }
 }

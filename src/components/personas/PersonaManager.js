@@ -375,8 +375,20 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
       </div>
       
       {showAttributesEditor && (
-        <div className="attributes-editor-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="attributes-content">
+        <div 
+          className="attributes-editor-modal" 
+          onClick={(e) => {
+            console.log("Modal background clicked");
+            e.stopPropagation();
+          }}
+        >
+          <div 
+            className="attributes-content"
+            onClick={(e) => {
+              console.log("Modal content clicked");
+              e.stopPropagation();
+            }}
+          >
             <h2>Edit Personality & Formatting</h2>
             <div className="attributes-editor-container">
               <PersonaAttributesEditor
@@ -385,10 +397,24 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
               />
             </div>
             <div className="modal-footer">
-              <button className="cancel-button" onClick={closeAttributesEditor}>
+              <button 
+                className="cancel-button" 
+                onClick={(e) => {
+                  console.log("Cancel button clicked");
+                  e.stopPropagation();
+                  closeAttributesEditor();
+                }}
+              >
                 Cancel
               </button>
-              <button className="save-button" onClick={closeAttributesEditor}>
+              <button 
+                className="save-button" 
+                onClick={(e) => {
+                  console.log("Save button clicked");
+                  e.stopPropagation();
+                  closeAttributesEditor();
+                }}
+              >
                 Save Changes
               </button>
             </div>

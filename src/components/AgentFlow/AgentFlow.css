@@ -3,13 +3,21 @@
   flex-direction: column;
   height: 100%;
   flex: 1;
-  width: calc(100% - 250px); /* Sidebar width is 250px */
+  width: 100%;
+  max-width: calc(100% - 250px); /* Sidebar width is 250px */
   background-color: #36393f;
   color: #dcddde;
 }
 
+@media (max-width: 768px) {
+  .agent-flow-container {
+    max-width: 100%;
+  }
+}
+
 .agent-flow-header {
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
@@ -17,12 +25,30 @@
   background-color: #2f3136;
   border-bottom: 1px solid #202225;
   color: white;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .agent-flow-header h2 {
   margin: 0;
   font-size: 1.5rem;
   color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .agent-flow-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .agent-flow-header h2 {
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+  }
 }
 
 .agent-flow-actions {
@@ -30,6 +56,14 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .agent-flow-actions {
+    justify-content: space-between;
+  }
 }
 
 .chat-integration {
@@ -71,14 +105,24 @@
 
 .agent-flow-actions button,
 .agent-flow-actions select {
-  padding: 8px 16px;
-  margin-left: 10px;
+  padding: 8px 12px;
+  margin-left: 5px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
   transition: background-color 0.2s;
   font-size: 14px;
+}
+
+@media (max-width: 480px) {
+  .agent-flow-actions button,
+  .agent-flow-actions select {
+    padding: 6px 10px;
+    font-size: 12px;
+    margin-left: 2px;
+    min-width: 0;
+  }
 }
 
 .save-button {
@@ -128,13 +172,31 @@
   opacity: 0.7;
 }
 
-.workflow-selector {
+.workflow-selector,
+.template-selector {
   min-width: 150px;
   appearance: none;
   -webkit-appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='18px' height='18px'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 8px center;
+}
+
+@media (max-width: 768px) {
+  .workflow-selector,
+  .template-selector {
+    min-width: 100px;
+    width: auto;
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .workflow-selector,
+  .template-selector {
+    min-width: 80px;
+    background-position: right 4px center;
+  }
 }
 
 .agent-flow-tools {
@@ -145,6 +207,8 @@
   background-color: #2f3136;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .agent-flow-tool {
@@ -152,7 +216,7 @@
 }
 
 .tool-node {
-  width: 100px;
+  width: 90px;
   padding: 10px;
   text-align: center;
   border-radius: 6px;
@@ -160,6 +224,14 @@
   font-size: 14px;
   color: white;
   transition: transform 0.2s;
+}
+
+@media (max-width: 480px) {
+  .tool-node {
+    width: 70px;
+    padding: 8px;
+    font-size: 12px;
+  }
 }
 
 .tool-node:hover {
@@ -204,6 +276,23 @@
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   overflow: hidden;
+  min-height: 400px;
+  max-height: calc(100vh - 250px);
+}
+
+@media (max-width: 768px) {
+  .agent-flow-canvas {
+    margin: 0 10px 10px;
+    min-height: 300px;
+    max-height: calc(100vh - 200px);
+  }
+}
+
+@media (max-width: 480px) {
+  .agent-flow-canvas {
+    margin: 0 5px 5px;
+    min-height: 250px;
+  }
 }
 
 /* Node styling */
@@ -216,6 +305,21 @@
   position: relative;
   color: white;
   transition: transform 0.2s, box-shadow 0.2s;
+}
+
+@media (max-width: 768px) {
+  .agent-flow-node {
+    padding: 10px;
+    width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .agent-flow-node {
+    padding: 8px;
+    width: 150px;
+    font-size: 0.9em;
+  }
 }
 
 .agent-flow-node:hover {
@@ -394,12 +498,9 @@
   background-color: #5865f2;
 }
 
-.react-flow__minimap {
-  background-color: #2f3136;
-  border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-
-.react-flow__minimap-mask {
-  fill: rgba(88, 101, 242, 0.3);
+@media (max-width: 480px) {
+  .react-flow__controls {
+    transform: scale(0.85);
+    transform-origin: bottom right;
+  }
 }

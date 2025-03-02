@@ -56,6 +56,7 @@ Gaia is an innovative AI chat application that implements a unique RPG-style per
 ## Documentation
 
 - [API Documentation](src/docs/API.md): Comprehensive API and system documentation
+- [Design System](src/docs/DESIGN.md): UI design principles and guidelines
 - [Component Guide](src/docs/API.md#ui-components): UI component documentation
 - [Best Practices](src/docs/API.md#best-practices): Development guidelines
 - [Examples](src/docs/API.md#examples): Code examples and usage patterns

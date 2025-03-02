@@ -2,7 +2,6 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ReactFlow, {
   ReactFlowProvider,
   addEdge,
-  MiniMap,
   Controls,
   Background,
   useNodesState,
@@ -807,7 +806,6 @@ const AgentFlowContent = () => {
           attributionPosition="bottom-right"
         >
           <Controls />
-          <MiniMap />
           <Background variant="dots" gap={16} size={1} color="#2f3136" />
         </ReactFlow>
       </div>

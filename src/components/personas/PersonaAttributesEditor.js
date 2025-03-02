@@ -13,6 +13,15 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
   const [showToolsPopup, setShowToolsPopup] = useState(false);
   const [formattingExpanded, setFormattingExpanded] = useState(false);
   const [customFormattingExpanded, setCustomFormattingExpanded] = useState(false);
+  
+  // Debug helper to track modal clicks
+  useEffect(() => {
+    console.log('PersonaAttributesEditor mounted');
+    
+    return () => {
+      console.log('PersonaAttributesEditor unmounted');
+    };
+  }, []);
 
   // Default format rules templates to offer
   const formatRuleTemplates = [
