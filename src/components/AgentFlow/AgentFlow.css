@@ -1,3 +1,8 @@
+/* 
+ * AgentFlow.css - Gaia Design System
+ * Following specifications from DESIGN.md
+ */
+
 .agent-flow-container {
   display: flex;
   flex-direction: column;
@@ -5,8 +10,9 @@
   flex: 1;
   width: 100%;
   max-width: calc(100% - 250px); /* Sidebar width is 250px */
-  background-color: #36393f;
-  color: #dcddde;
+  background-color: var(--discord-primary);
+  color: var(--text-normal);
+  font-family: var(--font-primary);
 }
 
 @media (max-width: 768px) {
@@ -20,23 +26,25 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 15px 20px;
-  background-color: #2f3136;
-  border-bottom: 1px solid #202225;
-  color: white;
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--discord-secondary);
+  border-bottom: 1px solid var(--discord-tertiary);
+  color: var(--text-normal);
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--spacing-sm);
 }
 
 .agent-flow-header h2 {
   margin: 0;
-  font-size: 1.5rem;
-  color: white;
+  font-size: var(--font-size-xl);
+  color: var(--text-normal);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
 }
 
 @media (max-width: 768px) {
@@ -46,15 +54,15 @@
   }
   
   .agent-flow-header h2 {
-    margin-bottom: 10px;
-    font-size: 1.2rem;
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-lg);
   }
 }
 
 .agent-flow-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--spacing-sm);
   flex-wrap: wrap;
   justify-content: flex-start;
   width: 100%;
@@ -69,93 +77,111 @@
 .chat-integration {
   display: flex;
   align-items: center;
-  font-size: 14px;
-  padding: 0 10px;
-  color: #ccc;
+  font-size: var(--font-size-sm);
+  padding: 0 var(--spacing-sm);
+  color: var(--text-muted);
 }
 
 .chat-integration input {
-  margin-right: 5px;
+  margin-right: var(--spacing-xs);
+  min-width: var(--touch-target-size);
+  min-height: var(--touch-target-size);
+  transform: scale(0.8); /* Make checkboxes more touch-friendly */
 }
 
 .template-button {
-  background-color: #7289da;
+  background-color: var(--discord-accent);
   color: white;
   border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-md);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-short) ease;
+  min-height: var(--touch-target-size);
 }
 
 .template-button:hover {
-  background-color: #5a67a3;
+  background-color: var(--discord-accent-hover);
+}
+
+.template-button:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
 }
 
 .template-selector {
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid #444;
-  background-color: #2f3136;
-  color: #dcddde;
-  font-size: 14px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--interactive-muted);
+  background-color: var(--discord-secondary);
+  color: var(--text-normal);
+  font-size: var(--font-size-sm);
   min-width: 160px;
+  font-family: var(--font-primary);
 }
 
 .agent-flow-actions button,
 .agent-flow-actions select {
-  padding: 8px 12px;
-  margin-left: 5px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-left: var(--spacing-xs);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--border-radius-md);
   cursor: pointer;
-  font-weight: 600;
-  transition: background-color 0.2s;
-  font-size: 14px;
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-short) ease;
+  font-size: var(--font-size-sm);
+  min-height: var(--touch-target-size);
+}
+
+.agent-flow-actions button:focus-visible,
+.agent-flow-actions select:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
 }
 
 @media (max-width: 480px) {
   .agent-flow-actions button,
   .agent-flow-actions select {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
     margin-left: 2px;
     min-width: 0;
   }
 }
 
 .save-button {
-  background-color: #43b581;
+  background-color: var(--status-green);
   color: white;
 }
 
 .save-button:hover {
-  background-color: #3ca374;
+  background-color: #3ca374; /* Darker variant of status-green */
 }
 
 .load-button,
 .workflow-selector {
-  background-color: #5865f2;
+  background-color: var(--discord-accent);
   color: white;
 }
 
 .load-button:hover,
 .workflow-selector:hover {
-  background-color: #4752c4;
+  background-color: var(--discord-accent-hover);
 }
 
 .new-button {
-  background-color: #4f545c;
-  color: white;
+  background-color: var(--interactive-muted);
+  color: var(--text-normal);
 }
 
 .new-button:hover {
-  background-color: #5d6269;
+  background-color: #5d6269; /* Lighter variant of interactive muted */
 }
 
 .execute-button {
-  background-color: #f04747;
+  background-color: var(--status-red);
   color: white;
   display: flex;
   align-items: center;
@@ -163,11 +189,11 @@
 }
 
 .execute-button:hover {
-  background-color: #d84040;
+  background-color: #d84040; /* Darker variant of status-red */
 }
 
 .execute-button:disabled {
-  background-color: #72767d;
+  background-color: var(--interactive-muted);
   cursor: not-allowed;
   opacity: 0.7;
 }
@@ -201,36 +227,45 @@
 
 .agent-flow-tools {
   display: flex;
-  gap: 10px;
-  margin: 0 20px 20px;
-  padding: 15px;
-  background-color: #2f3136;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  gap: var(--spacing-sm);
+  margin: 0 var(--spacing-lg) var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--discord-secondary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--elevation-medium);
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .agent-flow-tool {
   cursor: grab;
+  user-select: none;
 }
 
 .tool-node {
   width: 90px;
-  padding: 10px;
+  padding: var(--spacing-sm);
   text-align: center;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 14px;
+  border-radius: var(--border-radius-md);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
   color: white;
-  transition: transform 0.2s;
+  transition: transform var(--transition-short) ease;
+  min-height: var(--touch-target-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reduced-motion .tool-node {
+  transition: none;
 }
 
 @media (max-width: 480px) {
   .tool-node {
     width: 70px;
-    padding: 8px;
-    font-size: 12px;
+    padding: var(--spacing-xs);
+    font-size: var(--font-size-xs);
   }
 }
 
@@ -238,16 +273,21 @@
   transform: scale(1.05);
 }
 
+.reduced-motion .tool-node:hover {
+  transform: none;
+  opacity: 0.9;
+}
+
 .tool-node.trigger {
   background-color: #00a3bf;
 }
 
 .tool-node.action {
-  background-color: #5865f2;
+  background-color: var(--discord-accent);
 }
 
 .tool-node.decision {
-  background-color: #43b581;
+  background-color: var(--status-green);
 }
 
 .tool-node.persona {
@@ -255,7 +295,7 @@
 }
 
 .tool-node.tool {
-  background-color: #ff9800;
+  background-color: var(--status-yellow);
 }
 
 .tool-node.file {
@@ -265,24 +305,25 @@
 .nodes-divider {
   width: 1px;
   height: 30px;
-  background-color: #4f545c;
-  margin: 0 10px;
+  background-color: var(--interactive-muted);
+  margin: 0 var(--spacing-sm);
 }
 
 .agent-flow-canvas {
   flex: 1;
-  margin: 0 20px 20px;
-  background-color: #40444b;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  margin: 0 var(--spacing-lg) var(--spacing-lg);
+  background-color: #40444b; /* Slightly lighter than discord-primary */
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--elevation-medium);
   overflow: hidden;
   min-height: 400px;
   max-height: calc(100vh - 250px);
+  position: relative;
 }
 
 @media (max-width: 768px) {
   .agent-flow-canvas {
-    margin: 0 10px 10px;
+    margin: 0 var(--spacing-sm) var(--spacing-sm);
     min-height: 300px;
     max-height: calc(100vh - 200px);
   }
@@ -290,33 +331,37 @@
 
 @media (max-width: 480px) {
   .agent-flow-canvas {
-    margin: 0 5px 5px;
+    margin: 0 var(--spacing-xs) var(--spacing-xs);
     min-height: 250px;
   }
 }
 
 /* Node styling */
 .agent-flow-node {
-  padding: 12px;
-  border-radius: 8px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--elevation-medium);
   width: 200px;
   user-select: none;
   position: relative;
   color: white;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform var(--transition-medium) ease, box-shadow var(--transition-medium) ease;
+}
+
+.reduced-motion .agent-flow-node {
+  transition: none;
 }
 
 @media (max-width: 768px) {
   .agent-flow-node {
-    padding: 10px;
+    padding: var(--spacing-sm);
     width: 180px;
   }
 }
 
 @media (max-width: 480px) {
   .agent-flow-node {
-    padding: 8px;
+    padding: var(--spacing-xs);
     width: 150px;
     font-size: 0.9em;
   }
@@ -324,7 +369,11 @@
 
 .agent-flow-node:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--elevation-high);
+}
+
+.reduced-motion .agent-flow-node:hover {
+  transform: none;
 }
 
 /* Original node types */
@@ -333,7 +382,7 @@
 }
 
 .agent-flow-node.action {
-  background-color: #5865f2;
+  background-color: var(--discord-accent);
 }
 
 .agent-flow-node.action.teal {
@@ -341,11 +390,11 @@
 }
 
 .agent-flow-node.action.blue {
-  background-color: #5865f2;
+  background-color: var(--discord-accent);
 }
 
 .agent-flow-node.decision {
-  background-color: #43b581;
+  background-color: var(--status-green);
   transform: rotate(45deg);
   width: 120px;
   height: 120px;
@@ -366,46 +415,48 @@
 }
 
 .agent-flow-node.tool {
+  background-color: var(--status-yellow);
   display: flex;
   flex-direction: column;
 }
 
 .agent-flow-node.file {
+  background-color: #607d8b;
   display: flex;
   flex-direction: column;
 }
 
 /* Common node elements */
 .node-label {
-  font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 8px;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-sm);
 }
 
 .node-description {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   opacity: 0.9;
-  margin-bottom: 10px;
-  line-height: 1.3;
+  margin-bottom: var(--spacing-sm);
+  line-height: var(--line-height-base);
 }
 
 .node-icons {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
   display: flex;
 }
 
 .node-icon {
   width: 20px;
   height: 20px;
-  margin-left: 5px;
+  margin-left: var(--spacing-xs);
 }
 
 .node-add-icon {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: var(--spacing-sm);
+  right: var(--spacing-sm);
   background-color: rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   width: 24px;
@@ -414,40 +465,47 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background-color var(--transition-short) ease;
 }
 
 .node-add-icon:hover {
   background-color: rgba(255, 255, 255, 0.5);
 }
 
+.node-add-icon:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
 /* Persona node specific */
 .node-attributes {
   display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 .attribute-chip {
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 500;
+  padding: 2px var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
 }
 
 /* Tool node specific */
 .node-file-info {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 10px;
+  font-size: var(--font-size-xs);
+  margin-bottom: var(--spacing-sm);
   opacity: 0.8;
 }
 
 /* Action buttons */
 .node-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--spacing-xs);
   margin-top: auto;
 }
 
@@ -455,15 +513,21 @@
   background-color: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
+  border-radius: var(--border-radius-sm);
+  padding: 4px var(--spacing-sm);
+  font-size: var(--font-size-xs);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-short) ease;
+  min-height: 24px; /* Smaller than standard touch target but still accessible */
 }
 
 .node-action-button:hover {
   background-color: rgba(0, 0, 0, 0.4);
+}
+
+.node-action-button:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
 }
 
 .node-action-button.settings {
@@ -483,24 +547,49 @@
 }
 
 .react-flow__controls {
-  background-color: #2f3136;
-  border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  background-color: var(--discord-secondary);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--elevation-low);
 }
 
 .react-flow__controls button {
   background-color: #40444b;
-  border-color: #202225;
-  color: #dcddde;
+  border-color: var(--discord-tertiary);
+  color: var(--text-normal);
+  min-width: var(--touch-target-size);
+  min-height: var(--touch-target-size);
 }
 
 .react-flow__controls button:hover {
-  background-color: #5865f2;
+  background-color: var(--discord-accent);
+}
+
+.react-flow__controls button:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+/* Apply iOS/Apple platform specific adjustments */
+.apple-platform .agent-flow-canvas,
+.apple-platform .agent-flow-tools {
+  -webkit-overflow-scrolling: touch;
+}
+
+.apple-platform .agent-flow-container {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
 }
 
 @media (max-width: 480px) {
   .react-flow__controls {
     transform: scale(0.85);
     transform-origin: bottom right;
+  }
+  
+  /* Bottom-aligned controls for thumb reachability on mobile */
+  .agent-flow-actions {
+    padding-bottom: calc(var(--spacing-sm) + var(--safe-area-inset-bottom));
   }
 }

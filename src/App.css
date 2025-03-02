@@ -1,4 +1,6 @@
-/* App.css - Discord Dark Theme */
+/* App.css - Gaia Design System 
+ * Following the specifications from DESIGN.md
+ */
 
 /* App Container */
 .app {
@@ -8,10 +10,13 @@
   overflow: hidden;
   background-color: var(--discord-primary);
   color: var(--text-normal);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
 }
 
-/* Main Chat Container */
-.chat-container {
+/* Main Content Container */
+.main-container {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -20,6 +25,20 @@
   transition: margin-left var(--transition-long) ease;
   width: 100%;
   max-width: calc(100vw - 250px);
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Tab Panels */
+.tab-panel {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tab-panel.active {
+  display: flex;
 }
 
 /* Sidebar */
@@ -31,13 +50,15 @@
   height: 100%;
   overflow-y: auto;
   flex-shrink: 0;
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
 }
 
 .sidebar h2 {
   margin-bottom: var(--spacing-md);
   color: var(--interactive-active);
   font-size: 1.2rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
 }
 
 .sidebar-container {
@@ -45,7 +66,7 @@
   top: 0;
   left: 0;
   height: 100vh;
-  z-index: 1100;
+  z-index: var(--z-index-fixed);
   transition: transform var(--transition-long) ease;
   width: 250px;
   background-color: var(--discord-secondary);
@@ -65,12 +86,12 @@
   position: fixed;
   top: var(--spacing-md);
   left: var(--spacing-md);
-  z-index: 1200;
-  width: 40px;
-  height: 40px;
+  z-index: var(--z-index-fixed);
+  width: var(--touch-target-size);
+  height: var(--touch-target-size);
   border-radius: 50%;
-  background-color: var(--discord-accent);
-  color: white;
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-color);
   border: none;
   display: flex;
   align-items: center;
@@ -81,12 +102,11 @@
 }
 
 .hamburger-menu:hover {
-  background-color: var(--discord-accent-hover);
+  background-color: var(--button-primary-hover-bg);
 }
 
-.hamburger-menu:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--discord-accent-hover), var(--elevation-medium);
+.hamburger-menu:focus-visible {
+  box-shadow: var(--focus-ring), var(--elevation-medium);
 }
 
 /* Sidebar Close Button */
@@ -99,10 +119,9 @@
   color: var(--interactive-normal);
   font-size: 18px;
   cursor: pointer;
-  z-index: 1101;
-  display: none;
-  width: 32px;
-  height: 32px;
+  z-index: var(--z-index-dropdown);
+  width: var(--touch-target-size);
+  height: var(--touch-target-size);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -115,6 +134,10 @@
   color: var(--interactive-hover);
 }
 
+.sidebar-close:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
 /* Overlay for clicking out on mobile */
 .sidebar-overlay {
   position: fixed;
@@ -122,9 +145,14 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  z-index: 1050;
+  background-color: var(--modal-overlay);
+  z-index: var(--z-index-modal);
   animation: fadeIn var(--transition-short) ease;
+}
+
+/* Reduced motion settings */
+.reduced-motion .sidebar-overlay {
+  animation: none;
 }
 
 @keyframes fadeIn {
@@ -138,7 +166,7 @@
   top: var(--spacing-md);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 100;
+  z-index: var(--z-index-dropdown);
   display: flex;
   gap: var(--spacing-sm);
   background-color: var(--discord-secondary);
@@ -152,29 +180,34 @@
 }
 
 .view-toggle button {
-  background-color: var(--discord-tertiary);
-  color: var(--interactive-normal);
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-color);
   border: 1px solid transparent;
   border-radius: var(--border-radius-md);
   padding: var(--spacing-sm) var(--spacing-md);
   cursor: pointer;
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   transition: all var(--transition-short) ease;
   display: flex;
   align-items: center;
   white-space: nowrap;
   min-height: 36px;
+  min-width: calc(var(--touch-target-size) * 2);
 }
 
 .view-toggle button:hover {
-  background-color: var(--interactive-muted);
+  background-color: var(--button-secondary-hover-bg);
   color: var(--interactive-hover);
 }
 
+.view-toggle button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
 .view-toggle button.active {
-  background-color: var(--discord-accent);
-  color: white;
-  border-color: var(--discord-accent-hover);
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-color);
+  border-color: var(--button-primary-hover-bg);
 }
 
 .view-toggle button svg {
@@ -199,6 +232,7 @@
   overflow-y: auto;
   background-color: var(--discord-primary);
   position: relative;
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
 }
 
 .message {
@@ -207,6 +241,7 @@
   border-radius: var(--border-radius-md);
   max-width: 85%;
   position: relative;
+  box-shadow: var(--elevation-low);
 }
 
 .message.user {
@@ -230,46 +265,82 @@
   border-top: 1px solid var(--discord-tertiary);
   background-color: var(--discord-secondary);
   position: relative;
-  z-index: 10;
+  z-index: var(--z-index-dropdown);
   flex-shrink: 0;
 }
 
 .chat-input input {
   flex: 1;
   padding: var(--spacing-md);
-  border: 1px solid var(--interactive-muted);
+  border: 1px solid var(--input-border);
   border-radius: var(--border-radius-md);
-  background-color: var(--discord-tertiary);
-  color: var(--text-normal);
+  background-color: var(--input-bg);
+  color: var(--input-text);
   transition: border-color var(--transition-short) ease;
+  min-height: var(--touch-target-size);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-base);
 }
 
-.chat-input input:focus {
-  border-color: var(--discord-accent);
-  outline: none;
+.chat-input input:focus-visible {
+  border-color: var(--input-focus-border);
+  box-shadow: var(--focus-ring);
 }
 
 .chat-input button {
   margin-left: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  background-color: var(--discord-accent);
+  background-color: var(--button-primary-bg);
   border: none;
-  color: white;
+  color: var(--button-primary-color);
   border-radius: var(--border-radius-md);
   cursor: pointer;
   transition: background-color var(--transition-short) ease;
+  min-height: var(--touch-target-size);
+  min-width: var(--touch-target-size);
+  font-weight: var(--font-weight-medium);
 }
 
 .chat-input button:hover {
-  background-color: var(--discord-accent-hover);
+  background-color: var(--button-primary-hover-bg);
 }
 
-/* Media Queries for Mobile Responsiveness */
-@media (max-width: 992px) {
+.chat-input button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+/* Apply iOS/Apple platform specific adjustments */
+.apple-platform .main-container {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+.apple-platform .scrollable {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Apply smooth animations unless user prefers reduced motion */
+.reduced-motion * {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Media Queries for Mobile Responsiveness - Using variables from theme.css */
+@media (max-width: 1024px) {
   .chat-container {
     margin-left: 0;
     max-width: 100%;
     padding-top: 60px; /* Make space for the view toggle */
+  }
+  
+  .main-container {
+    margin-left: 0;
+    max-width: 100%;
+    padding-top: 60px;
   }
   
   .sidebar-container {
@@ -291,7 +362,7 @@
     top: auto;
     bottom: var(--spacing-md);
     padding: var(--spacing-xs) var(--spacing-sm);
-    z-index: 1001;
+    z-index: var(--z-index-sticky);
   }
   
   .view-toggle button {
@@ -365,6 +436,11 @@
   
   .chat-input {
     padding: var(--spacing-xs);
+  }
+  
+  /* Bottom-aligned key actions for thumb reachability */
+  .chat-input, .action-buttons, .mobile-controls {
+    padding-bottom: calc(var(--spacing-sm) + var(--safe-area-inset-bottom));
   }
 }
 

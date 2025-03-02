@@ -669,13 +669,31 @@ const AgentFlowContent = () => {
   };
   
   return (
-    <div className="agent-flow-container">
+    <div className="agent-flow-container" role="application" aria-label="Agent Workflow Editor">
       <div className="agent-flow-header">
-        <h2>Agent Workflow: {currentWorkflow.name}</h2>
-        <div className="agent-flow-actions">
-          <button onClick={createNewWorkflow} className="new-button">New Workflow</button>
-          <button onClick={saveCurrentWorkflow} className="save-button">Save Workflow</button>
-          <button onClick={saveCurrentWorkflowAsTemplate} className="template-button">Save as Template</button>
+        <h2 id="workflow-title">Agent Workflow: {currentWorkflow.name}</h2>
+        <div className="agent-flow-actions" role="toolbar" aria-label="Workflow actions">
+          <button 
+            onClick={createNewWorkflow} 
+            className="new-button"
+            aria-label="Create new workflow"
+          >
+            New Workflow
+          </button>
+          <button 
+            onClick={saveCurrentWorkflow} 
+            className="save-button"
+            aria-label="Save current workflow"
+          >
+            Save Workflow
+          </button>
+          <button 
+            onClick={saveCurrentWorkflowAsTemplate} 
+            className="template-button"
+            aria-label="Save as workflow template"
+          >
+            Save as Template
+          </button>
           
           <select 
             className="workflow-selector"
@@ -685,6 +703,7 @@ const AgentFlowContent = () => {
               }
             }}
             value={currentWorkflow.id || ''}
+            aria-label="Select saved workflow to load"
           >
             <option value="">-- Load Workflow --</option>
             {savedWorkflows.map(workflow => (
@@ -702,6 +721,7 @@ const AgentFlowContent = () => {
               }
             }}
             value=""
+            aria-label="Select workflow template to use"
           >
             <option value="">-- Use Template --</option>
             {workflowTemplates.map(template => (
@@ -712,11 +732,13 @@ const AgentFlowContent = () => {
           </select>
           
           <div className="chat-integration">
-            <label>
+            <label htmlFor="chat-integration-checkbox">
               <input 
+                id="chat-integration-checkbox"
                 type="checkbox" 
                 checked={chatIntegration} 
-                onChange={(e) => setChatIntegration(e.target.checked)} 
+                onChange={(e) => setChatIntegration(e.target.checked)}
+                aria-label="Enable chat integration" 
               />
               Chat Integration
             </label>
@@ -726,18 +748,42 @@ const AgentFlowContent = () => {
             onClick={executeCurrentWorkflow}
             className="execute-button"
             disabled={nodes.length === 0}
+            aria-label="Execute current workflow"
           >
-            ▶ Execute
+            <span aria-hidden="true">▶</span> Execute
           </button>
         </div>
       </div>
       
-      <div className="agent-flow-tools">
+      <div 
+        className="agent-flow-tools" 
+        role="toolbar" 
+        aria-label="Available node types"
+      >
         <div 
           className="agent-flow-tool"
           draggable
           onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'personaNode');
+          }}
+          role="button"
+          aria-label="Drag to add Persona node"
+          tabIndex="0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              // Create a persona node at a default position
+              const newNode = {
+                id: `${Date.now()}`,
+                type: 'personaNode',
+                position: { x: 250, y: 150 },
+                data: {
+                  personaData: {},
+                  onEdit: () => setShowPersonaSelector(true),
+                  onSettings: () => {}
+                }
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
           }}
         >
           <div className="tool-node persona">Persona</div>
@@ -748,6 +794,27 @@ const AgentFlowContent = () => {
           onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'toolNode');
           }}
+          role="button"
+          aria-label="Drag to add Tool node"
+          tabIndex="0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              // Create a tool node at a default position
+              const newNode = {
+                id: `${Date.now()}`,
+                type: 'toolNode',
+                position: { x: 250, y: 200 },
+                data: {
+                  toolType: 'generic',
+                  toolName: 'New Tool',
+                  toolDescription: 'Configure this tool',
+                  toolConfig: {},
+                  onConfigure: () => setShowToolConfig(true)
+                }
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
+          }}
         >
           <div className="tool-node tool">Tool</div>
         </div>
@@ -757,15 +824,54 @@ const AgentFlowContent = () => {
           onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'fileNode');
           }}
+          role="button"
+          aria-label="Drag to add File node"
+          tabIndex="0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              // Create a file node at a default position
+              const newNode = {
+                id: `${Date.now()}`,
+                type: 'fileNode',
+                position: { x: 250, y: 250 },
+                data: {
+                  fileName: 'Select File',
+                  fileType: 'unknown',
+                  fileSize: '0 KB',
+                  onSelect: () => setShowFileSelector(true),
+                  onPreview: () => {}
+                }
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
+          }}
         >
           <div className="tool-node file">File</div>
         </div>
-        <div className="nodes-divider"></div>
+        <div className="nodes-divider" aria-hidden="true"></div>
         <div 
           className="agent-flow-tool"
           draggable
           onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'triggerNode');
+          }}
+          role="button"
+          aria-label="Drag to add Trigger node"
+          tabIndex="0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              // Create a trigger node at a default position
+              const newNode = {
+                id: `${Date.now()}`,
+                type: 'triggerNode',
+                position: { x: 250, y: 300 },
+                data: {
+                  label: 'New Trigger',
+                  icon: 'lightning-bolt'
+                }
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
           }}
         >
           <div className="tool-node trigger">Trigger</div>
@@ -776,6 +882,24 @@ const AgentFlowContent = () => {
           onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'actionNode');
           }}
+          role="button"
+          aria-label="Drag to add Action node"
+          tabIndex="0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              // Create an action node at a default position
+              const newNode = {
+                id: `${Date.now()}`,
+                type: 'actionNode',
+                position: { x: 250, y: 350 },
+                data: {
+                  label: 'New Action',
+                  color: 'blue'
+                }
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
+          }}
         >
           <div className="tool-node action">Action</div>
         </div>
@@ -785,12 +909,35 @@ const AgentFlowContent = () => {
           onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'decisionNode');
           }}
+          role="button"
+          aria-label="Drag to add Decision node"
+          tabIndex="0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              // Create a decision node at a default position
+              const newNode = {
+                id: `${Date.now()}`,
+                type: 'decisionNode',
+                position: { x: 250, y: 400 },
+                data: {
+                  label: 'New Decision',
+                  color: 'green'
+                }
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
+          }}
         >
           <div className="tool-node decision">Decision</div>
         </div>
       </div>
       
-      <div className="agent-flow-canvas" ref={reactFlowWrapper}>
+      <div 
+        className="agent-flow-canvas" 
+        ref={reactFlowWrapper}
+        role="region"
+        aria-label="Workflow canvas"
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -804,8 +951,15 @@ const AgentFlowContent = () => {
           nodeTypes={nodeTypes}
           fitView
           attributionPosition="bottom-right"
+          aria-label="Interactive workflow diagram"
+          ariaLiveMessage={`Workflow contains ${nodes.length} nodes and ${edges.length} connections`}
         >
-          <Controls />
+          <Controls 
+            showZoom={true}
+            showFitView={true}
+            showInteractive={false}
+            position="bottom-right"
+          />
           <Background variant="dots" gap={16} size={1} color="#2f3136" />
         </ReactFlow>
       </div>
@@ -816,6 +970,9 @@ const AgentFlowContent = () => {
           personas={personas} 
           onSelect={handlePersonaSelect}
           onCancel={() => setShowPersonaSelector(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="persona-selector-title"
         />
       )}
       
@@ -824,6 +981,9 @@ const AgentFlowContent = () => {
           toolData={getSelectedNodeData()}
           onSave={handleToolSave}
           onCancel={() => setShowToolConfig(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tool-config-title"
         />
       )}
       
@@ -833,6 +993,9 @@ const AgentFlowContent = () => {
           onSelect={handleFileSelect}
           onCancel={() => setShowFileSelector(false)}
           onUpload={handleFileUpload}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="file-selector-title"
         />
       )}
       
@@ -848,16 +1011,22 @@ const AgentFlowContent = () => {
             // Handle completion, e.g. save result
             console.log('Workflow execution completed:', result);
           }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="execution-title"
+          aria-live="polite"
         />
       )}
     </div>
   );
 };
 
-const AgentFlow = () => {
+const AgentFlow = ({ reducedMotion = false, isApplePlatform = false }) => {
   return (
     <ReactFlowProvider>
-      <AgentFlowContent />
+      <div className={`${reducedMotion ? 'reduced-motion' : ''} ${isApplePlatform ? 'apple-platform' : ''}`}>
+        <AgentFlowContent />
+      </div>
     </ReactFlowProvider>
   );
 };
