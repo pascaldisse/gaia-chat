@@ -5,7 +5,7 @@
   height: 100%;
   overflow-y: auto;
   padding: 20px;
-  background-color: #f5f7fa;
+  background-color: var(--discord-primary);
 }
 
 .store-header {
@@ -14,13 +14,13 @@
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--discord-tertiary);
 }
 
 .store-title {
   font-size: 28px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-normal);
 }
 
 .store-controls {
@@ -39,9 +39,10 @@
   padding: 10px 15px;
   padding-left: 40px;
   border-radius: 20px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--discord-tertiary);
   font-size: 14px;
-  background-color: white;
+  background-color: var(--discord-secondary);
+  color: var(--text-normal);
 }
 
 .store-search svg {
@@ -49,7 +50,7 @@
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
-  color: #888;
+  color: var(--text-muted);
 }
 
 .nsfw-toggle {
@@ -62,7 +63,7 @@
 
 .nsfw-toggle label {
   font-size: 14px;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .toggle-switch {
@@ -85,7 +86,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: var(--interactive-muted);
   transition: .4s;
   border-radius: 24px;
 }
@@ -97,13 +98,13 @@
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
+  background-color: var(--interactive-normal);
   transition: .4s;
   border-radius: 50%;
 }
 
 input:checked + .toggle-slider {
-  background-color: #2196F3;
+  background-color: var(--discord-accent);
 }
 
 input:checked + .toggle-slider:before {
@@ -113,7 +114,7 @@ input:checked + .toggle-slider:before {
 .store-nav {
   display: flex;
   margin-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--discord-tertiary);
 }
 
 .store-nav-item {
@@ -123,16 +124,16 @@ input:checked + .toggle-slider:before {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .store-nav-item:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .store-nav-item.active {
-  border-bottom: 3px solid #2196F3;
-  color: #2196F3;
+  border-bottom: 3px solid var(--discord-accent);
+  color: var(--discord-accent);
   font-weight: 600;
 }
 
@@ -146,22 +147,22 @@ input:checked + .toggle-slider:before {
 
 .category-tab {
   padding: 8px 15px;
-  background-color: #f0f0f0;
+  background-color: var(--discord-secondary);
   border-radius: 15px;
   font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .category-tab:hover {
-  background-color: #e0e0e0;
+  background-color: var(--discord-tertiary);
 }
 
 .category-tab.active {
-  background-color: #2196F3;
-  color: white;
+  background-color: var(--discord-accent);
+  color: var(--interactive-active);
 }
 
 .persona-card-grid {
@@ -174,9 +175,9 @@ input:checked + .toggle-slider:before {
 .persona-card {
   display: flex;
   flex-direction: column;
-  background-color: white;
+  background-color: var(--discord-secondary);
   border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--elevation-medium);
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
@@ -184,15 +185,15 @@ input:checked + .toggle-slider:before {
 
 .persona-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--elevation-high);
 }
 
 .card-nsfw-badge {
   position: absolute;
   top: 10px;
   right: 10px;
-  background-color: #ff3860;
-  color: white;
+  background-color: var(--status-red);
+  color: var(--interactive-active);
   padding: 3px 8px;
   border-radius: 10px;
   font-size: 12px;
@@ -224,18 +225,18 @@ input:checked + .toggle-slider:before {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #333;
+  color: var(--text-normal);
 }
 
 .card-creator {
   font-size: 14px;
-  color: #888;
+  color: var(--text-muted);
   margin-top: 3px;
 }
 
 .card-partner-badge {
-  background-color: #7e57c2;
-  color: white;
+  background-color: var(--status-purple);
+  color: var(--interactive-active);
   padding: 3px 8px;
   border-radius: 10px;
   font-size: 12px;
@@ -244,7 +245,7 @@ input:checked + .toggle-slider:before {
 
 .card-description {
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
   margin-bottom: 15px;
   flex-grow: 1;
   overflow: hidden;
@@ -261,11 +262,11 @@ input:checked + .toggle-slider:before {
 }
 
 .card-tag {
-  background-color: #f0f0f0;
+  background-color: var(--discord-tertiary);
   padding: 3px 8px;
   border-radius: 10px;
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .card-stats {
@@ -273,7 +274,7 @@ input:checked + .toggle-slider:before {
   justify-content: space-between;
   align-items: center;
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .downloads {
@@ -295,8 +296,8 @@ input:checked + .toggle-slider:before {
 }
 
 .add-button {
-  background-color: #2196F3;
-  color: white;
+  background-color: var(--discord-accent);
+  color: var(--interactive-active);
   border: none;
   border-radius: 5px;
   padding: 8px 15px;
@@ -311,13 +312,13 @@ input:checked + .toggle-slider:before {
 }
 
 .add-button:hover {
-  background-color: #1976D2;
+  background-color: var(--discord-accent-hover);
 }
 
 .view-details-button {
   background-color: transparent;
-  border: 1px solid #2196F3;
-  color: #2196F3;
+  border: 1px solid var(--discord-accent);
+  color: var(--discord-accent);
   border-radius: 5px;
   padding: 8px 15px;
   font-weight: 500;
@@ -330,7 +331,7 @@ input:checked + .toggle-slider:before {
 }
 
 .view-details-button:hover {
-  background-color: rgba(33, 150, 243, 0.1);
+  background-color: rgba(88, 101, 242, 0.1);
 }
 
 .persona-details-modal {
@@ -347,7 +348,7 @@ input:checked + .toggle-slider:before {
 }
 
 .details-content {
-  background-color: white;
+  background-color: var(--discord-secondary);
   border-radius: 10px;
   overflow: hidden;
   width: 90%;
@@ -360,7 +361,7 @@ input:checked + .toggle-slider:before {
 .details-header {
   display: flex;
   padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--discord-tertiary);
 }
 
 .details-image {
@@ -379,11 +380,12 @@ input:checked + .toggle-slider:before {
   font-size: 24px;
   font-weight: 600;
   margin: 0 0 5px;
+  color: var(--text-normal);
 }
 
 .details-creator {
   font-size: 16px;
-  color: #666;
+  color: var(--text-muted);
   margin-bottom: 10px;
 }
 
@@ -395,17 +397,17 @@ input:checked + .toggle-slider:before {
 }
 
 .details-tag {
-  background-color: #f0f0f0;
+  background-color: var(--discord-tertiary);
   padding: 5px 10px;
   border-radius: 15px;
   font-size: 14px;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .details-stats {
   display: flex;
   gap: 20px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .details-body {
@@ -427,7 +429,7 @@ input:checked + .toggle-slider:before {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 10px;
-  color: #333;
+  color: var(--text-normal);
 }
 
 .attribute-grid {
@@ -437,27 +439,27 @@ input:checked + .toggle-slider:before {
 }
 
 .attribute-item {
-  background-color: #f5f7fa;
+  background-color: var(--discord-primary);
   padding: 10px;
   border-radius: 8px;
 }
 
 .attribute-name {
   font-weight: 500;
-  color: #555;
+  color: var(--text-normal);
   margin-bottom: 5px;
 }
 
 .attribute-value {
   display: flex;
   height: 8px;
-  background-color: #e0e0e0;
+  background-color: var(--interactive-muted);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .attribute-fill {
-  background-color: #2196F3;
+  background-color: var(--discord-accent);
   height: 100%;
 }
 
@@ -468,11 +470,11 @@ input:checked + .toggle-slider:before {
 }
 
 .tool-item {
-  background-color: #f0f0f0;
+  background-color: var(--discord-tertiary);
   padding: 5px 10px;
   border-radius: 5px;
   font-size: 14px;
-  color: #555;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -482,14 +484,14 @@ input:checked + .toggle-slider:before {
   display: flex;
   justify-content: flex-end;
   padding: 15px 20px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--discord-tertiary);
   gap: 10px;
 }
 
 .close-button {
   background-color: transparent;
-  border: 1px solid #e0e0e0;
-  color: #666;
+  border: 1px solid var(--discord-tertiary);
+  color: var(--text-muted);
   border-radius: 5px;
   padding: 8px 15px;
   cursor: pointer;
@@ -497,12 +499,12 @@ input:checked + .toggle-slider:before {
 }
 
 .close-button:hover {
-  background-color: #f0f0f0;
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .add-from-details-button {
-  background-color: #2196F3;
-  color: white;
+  background-color: var(--discord-accent);
+  color: var(--interactive-active);
   border: none;
   border-radius: 5px;
   padding: 8px 15px;
@@ -512,7 +514,7 @@ input:checked + .toggle-slider:before {
 }
 
 .add-from-details-button:hover {
-  background-color: #1976D2;
+  background-color: var(--discord-accent-hover);
 }
 
 .empty-state {
@@ -522,19 +524,20 @@ input:checked + .toggle-slider:before {
   justify-content: center;
   padding: 50px 20px;
   text-align: center;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .empty-icon {
   font-size: 48px;
   margin-bottom: 20px;
-  color: #ddd;
+  color: var(--interactive-muted);
 }
 
 .empty-title {
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 10px;
+  color: var(--text-normal);
 }
 
 .empty-description {
@@ -552,7 +555,7 @@ input:checked + .toggle-slider:before {
 .loading-spinner {
   border: 4px solid rgba(0, 0, 0, 0.1);
   border-radius: 50%;
-  border-top: 4px solid #2196F3;
+  border-top: 4px solid var(--discord-accent);
   width: 40px;
   height: 40px;
   animation: spin 1s linear infinite;
