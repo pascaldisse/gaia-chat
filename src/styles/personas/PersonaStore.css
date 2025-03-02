@@ -180,10 +180,15 @@ input:checked + .toggle-slider:before {
 .category-tabs {
   display: flex;
   overflow-x: auto;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
   gap: var(--spacing-sm);
-  padding-bottom: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  padding-bottom: var(--spacing-md);
   -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  position: relative;
+  background-color: var(--discord-primary);
+  border-bottom: 1px solid var(--discord-tertiary);
+  z-index: 5;
 }
 
 .category-tab {
@@ -199,6 +204,8 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   border: 1px solid transparent;
+  box-shadow: var(--elevation-low);
+  margin: var(--spacing-xs) 0;
 }
 
 .reduced-motion .category-tab {
@@ -225,6 +232,9 @@ input:checked + .toggle-slider:before {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
+  margin-top: var(--spacing-lg);
+  position: relative;
+  z-index: 1;
 }
 
 .persona-card {
