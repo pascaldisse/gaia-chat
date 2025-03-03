@@ -48,7 +48,8 @@ const ToolConfiguration = ({ toolData, onSave, onCancel }) => {
               >
                 <option value="knowledge">Knowledge Base</option>
                 <option value="vector">Vector Database</option>
-                <option value="web">Web Search</option>
+                <option value="tavily">Tavily Search (AI-Optimized)</option>
+                <option value="duckduckgo">DuckDuckGo Search (Privacy-Focused)</option>
               </select>
             </div>
             <div className="form-group">
