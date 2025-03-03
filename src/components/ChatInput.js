@@ -8,14 +8,15 @@ const COMMANDS = [
   { name: 'search', description: 'Search the web using DuckDuckGo' }
 ];
 
-const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
+const ChatInput = ({ personas, onSendMessage, isLoading, onCancel, onToggleSearch }) => {
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState([]);
   const [mentionStartIndex, setMentionStartIndex] = useState(null);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [users, setUsers] = useState([]);
-  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  // Initialize webSearchEnabled from window if it exists
+  const [webSearchEnabled, setWebSearchEnabled] = useState(window.webSearchEnabled || false);
   const { user: currentUser } = useUser();
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -195,6 +196,7 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
     if (inputValue.trim()) {
       // Save the webSearchEnabled state to window so it can be accessed by the Chat component
       window.webSearchEnabled = webSearchEnabled;
+      console.log('Web search enabled:', webSearchEnabled);
       
       onSendMessage(inputValue);
       setInputValue('');
@@ -262,7 +264,17 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
         <button 
           type="button" 
           className={`web-search-toggle ${webSearchEnabled ? 'enabled' : ''}`}
-          onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+          onClick={() => {
+            const newValue = !webSearchEnabled;
+            setWebSearchEnabled(newValue);
+            window.webSearchEnabled = newValue;
+            console.log('Web search toggled to:', newValue);
+            
+            // Call the callback to notify the parent component
+            if (onToggleSearch) {
+              onToggleSearch(newValue);
+            }
+          }}
           title={webSearchEnabled ? "Web search enabled (DuckDuckGo)" : "Enable web search"}
         >
           <span role="img" aria-label="Web Search">🔍</span>
