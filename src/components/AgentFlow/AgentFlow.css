@@ -262,6 +262,18 @@
   background-color: #607d8b;
 }
 
+.tool-node.team {
+  background-color: #9c27b0;
+}
+
+.tool-node.memory {
+  background-color: #546e7a;
+}
+
+.tool-node.communication {
+  background-color: #ff5722;
+}
+
 .nodes-divider {
   width: 1px;
   height: 30px;
@@ -371,6 +383,24 @@
 }
 
 .agent-flow-node.file {
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-flow-node.team {
+  background-color: #9c27b0;
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-flow-node.memory {
+  background-color: #546e7a;
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-flow-node.communication {
+  background-color: #ff5722;
   display: flex;
   flex-direction: column;
 }

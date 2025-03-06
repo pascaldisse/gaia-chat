@@ -18,11 +18,15 @@ import DecisionNode from './nodes/DecisionNode';
 import PersonaNode from './nodes/PersonaNode';
 import ToolNode from './nodes/ToolNode';
 import FileNode from './nodes/FileNode';
+import TeamNode from './nodes/TeamNode';
+import MemoryNode from './nodes/MemoryNode';
+import CommunicationNode from './nodes/CommunicationNode';
 
 // Modal components
 import PersonaSelector from './modals/PersonaSelector';
 import ToolConfiguration from './modals/ToolConfiguration';
 import FileSelector from './modals/FileSelector';
+import TeamSelector from './modals/TeamSelector';
 import WorkflowExecution from './modals/WorkflowExecution';
 
 // Services
@@ -48,6 +52,9 @@ const nodeTypes = {
   personaNode: PersonaNode,
   toolNode: ToolNode,
   fileNode: FileNode,
+  teamNode: TeamNode,
+  memoryNode: MemoryNode,
+  communicationNode: CommunicationNode,
 };
 
 // Initial nodes for a new workflow with personalized agents
@@ -96,6 +103,7 @@ const AgentFlowContent = () => {
   const [showPersonaSelector, setShowPersonaSelector] = useState(false);
   const [showToolConfig, setShowToolConfig] = useState(false);
   const [showFileSelector, setShowFileSelector] = useState(false);
+  const [showTeamSelector, setShowTeamSelector] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
   
   // State for data handling
@@ -468,6 +476,17 @@ const AgentFlowContent = () => {
       case 'personaNode':
         setShowPersonaSelector(true);
         break;
+      case 'teamNode':
+        setShowTeamSelector(true);
+        break;
+      case 'memoryNode':
+        // Will need to implement MemoryConfiguration modal
+        alert('Memory configuration dialog will be implemented here');
+        break;
+      case 'communicationNode':
+        // Will need to implement CommunicationConfiguration modal
+        alert('Communication configuration dialog will be implemented here');
+        break;
       case 'toolNode':
         setShowToolConfig(true);
         break;
@@ -509,6 +528,47 @@ const AgentFlowContent = () => {
             onSettings: (personaData) => {
               console.log('Configure persona:', personaData);
               alert(`Configure ${personaData?.name || 'persona'} settings`);
+            }
+          };
+          break;
+        case 'teamNode':
+          nodeData = {
+            teamName: 'Agent Team',
+            teamDescription: 'A team of collaborative agents',
+            agents: [],
+            teamRole: 'coordinator',
+            onEdit: () => setShowTeamSelector(true),
+            onSettings: () => {
+              // Additional team settings if needed
+              console.log('Team settings button clicked');
+            }
+          };
+          break;
+        case 'communicationNode':
+          nodeData = {
+            name: 'Communication Channel',
+            mode: 'broadcast',
+            description: 'Communication channel for agents',
+            format: 'text',
+            onEdit: () => {
+              alert('Communication channel configuration dialog will appear here');
+            },
+            onView: () => {
+              alert('Message history will appear here');
+            }
+          };
+          break;
+        case 'memoryNode':
+          nodeData = {
+            memoryName: 'Shared Memory',
+            memoryType: 'simple',
+            memoryDescription: 'Shared memory for agent collaboration',
+            memorySize: 0,
+            onEdit: () => {
+              alert('Memory configuration dialog will appear here');
+            },
+            onView: () => {
+              alert('Memory contents will appear here');
             }
           };
           break;
@@ -608,6 +668,20 @@ const AgentFlowContent = () => {
       });
     }
     setShowFileSelector(false);
+  };
+  
+  // Handle team configuration
+  const handleTeamSave = (teamData) => {
+    if (selectedNodeId) {
+      updateNodeData(selectedNodeId, {
+        ...teamData,
+        onEdit: () => setShowTeamSelector(true),
+        onSettings: () => {
+          console.log('Team settings:', teamData);
+        }
+      });
+    }
+    setShowTeamSelector(false);
   };
   
   // Handle file upload
@@ -746,6 +820,15 @@ const AgentFlowContent = () => {
           className="agent-flow-tool"
           draggable
           onDragStart={(event) => {
+            event.dataTransfer.setData('application/reactflow', 'teamNode');
+          }}
+        >
+          <div className="tool-node team">Team</div>
+        </div>
+        <div 
+          className="agent-flow-tool"
+          draggable
+          onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'toolNode');
           }}
         >
@@ -759,6 +842,25 @@ const AgentFlowContent = () => {
           }}
         >
           <div className="tool-node file">File</div>
+        </div>
+        <div className="nodes-divider"></div>
+        <div 
+          className="agent-flow-tool"
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.setData('application/reactflow', 'communicationNode');
+          }}
+        >
+          <div className="tool-node communication">Communication</div>
+        </div>
+        <div 
+          className="agent-flow-tool"
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.setData('application/reactflow', 'memoryNode');
+          }}
+        >
+          <div className="tool-node memory">Memory</div>
         </div>
         <div className="nodes-divider"></div>
         <div 
@@ -833,6 +935,22 @@ const AgentFlowContent = () => {
           onSelect={handleFileSelect}
           onCancel={() => setShowFileSelector(false)}
           onUpload={handleFileUpload}
+        />
+      )}
+      
+      {showTeamSelector && (
+        <TeamSelector
+          teamData={getSelectedNodeData()}
+          agents={nodes
+            .filter(node => node.type === 'personaNode' && node.data.personaData?.id)
+            .map(node => ({
+              id: node.id,
+              name: node.data.personaData?.name || 'Unnamed Agent',
+              persona: node.data.personaData
+            }))
+          }
+          onSave={handleTeamSave}
+          onCancel={() => setShowTeamSelector(false)}
         />
       )}
       
