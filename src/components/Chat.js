@@ -673,7 +673,19 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         ? [...new Set([...updatedPersonas, ...mentionedPersonas])]
         : activePersonas;
 
-      const context = analyzeMessageContext(message);
+      // Analyze message context for response determination
+      const context = {
+        length: message.length,
+        hasQuestion: message.includes('?'),
+        containsGreeting: /\b(hi|hello|hey|greetings|howdy)\b/i.test(message),
+        containsFarewell: /\b(bye|goodbye|farewell|see you|later)\b/i.test(message),
+        isQuestion: message.trim().endsWith('?'),
+        containsCommand: message.startsWith('/'),
+        mentionsPersona: /@\w+/.test(message),
+        allCaps: message === message.toUpperCase() && message.length > 5,
+        containsSearchQuery: /\b(search|find|look up|research|info on|information about)\b/i.test(message),
+        webSearchRequested: window.webSearchEnabled && message.length > 10 && !/\b(no search|don't search)\b/i.test(message),
+      };
 
       // Calculate responses for all candidates
       const responseQueue = await Promise.all(
@@ -878,12 +890,14 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         setImagePrompt(args);
         setShowImageModal(true);
         break;
+      case 'tavily':
+      case 'ddg':
       case 'search':
         if (!args || args.trim() === '') {
           console.warn('Search command requires a query');
           setCurrentChat(prev => [...prev, {
             id: Date.now(),
-            content: `⚠️ Please provide a search query. Usage: /search your search query`,
+            content: `⚠️ Please provide a search query. Usage: /${command} your search query`,
             isUser: false,
             isCommand: true,
             personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
@@ -891,9 +905,22 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           return;
         }
         
-        // Find a persona with DuckDuckGo search tool enabled
+        // Find a persona with appropriate search tool enabled
+        let preferredToolType;
+        if (command === 'tavily') {
+          preferredToolType = 'tavilySearch';
+        } else if (command === 'ddg') {
+          preferredToolType = 'duckDuckGoSearch';
+        } else {
+          // For generic 'search' command, prefer Tavily but accept DuckDuckGo
+          preferredToolType = 'tavilySearch';
+        }
+        
+        // Find a persona with the preferred search tool, or fallback to any search tool
         const searchEnabledPersona = activePersonas.find(p => 
-          personaHasTool(p, 'duckDuckGoSearch')
+          personaHasTool(p, preferredToolType)
+        ) || activePersonas.find(p => 
+          personaHasTool(p, 'duckDuckGoSearch') || personaHasTool(p, 'tavilySearch')
         );
         
         if (!searchEnabledPersona) {
@@ -901,11 +928,20 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           const defaultPersona = activePersonas.find(p => p.isDefault) || activePersonas[0];
           
           if (defaultPersona && defaultPersona.agentSettings) {
-            // Enable the search tool for this persona temporarily
+            // Enable the search tools for this persona temporarily
             if (!defaultPersona.agentSettings.toolConfig) {
               defaultPersona.agentSettings.toolConfig = {};
             }
-            defaultPersona.agentSettings.toolConfig.duckDuckGoSearch = true;
+            // Enable search tools based on command
+            if (command === 'tavily') {
+              defaultPersona.agentSettings.toolConfig.tavilySearch = true;
+            } else if (command === 'ddg') {
+              defaultPersona.agentSettings.toolConfig.duckDuckGoSearch = true;
+            } else {
+              // For generic search, enable both with preference for Tavily
+              defaultPersona.agentSettings.toolConfig.tavilySearch = true;
+              defaultPersona.agentSettings.toolConfig.duckDuckGoSearch = true;
+            }
             
             // Create component reference for tool creation
             const componentRef = {
@@ -919,14 +955,23 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
             // Create tools including the search tool
             const searchTools = createPersonaTools(componentRef, defaultPersona);
             
-            // Find the search tool
-            const searchTool = searchTools.find(tool => tool.name === "duckduckgo_search");
+            // Find the appropriate search tool based on command
+            let searchTool;
+            if (command === 'tavily') {
+              searchTool = searchTools.find(tool => tool.name === "tavily_search");
+            } else if (command === 'ddg') {
+              searchTool = searchTools.find(tool => tool.name === "duckduckgo_search");
+            } else {
+              // For generic search, prefer Tavily then fall back to DuckDuckGo
+              searchTool = searchTools.find(tool => tool.name === "tavily_search") || 
+                          searchTools.find(tool => tool.name === "duckduckgo_search");
+            }
             
             if (searchTool) {
               // Execute search directly
               setCurrentChat(prev => [...prev, {
                 id: Date.now(),
-                content: `🔍 Searching the web for: "${args}"...`,
+                content: `🔍 Searching the web${searchTool.name.includes('tavily') ? ' with Tavily AI' : ' with DuckDuckGo'} for: "${args}"...`,
                 isUser: false,
                 isCommand: true,
                 personaId: defaultPersona.id
@@ -969,12 +1014,27 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           };
           
           const searchTools = createPersonaTools(componentRef, searchEnabledPersona);
-          const searchTool = searchTools.find(tool => tool.name === "duckduckgo_search");
+          
+          // Select the appropriate search tool based on command
+          let searchTool;
+          if (command === 'tavily' && personaHasTool(searchEnabledPersona, 'tavilySearch')) {
+            searchTool = searchTools.find(tool => tool.name === "tavily_search");
+          } else if (command === 'ddg' && personaHasTool(searchEnabledPersona, 'duckDuckGoSearch')) {
+            searchTool = searchTools.find(tool => tool.name === "duckduckgo_search");
+          } else if (personaHasTool(searchEnabledPersona, preferredToolType)) {
+            // Use the preferred tool type if available
+            const toolName = preferredToolType === 'tavilySearch' ? "tavily_search" : "duckduckgo_search";
+            searchTool = searchTools.find(tool => tool.name === toolName);
+          } else if (personaHasTool(searchEnabledPersona, 'tavilySearch')) {
+            searchTool = searchTools.find(tool => tool.name === "tavily_search");
+          } else {
+            searchTool = searchTools.find(tool => tool.name === "duckduckgo_search");
+          }
           
           if (searchTool) {
             setCurrentChat(prev => [...prev, {
               id: Date.now(),
-              content: `🔍 ${searchEnabledPersona.name} is searching for: "${args}"...`,
+              content: `🔍 ${searchEnabledPersona.name} is searching${searchTool.name.includes('tavily') ? ' with Tavily AI' : ' with DuckDuckGo'} for: "${args}"...`,
               isUser: false,
               isCommand: true,
               personaId: searchEnabledPersona.id

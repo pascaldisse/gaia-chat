@@ -1,7 +1,6 @@
 import { DynamicTool } from "@langchain/core/tools";
-// Import these in a real implementation
-// import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
-// import { DuckDuckGoSearchResults } from "@langchain/community/tools/ddg_search";
+import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
+import { DuckDuckGoSearchResults } from "@langchain/community/tools/ddg_search";
 
 // Format search results for readability
 function formatSearchResults(results) {
@@ -17,7 +16,7 @@ ${result.snippet || result.content || 'No snippet available'}
   }).join("\n---\n\n");
 }
 
-// Simulated Tavily Search API - replace with real implementation in production
+// Fallback Tavily Search API simulation for when the real API is unavailable
 async function simulateTavilySearch(query, searchType = "search") {
   console.log(`Simulating Tavily search for: "${query}" with type: ${searchType}`);
   
@@ -27,21 +26,21 @@ async function simulateTavilySearch(query, searchType = "search") {
   // Generate fake search results based on the query
   const results = [
     {
-      title: `Tavily: Information about ${query}`,
+      title: `Tavily (Simulated): Information about ${query}`,
       url: `https://example.com/tavily/info/${encodeURIComponent(query)}`,
-      content: `This is detailed information about ${query} found by Tavily Search. This result includes comprehensive details and facts about the topic.`,
+      content: `This is simulated information about ${query}. (SIMULATION MODE - Not real search results)`,
       score: 0.95
     },
     {
-      title: `Tavily: ${query} - Latest News and Updates`,
+      title: `Tavily (Simulated): ${query} - Latest News`,
       url: `https://example.com/tavily/news/${encodeURIComponent(query)}`,
-      content: `The latest updates and news regarding ${query} from Tavily Search. Recent developments include new research, findings, and industry trends.`,
+      content: `Simulated latest updates regarding ${query}. (SIMULATION MODE - Not real search results)`,
       score: 0.87
     },
     {
-      title: `Tavily: Expert Analysis on ${query}`,
+      title: `Tavily (Simulated): Analysis on ${query}`,
       url: `https://example.com/tavily/analysis/${encodeURIComponent(query)}`,
-      content: `Expert analysis and insights about ${query} aggregated by Tavily Search. Leading experts suggest that this topic is evolving rapidly.`,
+      content: `Simulated analysis about ${query}. (SIMULATION MODE - Not real search results)`,
       score: 0.82
     }
   ];
@@ -51,11 +50,12 @@ async function simulateTavilySearch(query, searchType = "search") {
     query,
     search_type: searchType,
     organic_results: results.length,
-    max_results: 3
+    max_results: 3,
+    simulated: true // Flag to indicate these are simulated results
   };
 }
 
-// Simulated DuckDuckGo Search API - replace with real implementation in production
+// Fallback DuckDuckGo Search API simulation for when the real API is unavailable
 async function simulateDuckDuckGoSearch(query) {
   console.log(`Simulating DuckDuckGo search for: "${query}"`);
   
@@ -65,24 +65,29 @@ async function simulateDuckDuckGoSearch(query) {
   // Generate fake search results based on the query
   const results = [
     {
-      title: `DuckDuckGo: ${query} Information`,
+      title: `DuckDuckGo (Simulated): ${query} Information`,
       link: `https://example.com/ddg/info/${encodeURIComponent(query)}`,
-      snippet: `Information about ${query} from DuckDuckGo. This private search engine found relevant details without tracking your search history.`,
+      snippet: `Simulated information about ${query}. (SIMULATION MODE - Not real search results)`,
       source: "example.com"
     },
     {
-      title: `DuckDuckGo: Understanding ${query}`,
+      title: `DuckDuckGo (Simulated): About ${query}`,
       link: `https://example.com/ddg/understanding/${encodeURIComponent(query)}`,
-      snippet: `A comprehensive guide to understanding ${query} from various sources. DuckDuckGo brings you privacy-focused search results.`,
+      snippet: `Simulated content about ${query}. (SIMULATION MODE - Not real search results)`,
       source: "example.com"
     },
     {
-      title: `DuckDuckGo: ${query} Resources and References`,
+      title: `DuckDuckGo (Simulated): ${query} Resources`,
       link: `https://example.com/ddg/resources/${encodeURIComponent(query)}`,
-      snippet: `Find resources, references, and additional reading materials about ${query}. Privacy-respecting search results from DuckDuckGo.`,
+      snippet: `Simulated resources about ${query}. (SIMULATION MODE - Not real search results)`,
       source: "example.com"
     }
   ];
+  
+  // Add simulated flag
+  results.forEach(result => {
+    result.simulated = true;
+  });
   
   return results;
 }
@@ -154,16 +159,26 @@ export function createPersonaTools(chatComponent, persona) {
           // Add message to chat before fetching
           addToolUsageMessage("Tavily Search", query, "Searching with Tavily...");
           
-          // In a real implementation, use the actual Tavily API
-          // const tavily = new TavilySearchResults({
-          //   apiKey: process.env.TAVILY_API_KEY,
-          //   maxResults: 3
-          // });
-          // const searchResults = await tavily.invoke(query);
+          // Get API key from environment or config
+          const apiKey = process.env.TAVILY_API_KEY || 'tavily-api-key-placeholder';
           
-          // Simulated search results for demonstration
-          const searchResponse = await simulateTavilySearch(query);
-          const searchResults = searchResponse.results;
+          // Use the actual Tavily API
+          const tavily = new TavilySearchResults({
+            apiKey: apiKey,
+            maxResults: 3
+          });
+          
+          // Try real API first, fall back to simulation if it fails
+          let searchResults;
+          try {
+            const searchResponse = await tavily.invoke(query);
+            searchResults = searchResponse.results || [];
+            console.log("Tavily API search successful:", searchResults.length, "results");
+          } catch (error) {
+            console.warn("Tavily API error, using simulation:", error.message);
+            const searchResponse = await simulateTavilySearch(query);
+            searchResults = searchResponse.results;
+          }
           
           // Format results
           const formattedResults = formatSearchResults(searchResults);
@@ -195,12 +210,17 @@ export function createPersonaTools(chatComponent, persona) {
           // Add message to chat before fetching
           addToolUsageMessage("DuckDuckGo Search", query, "Searching with DuckDuckGo...");
           
-          // In a real implementation, use the actual DuckDuckGo API
-          // const ddg = new DuckDuckGoSearchResults();
-          // const searchResults = await ddg.invoke(query);
-          
-          // Simulated search results for demonstration
-          const searchResults = await simulateDuckDuckGoSearch(query);
+          // Use the actual DuckDuckGo API
+          let searchResults;
+          try {
+            const ddg = new DuckDuckGoSearchResults({ maxResults: 5 });
+            searchResults = await ddg.invoke(query);
+            console.log("DuckDuckGo API search successful:", searchResults.length, "results");
+          } catch (error) {
+            console.warn("DuckDuckGo API error, using simulation:", error.message);
+            // Fall back to simulation if the real API fails
+            searchResults = await simulateDuckDuckGoSearch(query);
+          }
           
           // Format results
           const formattedResults = formatSearchResults(searchResults);

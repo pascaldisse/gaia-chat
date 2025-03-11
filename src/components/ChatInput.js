@@ -5,7 +5,9 @@ import { useUser } from '../contexts/UserContext';
 
 const COMMANDS = [
   { name: 'imagine', description: 'Generate an image from text description' },
-  { name: 'search', description: 'Search the web using DuckDuckGo' }
+  { name: 'search', description: 'Search the web for information' },
+  { name: 'tavily', description: 'Search the web using Tavily AI-optimized search' },
+  { name: 'ddg', description: 'Search the web using DuckDuckGo' }
 ];
 
 const ChatInput = ({ personas, onSendMessage, isLoading, onCancel, onToggleSearch }) => {
