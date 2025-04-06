@@ -19,7 +19,7 @@ import { UserProvider, useUser } from './contexts/UserContext';
 function AppContent() {
   const { user: currentUser } = useUser();
   const [currentChat, setCurrentChat] = useState([]);
-  const [model, setModel] = useState(MODELS.LLAMA3_70B);
+  const [model, setModel] = useState(MODELS.LLAMA4_MAVERICK);
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
   const [chatHistory, setChatHistory] = useState([]);
   const [selectedChatId, setSelectedChatId] = useState(null);
@@ -235,7 +235,7 @@ function AppContent() {
     const newPersona = new Persona({
       name: 'New Persona',
       systemPrompt: 'You are a helpful assistant',
-      model: MODELS.LLAMA3_70B,
+      model: MODELS.LLAMA4_MAVERICK,
       userId: currentUser ? currentUser.id : undefined // Associate with user if logged in
     });
     

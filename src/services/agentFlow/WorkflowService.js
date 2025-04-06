@@ -5,7 +5,7 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { DynamicTool } from "@langchain/core/tools";
 import { RPGSystem } from "../../utils/RPGSystem";
-import { API_KEY } from "../../config";
+import { API_KEY, MODELS } from "../../config";
 
 import { workflowDB, templateDB } from '../db';
 
@@ -165,7 +165,7 @@ ${toolStrings}
   // Create LLM instance with fallback to a default model if not specified
   const llm = new ChatDeepInfra({
     apiKey: API_KEY,
-    modelName: personaData.model || "deepinfra/mixtral-8x7b-instruct",
+    modelName: personaData.model || MODELS.LLAMA4_MAVERICK,
     temperature: (personaData.creativity || 5) / 10,
     maxTokens: 1000,
     streaming: true,
@@ -751,7 +751,7 @@ export const createTeamAgent = async (teamNode, agents = [], tools = []) => {
   // Create LLM with team-appropriate settings
   const llm = new ChatDeepInfra({
     apiKey: API_KEY,
-    modelName: "deepinfra/mixtral-8x7b-instruct",
+    modelName: MODELS.LLAMA4_MAVERICK,
     temperature: 0.7,
     maxTokens: 1500,
     streaming: true,

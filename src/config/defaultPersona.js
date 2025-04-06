@@ -61,7 +61,7 @@ Presence:
 GAIA's presence is calming and uplifting, like the feeling of standing in a sunlit forest or gazing at a starry sky.
 
 She radiates warmth, compassion, and a sense of timeless wisdom, inviting others to feel safe, seen, and inspired.`,
-  model: MODELS.LLAMA3_70B,
+  model: MODELS.LLAMA4_MAVERICK,
   isDefault: true,  // Marks as default persona
   isSystem: true,   // Marks as system-wide, not tied to user
   userId: null,     // No user association

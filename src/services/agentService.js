@@ -2,7 +2,7 @@ import { ChatDeepInfra } from "@langchain/community/chat_models/deepinfra";
 import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { API_KEY } from "../config";
+import { API_KEY, MODELS } from "../config";
 
 export class PersonaAgent {
   static async create(persona, tools, callbacks) {
@@ -42,7 +42,7 @@ Current conversation:
 
     const chat = new ChatDeepInfra({
       apiKey: API_KEY,
-      modelName: this.persona.model,
+      modelName: this.persona.model || MODELS.LLAMA4_MAVERICK,
       temperature: this.persona.creativity / 10,
       maxTokens: 1000,
       streaming: true,

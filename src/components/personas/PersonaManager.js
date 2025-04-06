@@ -45,7 +45,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
     const initialPersona = persona || new Persona({ 
       name: '', 
       systemPrompt: '', 
-      model: MODELS.LLAMA3_70B
+      model: MODELS.LLAMA4_MAVERICK
     });
 
     // Ensure agentSettings and toolConfig exist

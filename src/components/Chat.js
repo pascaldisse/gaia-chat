@@ -1152,7 +1152,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         activePersona = new Persona({
           name: 'Assistant',
           systemPrompt: 'You are a helpful assistant',
-          model: MODELS.LLAMA3_70B,
+          model: MODELS.LLAMA4_MAVERICK,
           talkativeness: 15
         });
       }

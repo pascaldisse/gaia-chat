@@ -1,22 +1,24 @@
-# Gaia Project Guidelines
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Build & Test Commands
 - `npm start` - Run development server
 - `npm test` - Run all tests
-- `npm test -- --testPathPattern=src/components/Chat` - Run specific test file
-- `npm test -- -t "test name"` - Run specific test by name
+- `npm test -- --testPathPattern=src/tests/YourTest` - Run specific test file
+- `npm test -- -t "test name"` - Run test by name pattern
 - `npm run build` - Build for production
-- `npm run eject` - Eject from Create React App
+- `./low-memory-build.sh` - Build with memory constraints
+- `./minimal-build.sh` - Create minimal build in resource-limited environments
 
 ## Code Style Guidelines
-- **React Functional Components** with hooks for state management
-- **Imports**: Group imports - React, components, services, utils, styles (in that order)
-- **Naming**: PascalCase for components, camelCase for functions/variables
-- **Error Handling**: Try/catch blocks with specific error messages and proper console.error logging
-- **Promises**: Always use async/await with proper error handling
+- **Components**: Functional React with hooks for state management
+- **Imports**: Order - React, components, services, utils, styles
+- **Naming**: PascalCase for components/classes, camelCase for functions/variables
+- **Error Handling**: Try/catch with specific error messages and console.error
+- **Promises**: Use async/await with proper error handling
 - **Component Props**: Destructure in function parameters
-- **State Management**: Use useState for local state, useEffect for side effects
-- **File Structure**: One component per file, matching filename to component name
-- **RPG System**: Follow the established D20-based mechanics for persona behavior calculations
-- **Persona API**: Use class-based approach for Persona model with appropriate attributes
+- **State**: useState for local state, useEffect for side effects
+- **File Structure**: One component per file, matching filename to component
+- **Persona System**: Use class-based Persona model with D20-based mechanics
 - **Database**: Use the existing db service for data persistence
