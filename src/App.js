@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Chat from './components/Chat';
 import Sidebar from './components/Sidebar';
 import AgentFlow from './components/AgentFlow/AgentFlow';
+import GaiaHiveDemo from './components/GaiaHive/GaiaHiveDemo';
 import { chatDB, userDB } from './services/db';
 import './styles/theme.css';
 import './styles/Sidebar.css';
@@ -29,7 +30,7 @@ function AppContent() {
   const [editingPersona, setEditingPersona] = useState(null);
   const [activePersonas, setActivePersonas] = useState([]);
   const [activeUsers, setActiveUsers] = useState([]);
-  const [viewMode, setViewMode] = useState('chat'); // 'chat', 'agentflow', 'store', 'admin', 'formatter'
+  const [viewMode, setViewMode] = useState('chat'); // 'chat', 'agentflow', 'store', 'admin', 'hivemind'
   const [sidebarVisible, setSidebarVisible] = useState(false); // Control sidebar visibility
 
   // Load chat history from database
@@ -393,6 +394,15 @@ function AppContent() {
           </svg>
           <span>Persona Store</span>
         </button>
+        <button 
+          className={viewMode === 'hivemind' ? 'active' : ''} 
+          onClick={() => setViewMode('hivemind')}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+          </svg>
+          <span>Hive Mind</span>
+        </button>
         {currentUser?.isAdmin && (
           <button 
             className={viewMode === 'admin' ? 'active' : ''} 
@@ -427,6 +437,8 @@ function AppContent() {
         <PersonaStore />
       ) : viewMode === 'admin' ? (
         <AdminDashboard />
+      ) : viewMode === 'hivemind' ? (
+        <GaiaHiveDemo />
       ) : (
         <PersonaStore />
       )}
