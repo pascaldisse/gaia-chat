@@ -96,35 +96,29 @@ const GaiaHiveSimple = ({ query, onResponse, attributes = {} }) => {
 
   return (
     <div className="gaia-hive-simple">
-      <h2>Simplified Gaia Hive Mind</h2>
+      <h2>Hive Mind Response</h2>
       
       <div className="simple-query">
         <strong>Query:</strong> {query || 'No query provided'}
       </div>
       
-      <div className="simple-agents">
-        <h3>Participating Attributes</h3>
-        <div className="simple-agent-list">
-          {state.activeAgents.map(agent => (
-            <div key={agent.id} className="simple-agent">
-              {agent.name} ({agent.value})
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="simple-conversation">
-        <h3>Conversation</h3>
-        {state.conversation.map((msg, index) => (
-          <div key={index} className="simple-message">
-            <strong>{msg.agentName}:</strong> {msg.message}
+      {/* Show only if we have active agents but keep it simplified */}
+      {state.activeAgents.length > 0 && (
+        <div className="simple-agents">
+          <div className="simple-agent-list">
+            {state.activeAgents.map(agent => (
+              <div key={agent.id} className="simple-agent">
+                {agent.name}: {agent.value}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
+      {/* Only show if we have a final summary */}
       {state.finalSummary && (
         <div className="simple-summary">
-          <h3>Final Response</h3>
+          <h3>Response</h3>
           <div>{state.finalSummary}</div>
         </div>
       )}
