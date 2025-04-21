@@ -452,8 +452,10 @@
 /* Demo Component Styles */
 .gaia-hive-demo {
   max-width: 900px;
+  width: 100%;
   margin: 0 auto;
   padding: 20px;
+  box-sizing: border-box;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   height: auto;
   min-height: 100%;
@@ -517,10 +519,12 @@
   background-size: 20px 20px;
   border-radius: 8px;
   padding: 15px;
-  height: auto; /* Changed from fixed height to auto */
-  min-height: 150px;
-  max-height: 250px;
+  height: 320px; /* Fixed increased height */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px; /* Reduced gap between messages */
@@ -620,8 +624,12 @@
   padding: 8px 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   max-width: 85%;
+  width: calc(100% - 40px);
   position: relative;
   transition: all 0.2s ease;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .attribute-bubble:hover {
@@ -698,8 +706,10 @@
 
 .attributes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .attribute-chip {
@@ -711,6 +721,9 @@
   flex-direction: column;
   border: 1px solid #e9ecef;
   position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
 }
 
 .attribute-name {
@@ -748,6 +761,8 @@
 .attribute-model-select {
   margin-top: auto;
   font-size: 11px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .attribute-model-select label {
@@ -755,6 +770,9 @@
   color: #495057;
   margin-bottom: 3px;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .attribute-model-select select {
@@ -764,6 +782,8 @@
   border: 1px solid #ced4da;
   font-size: 11px;
   background-color: #f8f9fa;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
 }
 
 .demo-form {
@@ -776,6 +796,8 @@
   z-index: 1;
   display: block !important;
   visibility: visible !important;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .query-label {
@@ -788,6 +810,8 @@
 .input-group {
   display: flex;
   gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .query-input {
@@ -797,6 +821,10 @@
   border-radius: 4px;
   font-size: 14px;
   transition: all 0.3s ease;
+  width: calc(100% - 100px);
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .query-input:focus {
@@ -815,6 +843,10 @@
   cursor: pointer;
   transition: background-color 0.2s;
   font-weight: 500;
+  min-width: 80px;
+  max-width: 100px;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .submit-button:hover {
