@@ -308,14 +308,24 @@ const GaiaHiveDemo = () => {
         </form>
       </div>
       
-      {/* Results container */}
+      {/* Results container - hidden processor */}
       {query && (
-        <div className="gaia-hive-container">
+        <div className="gaia-hive-container" style={{ display: 'none' }}>
           <GaiaHiveSimple 
             query={query}
             onResponse={handleResponse}
             attributes={attributeSettings}
           />
+        </div>
+      )}
+      
+      {/* Show final response in a new UI element */}
+      {response && (
+        <div className="demo-response">
+          <h3>Hive Mind Response</h3>
+          <div className="response-content">
+            {response}
+          </div>
         </div>
       )}
       

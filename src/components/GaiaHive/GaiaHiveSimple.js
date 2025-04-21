@@ -116,72 +116,20 @@ const GaiaHiveSimple = ({ query, onResponse, attributes = {} }) => {
 
   return (
     <div className="gaia-hive-simple">
-      <h2>Hive Mind Response</h2>
+      <h2>Hive Mind Processing</h2>
       
-      <div className="simple-query">
-        <strong>Query:</strong> {query || 'No query provided'}
+      {/* Process the query and generate the responses, 
+          but don't display anything in the UI */}
+      {query && state.isProcessing && (
+        <div className="processing-indicator">
+          Processing query: {query}...
+        </div>
+      )}
+      
+      {/* Hidden but still functional for the onResponse callback */}
+      <div style={{ display: 'none' }}>
+        {state.finalSummary}
       </div>
-      
-      {/* Show only if we have active agents but keep it simplified */}
-      {state.activeAgents.length > 0 && (
-        <div className="simple-agents">
-          <div className="simple-agent-list">
-            {state.activeAgents.map(agent => (
-              <div key={agent.id} className="simple-agent">
-                {agent.name}: {agent.value}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Display all attribute responses */}
-      {state.conversation.length > 0 && (
-        <div className="agent-responses">
-          <h3>Attribute Perspectives</h3>
-          <div className="agent-responses-list">
-            {state.conversation.map(response => (
-              <div key={response.agent} className="agent-response">
-                {(() => {
-                  // Determine color based on agent type
-                  let borderColor = "#6c757d"; // Default gray
-                  
-                  switch(response.agent) {
-                    case "autonomy": borderColor = "#4682B4"; break; // Steel Blue
-                    case "compassion": borderColor = "#E6A8D7"; break; // Pink
-                    case "creativity": borderColor = "#FFD700"; break; // Gold
-                    case "ecological": borderColor = "#228B22"; break; // Forest Green
-                    case "efficiency": borderColor = "#B22222"; break; // Firebrick
-                    case "truthRecognition": borderColor = "#9370DB"; break; // Medium Purple
-                    case "collectiveFlourishin": borderColor = "#20B2AA"; break; // Light Sea Green
-                  }
-                  
-                  return (
-                    <div className="agent-response-content" style={{borderLeftColor: borderColor}}>
-                      <div className="agent-response-header">
-                        <span className="agent-response-name" style={{color: borderColor}}>{response.agentName}</span>
-                        <div className="agent-response-meta">
-                          <span className="agent-response-value">Value: {response.value}/5</span>
-                          <span className="agent-response-model">{response.model?.split('/').pop()?.substring(0, 12) || 'Unknown'}</span>
-                        </div>
-                      </div>
-                      <div className="agent-response-message">{response.message}</div>
-                    </div>
-                  );
-                })()}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Only show if we have a final summary */}
-      {state.finalSummary && (
-        <div className="simple-summary">
-          <h3>Response</h3>
-          <div>{state.finalSummary}</div>
-        </div>
-      )}
     </div>
   );
 };

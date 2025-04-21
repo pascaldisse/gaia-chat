@@ -939,70 +939,38 @@ body > div, #root > div, .app {
   margin-bottom: 20px;
 }
 
-/* Simple version styles */
+/* Simple version styles - hidden but kept for functionality */
 .gaia-hive-simple {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 15px;
-  margin: 10px 0;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
-  max-width: 900px;
-  margin: 0 auto;
+  display: none; /* Hide the component completely */
 }
 
-.gaia-hive-simple h2 {
-  text-align: center;
-  margin-bottom: 12px;
-  color: #343a40;
-  font-size: 16px;
-}
-
-.gaia-hive-simple h3 {
-  margin: 10px 0;
-  color: #495057;
-  border-bottom: 1px solid #e9ecef;
-  padding-bottom: 4px;
-  font-size: 14px;
-}
-
-.simple-query {
-  background-color: #fff;
-  padding: 10px;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  border: 1px solid #e9ecef;
-  font-size: 13px;
-}
-
-.simple-agent-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.simple-agent {
-  background-color: #e9ecef;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #495057;
+/* Hide other simple elements that might be conditionally rendered */
+.simple-query, 
+.simple-agent-list,
+.simple-agent,
+.simple-agents,
+.simple-conversation,
+.simple-message,
+.simple-summary {
+  display: none;
 }
 
 /* Attribute responses section */
 .agent-responses {
-  background-color: #f8f9fa;
-  border-radius: 6px;
+  background-color: var(--discord-primary);
+  border-radius: var(--border-radius-md);
   padding: 12px;
   margin: 15px 0;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--discord-tertiary);
+  box-shadow: var(--elevation-medium);
 }
 
 .agent-responses h3 {
   font-size: 15px;
   margin-bottom: 12px;
-  color: #495057;
+  color: var(--text-normal);
   text-align: center;
+  font-weight: var(--font-weight-medium);
 }
 
 .agent-responses-list {
@@ -1018,11 +986,11 @@ body > div, #root > div, .app {
 }
 
 .agent-response-content {
-  background-color: white;
-  border-radius: 6px;
+  background-color: var(--discord-secondary);
+  border-radius: var(--border-radius-md);
   padding: 10px;
-  border-left: 3px solid #6c757d;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-left: 3px solid var(--interactive-muted);
+  box-shadow: var(--elevation-low);
 }
 
 .agent-response-header {
@@ -1030,13 +998,13 @@ body > div, #root > div, .app {
   justify-content: space-between;
   margin-bottom: 8px;
   padding-bottom: 5px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--discord-tertiary);
 }
 
 .agent-response-name {
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
   font-size: 13px;
-  color: #343a40;
+  color: var(--text-normal);
 }
 
 .agent-response-meta {
@@ -1048,18 +1016,18 @@ body > div, #root > div, .app {
 
 .agent-response-value {
   font-size: 12px;
-  color: #6c757d;
+  color: var(--text-muted);
 }
 
 .agent-response-model {
   font-size: 10px;
-  color: #999;
+  color: var(--text-muted);
   font-style: italic;
 }
 
 .agent-response-message {
   font-size: 13px;
-  color: #343a40;
+  color: var(--text-normal);
   line-height: 1.4;
 }
 
