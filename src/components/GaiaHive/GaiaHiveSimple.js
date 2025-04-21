@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { RPGSystem } from '../../utils/RPGSystem';
+import { AttributeAgent, HiveMindSummary } from '../../services/hiveMindService';
+import { MODELS } from '../../config';
 import './GaiaHive.css';
 
 const GaiaHiveSimple = ({ query, onResponse, attributes = {} }) => {
@@ -14,11 +15,11 @@ const GaiaHiveSimple = ({ query, onResponse, attributes = {} }) => {
 
   // Default attributes if not provided
   const defaultAttributes = {
-    autonomy: { value: 4, description: "Respect for freedom of thought, choice, and self-determination" },
-    compassion: { value: 3, description: "Capacity to alleviate suffering and emotional distress" },
-    creativity: { value: 2, description: "Value placed on expression, invention, and innovation" },
-    truthRecognition: { value: 3, description: "Commitment to understanding reality, even when painful" },
-    collectiveFlourishin: { value: 3, description: "Preference for actions that benefit many rather than few" },
+    autonomy: { value: 4, description: "Respect for freedom of thought, choice, and self-determination", model: MODELS.LLAMA3_70B },
+    compassion: { value: 3, description: "Capacity to alleviate suffering and emotional distress", model: MODELS.LLAMA3_70B },
+    creativity: { value: 2, description: "Value placed on expression, invention, and innovation", model: MODELS.LLAMA3_70B },
+    truthRecognition: { value: 3, description: "Commitment to understanding reality, even when painful", model: MODELS.LLAMA3_70B },
+    collectiveFlourishin: { value: 3, description: "Preference for actions that benefit many rather than few", model: MODELS.LLAMA3_70B },
   };
 
   // Combine default with provided attributes
@@ -26,7 +27,7 @@ const GaiaHiveSimple = ({ query, onResponse, attributes = {} }) => {
 
   // Process the query and start the agent conversation
   const processQuery = async () => {
-    console.log('SIMPLE: Processing query:', query);
+    console.log('HIVE: Processing query:', query);
     if (!query || state.isProcessing) return;
 
     setState(prev => ({ 
@@ -38,51 +39,70 @@ const GaiaHiveSimple = ({ query, onResponse, attributes = {} }) => {
       winningAgent: null
     }));
 
-    // Determine which attributes should participate
-    const participatingAttributes = Object.entries(combinedAttributes)
-      .filter(([key, attr]) => {
-        return true; // All participate in simple version
-      })
-      .map(([key, attr]) => ({
-        id: key,
-        name: key.charAt(0).toUpperCase() + key.slice(1),
-        value: attr.value,
-        description: attr.description
+    try {
+      // Determine which attributes should participate
+      const participatingAttributes = Object.entries(combinedAttributes)
+        .map(([key, attr]) => ({
+          id: key,
+          name: key.charAt(0).toUpperCase() + key.slice(1),
+          value: attr.value,
+          description: attr.description,
+          model: attr.model || MODELS.LLAMA3_70B
+        }));
+
+      console.log('HIVE: Participating attributes:', participatingAttributes);
+      setState(prev => ({ ...prev, activeAgents: participatingAttributes }));
+
+      // Create attribute agents and generate responses in parallel
+      const attributeAgents = participatingAttributes.map(attr => 
+        new AttributeAgent(attr.name, attr.value, attr.description, attr.model)
+      );
+
+      // Generate responses from all attribute agents
+      const responsePromises = attributeAgents.map(agent => 
+        agent.generateResponse(query)
+      );
+
+      // Wait for all agent responses
+      const agentResponses = await Promise.all(responsePromises);
+      console.log('HIVE: Agent responses:', agentResponses);
+
+      // Update conversation with real responses
+      setState(prev => ({ ...prev, conversation: agentResponses }));
+
+      // Create summary agent and generate final response
+      const hiveMind = new HiveMindSummary();
+      const summaryModel = MODELS.MIXTRAL_8X22B; // Use a powerful model for summary
+      const summary = await hiveMind.generateSummary(query, agentResponses, summaryModel);
+      
+      console.log('HIVE: Final summary:', summary);
+      
+      // Determine winning agent based on attribute value
+      const winningAgent = participatingAttributes.reduce((prev, current) => 
+        (current.value > prev.value) ? current : prev
+      );
+
+      // Update state with results
+      setState(prev => ({ 
+        ...prev, 
+        isProcessing: false,
+        conversation: agentResponses,
+        finalSummary: summary,
+        winningAgent: winningAgent
       }));
 
-    console.log('SIMPLE: Participating attributes:', participatingAttributes);
-    setState(prev => ({ ...prev, activeAgents: participatingAttributes }));
-
-    // Create conversation
-    const conversation = [];
-    for (const agent of participatingAttributes) {
-      const message = `I am the ${agent.name} attribute with value ${agent.value}. For "${query}", I think we should consider my perspective.`;
-      conversation.push({
-        agent: agent.id,
-        agentName: agent.name,
-        message,
-        roll: 10,
-        total: 10 + agent.value,
-        isWinner: agent.id === participatingAttributes[0].id
-      });
+      // Send response and conversation history back
+      onResponse(summary, agentResponses);
+    } catch (error) {
+      console.error('HIVE: Error processing query:', error);
+      setState(prev => ({ 
+        ...prev, 
+        isProcessing: false,
+        finalSummary: `Error: ${error.message}`
+      }));
+      
+      onResponse(`Error: ${error.message}`);
     }
-
-    console.log('SIMPLE: Generated conversation:', conversation);
-    setState(prev => ({ ...prev, conversation }));
-
-    // Generate summary
-    const summary = `This is a simple summary for "${query}" considering all attributes.`;
-    console.log('SIMPLE: Final summary:', summary);
-    
-    setState(prev => ({ 
-      ...prev, 
-      isProcessing: false,
-      conversation,
-      finalSummary: summary,
-      winningAgent: participatingAttributes[0]
-    }));
-
-    onResponse(summary);
   };
 
   // Process the query when it changes

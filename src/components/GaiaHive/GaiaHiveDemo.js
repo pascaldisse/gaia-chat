@@ -1,20 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import GaiaHiveSimple from './GaiaHiveSimple';
+import { MODELS } from '../../config';
 import './GaiaHive.css';
 
 const GaiaHiveDemo = () => {
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [conversation, setConversation] = useState([]);
   
-  // Define some custom attributes for the demo
-  const customAttributes = {
-    autonomy: { value: 5, description: "Respect for freedom of thought, choice, and self-determination" },
-    compassion: { value: 4, description: "Capacity to alleviate suffering and emotional distress" },
-    creativity: { value: 3, description: "Value placed on expression, invention, and innovation" },
-    ecological: { value: 5, description: "Consideration for environmental impact and sustainability" },
-    efficiency: { value: 2, description: "Preference for optimal use of resources and time" }
-  };
+  // Available models from config.js
+  const availableModels = Object.entries(MODELS).map(([key, value]) => ({
+    id: value,
+    name: key.replace(/_/g, ' ').toLowerCase(),
+    displayName: key.replace(/_/g, ' ')
+  }));
+  
+  // Default model
+  const defaultModel = availableModels[0].id;
+  
+  // Define some custom attributes for the demo with added model selection
+  const [attributeSettings, setAttributeSettings] = useState({
+    autonomy: { 
+      value: 5, 
+      description: "Respect for freedom of thought, choice, and self-determination",
+      model: defaultModel
+    },
+    compassion: { 
+      value: 4, 
+      description: "Capacity to alleviate suffering and emotional distress",
+      model: defaultModel
+    },
+    creativity: { 
+      value: 3, 
+      description: "Value placed on expression, invention, and innovation",
+      model: defaultModel
+    },
+    ecological: { 
+      value: 5, 
+      description: "Consideration for environmental impact and sustainability",
+      model: defaultModel
+    },
+    efficiency: { 
+      value: 2, 
+      description: "Preference for optimal use of resources and time",
+      model: defaultModel
+    }
+  });
   
   // For animated display of chat messages
   const [visibleMessages, setVisibleMessages] = useState([]);
@@ -23,8 +55,7 @@ const GaiaHiveDemo = () => {
   
   useEffect(() => {
     // Animate attribute messages appearing one by one
-    const keys = Object.keys(customAttributes);
-    let currentIndex = 0;
+    const keys = Object.keys(attributeSettings);
     
     // Show all messages immediately instead of animating
     setVisibleMessages(keys);
@@ -37,7 +68,7 @@ const GaiaHiveDemo = () => {
     setMessageTimes(timestamps);
     
     // No interval to clear anymore
-  }, [customAttributes]);
+  }, [attributeSettings]);
   
   // Format timestamps in a human-readable way
   const formatTime = (date) => {
@@ -91,10 +122,39 @@ const GaiaHiveDemo = () => {
     }, 10);
   };
   
-  const handleResponse = (result) => {
+  const handleResponse = (result, conversationHistory) => {
     console.log('GAIA HIVE DEMO: Received response from GaiaHive:', result);
+    console.log('GAIA HIVE DEMO: Conversation history:', conversationHistory);
+    
     setResponse(result);
     setIsProcessing(false);
+    
+    // Update conversation history if provided
+    if (conversationHistory) {
+      // Update timestamps for all responses
+      const timestamps = { ...messageTimes };
+      conversationHistory.forEach(msg => {
+        timestamps[msg.agent] = new Date();
+      });
+      setMessageTimes(timestamps);
+      
+      // Set conversation
+      setConversation(conversationHistory);
+      
+      // Make sure all attribute IDs are in visible messages
+      setVisibleMessages(conversationHistory.map(msg => msg.agent));
+    }
+  };
+  
+  // Handle model change for an attribute
+  const handleModelChange = (attributeKey, modelId) => {
+    setAttributeSettings(prev => ({
+      ...prev,
+      [attributeKey]: {
+        ...prev[attributeKey],
+        model: modelId
+      }
+    }));
   };
   
   return (
@@ -138,7 +198,7 @@ const GaiaHiveDemo = () => {
           <GaiaHiveSimple 
             query={query}
             onResponse={handleResponse}
-            attributes={customAttributes}
+            attributes={attributeSettings}
           />
         </div>
       )}
@@ -147,48 +207,55 @@ const GaiaHiveDemo = () => {
       <div className="demo-attributes-chat">
         <h3>Attribute Dialogue</h3>
         <div className="attributes-chat-window">
-          {Object.entries(customAttributes)
+          {(conversation.length > 0 ? conversation : Object.entries(attributeSettings)
             .filter(([key]) => visibleMessages.includes(key))
             .map(([key, attr]) => {
-              // Custom messages based on attribute type
-              let message = "";
-              let avatarColor = "";
+              return {
+                agent: key,
+                agentName: key.charAt(0).toUpperCase() + key.slice(1),
+                message: "Waiting for input...",
+                model: attr.model,
+                value: attr.value
+              };
+            }))
+            .map((msg) => {
+              // Determine avatar color based on agent/attribute type
+              let avatarColor = "#28a745"; // Default green
               
-              switch(key) {
+              switch(msg.agent) {
                 case "autonomy":
-                  message = "Freedom of choice and self-determination are essential. My value of " + attr.value + " reflects how strongly I prioritize individual liberty.";
                   avatarColor = "#4682B4"; // Steel Blue
                   break;
                 case "compassion":
-                  message = "I seek to understand and alleviate suffering. With a value of " + attr.value + ", I emphasize empathy and emotional connection.";
                   avatarColor = "#E6A8D7"; // Pink
                   break;
                 case "creativity":
-                  message = "Innovation and expression drive progress. My value of " + attr.value + " shows how much I value original thinking.";
                   avatarColor = "#FFD700"; // Gold
                   break;
                 case "ecological":
-                  message = "We must respect our natural world. My value of " + attr.value + " represents my commitment to environmental sustainability.";
                   avatarColor = "#228B22"; // Forest Green
                   break;
                 case "efficiency":
-                  message = "Optimal use of resources is critical. With a value of " + attr.value + ", I focus on streamlined solutions.";
                   avatarColor = "#B22222"; // Firebrick
                   break;
-                default:
-                  message = "I represent " + key + ". My value is " + attr.value + " - " + attr.description;
-                  avatarColor = "#28a745"; // Default green
               }
               
               return (
-                <div key={key} className="attribute-message animate-in">
-                  <div className="attribute-avatar" style={{backgroundColor: avatarColor}}>{key.charAt(0).toUpperCase()}</div>
+                <div key={msg.agent} className="attribute-message animate-in">
+                  <div className="attribute-avatar" style={{backgroundColor: avatarColor}}>
+                    {msg.agentName.charAt(0)}
+                  </div>
                   <div className="attribute-bubble">
                     <div className="attribute-header">
-                      <div className="attribute-speaker" style={{color: avatarColor}}>{key.charAt(0).toUpperCase() + key.slice(1)}</div>
-                      <div className="message-timestamp">{formatTime(messageTimes[key])}</div>
+                      <div className="attribute-speaker" style={{color: avatarColor}}>
+                        {msg.agentName}
+                      </div>
+                      <div className="attribute-model-info">
+                        {msg.model ? `(${msg.model.split('/').pop().substring(0, 10)}...)` : ''}
+                      </div>
+                      <div className="message-timestamp">{formatTime(messageTimes[msg.agent])}</div>
                     </div>
-                    <div className="attribute-content">{message}</div>
+                    <div className="attribute-content">{msg.message}</div>
                   </div>
                 </div>
               );
@@ -198,15 +265,30 @@ const GaiaHiveDemo = () => {
         </div>
       </div>
       
-      {/* Simple container with attribute values */}
+      {/* Attribute settings with model selection */}
       <div className="demo-attributes-info">
-        <h3>Current Attribute Values</h3>
+        <h3>Attribute Settings</h3>
         <div className="attributes-grid">
-          {Object.entries(customAttributes).map(([key, attr]) => (
+          {Object.entries(attributeSettings).map(([key, attr]) => (
             <div key={key} className="attribute-chip">
               <span className="attribute-name">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
               <span className="attribute-value">{attr.value}</span>
               <div className="attribute-desc">{attr.description}</div>
+              <div className="attribute-model-select">
+                <label htmlFor={`model-${key}`}>Model:</label>
+                <select 
+                  id={`model-${key}`}
+                  value={attr.model}
+                  onChange={(e) => handleModelChange(key, e.target.value)}
+                  disabled={isProcessing}
+                >
+                  {availableModels.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           ))}
         </div>
