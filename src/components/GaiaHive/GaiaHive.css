@@ -897,7 +897,7 @@
 }
 
 /* Fix for scrolling and height inheritance */
-html, body, #root, .app, .view-toggle, div[class^="gaia-"] {
+html, body, #root, .app, div[class^="gaia-"] {
   height: auto !important;
   min-height: auto !important;
   max-height: none !important;
@@ -907,11 +907,22 @@ html, body, #root, .app, .view-toggle, div[class^="gaia-"] {
 }
 
 /* Override parent height constraints that might cause cut-off */
-body > div, #root > div, .app, .view-toggle {
+body > div, #root > div, .app {
   height: auto !important;
   min-height: auto !important;
   max-height: none !important;
   overflow: auto !important;
+}
+
+/* Fix for view-toggle to ensure it doesn't stretch to bottom */
+.view-toggle {
+  position: fixed !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  bottom: auto !important;
+  top: var(--spacing-md) !important;
 }
 
 /* Fix for z-index stacking */

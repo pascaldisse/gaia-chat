@@ -169,13 +169,19 @@ const GaiaHiveDemo = () => {
         overflow: auto !important;
       }
       .view-toggle { 
+        position: fixed !important;
         height: auto !important; 
         min-height: auto !important;
+        width: auto !important;
+        bottom: auto !important;
+        top: var(--spacing-md) !important;
+        z-index: 1100 !important;
       }
       .app #gaia-hive-container {
         height: auto !important;
         overflow: visible !important;
         min-height: fit-content !important;
+        padding-top: 70px !important; /* Add space for the fixed nav */
       }
       .gaia-hive-demo {
         height: auto !important;
@@ -236,7 +242,8 @@ const GaiaHiveDemo = () => {
       position: 'relative', 
       overflow: 'visible',
       paddingBottom: '150px',
-      marginBottom: '100px'
+      marginBottom: '100px',
+      paddingTop: '70px' // Add space for the fixed nav bar
     }}>
       <div className="demo-header">
         <h1>🌿 Gaia Hive Mind</h1>
