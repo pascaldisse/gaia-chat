@@ -158,7 +158,7 @@ const GaiaHiveDemo = () => {
   };
   
   return (
-    <div className="gaia-hive-demo">
+    <div className="gaia-hive-demo" style={{display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%', position: 'relative', overflow: 'visible'}}>
       <div className="demo-header">
         <h1>🌿 Gaia Hive Mind</h1>
         <p>
@@ -167,7 +167,37 @@ const GaiaHiveDemo = () => {
         </p>
       </div>
       
-      {/* Input form section - MOVED TO TOP */}
+      {/* Attribute settings with model selection - MOVED TO TOP */}
+      <div className="demo-attributes-info" style={{display: 'block !important', visibility: 'visible !important'}}>
+        <h3>Attribute Settings</h3>
+        <div className="attributes-grid" style={{display: 'grid', width: '100%'}}>
+          {Object.entries(attributeSettings).map(([key, attr]) => (
+            <div key={key} className="attribute-chip" style={{display: 'flex', flexDirection: 'column', width: '100%', visibility: 'visible'}}>
+              <span className="attribute-name">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+              <span className="attribute-value">{attr.value}</span>
+              <div className="attribute-desc">{attr.description}</div>
+              <div className="attribute-model-select" style={{width: '100%', visibility: 'visible', display: 'block'}}>
+                <label htmlFor={`model-${key}`} style={{display: 'block', visibility: 'visible'}}>Model:</label>
+                <select 
+                  id={`model-${key}`}
+                  value={attr.model}
+                  onChange={(e) => handleModelChange(key, e.target.value)}
+                  disabled={isProcessing}
+                  style={{width: '100%', display: 'block', visibility: 'visible'}}
+                >
+                  {availableModels.map((model) => (
+                    <option key={model.id} value={model.id} style={{display: 'block'}}>
+                      {model.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Input form section */}
       <div className="demo-form">
         <h3 style={{marginBottom: '8px', textAlign: 'center', fontSize: '15px'}}>Ask a Question</h3>
         <form onSubmit={handleSubmit}>
@@ -192,7 +222,7 @@ const GaiaHiveDemo = () => {
         </form>
       </div>
       
-      {/* Results container - MOVED TO TOP */}
+      {/* Results container */}
       {query && (
         <div className="gaia-hive-container">
           <GaiaHiveSimple 
@@ -262,35 +292,6 @@ const GaiaHiveDemo = () => {
             })}
             
             {/* Removed typing indicator since we show all messages at once */}
-        </div>
-      </div>
-      
-      {/* Attribute settings with model selection */}
-      <div className="demo-attributes-info">
-        <h3>Attribute Settings</h3>
-        <div className="attributes-grid">
-          {Object.entries(attributeSettings).map(([key, attr]) => (
-            <div key={key} className="attribute-chip">
-              <span className="attribute-name">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-              <span className="attribute-value">{attr.value}</span>
-              <div className="attribute-desc">{attr.description}</div>
-              <div className="attribute-model-select">
-                <label htmlFor={`model-${key}`}>Model:</label>
-                <select 
-                  id={`model-${key}`}
-                  value={attr.model}
-                  onChange={(e) => handleModelChange(key, e.target.value)}
-                  disabled={isProcessing}
-                >
-                  {availableModels.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.displayName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
