@@ -157,8 +157,87 @@ const GaiaHiveDemo = () => {
     }));
   };
   
+  // Create a style element to override parent styles and ensure visibility
+  useEffect(() => {
+    // Create a style element to override parent constraints
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      .app { 
+        height: auto !important; 
+        min-height: auto !important; 
+        max-height: none !important; 
+        overflow: auto !important;
+      }
+      .view-toggle { 
+        height: auto !important; 
+        min-height: auto !important;
+      }
+      .app #gaia-hive-container {
+        height: auto !important;
+        overflow: visible !important;
+        min-height: fit-content !important;
+      }
+      .gaia-hive-demo {
+        height: auto !important;
+      }
+      div.app > div {
+        height: auto !important;
+        overflow: auto !important;
+      }
+      .demo-attributes-info {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    // Function to ensure attribute settings are visible
+    const ensureElementsVisible = () => {
+      // Check if attributes are visible and scroll to them if not
+      const attributesElement = document.querySelector('.demo-attributes-info');
+      if (attributesElement) {
+        // Force display
+        attributesElement.style.display = 'block';
+        attributesElement.style.visibility = 'visible';
+        attributesElement.style.opacity = '1';
+        
+        // Scroll into view if needed
+        const rect = attributesElement.getBoundingClientRect();
+        if (rect.top < 0 || rect.bottom > window.innerHeight) {
+          attributesElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    };
+    
+    // Run initially and on any resize events
+    ensureElementsVisible();
+    window.addEventListener('resize', ensureElementsVisible);
+    
+    // Run again after a small delay to ensure everything is rendered
+    setTimeout(ensureElementsVisible, 500);
+    setTimeout(ensureElementsVisible, 1500);
+    
+    // Clean up on unmount
+    return () => {
+      document.head.removeChild(styleElement);
+      window.removeEventListener('resize', ensureElementsVisible);
+    };
+  }, []);
+
   return (
-    <div className="gaia-hive-demo" style={{display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%', position: 'relative', overflow: 'visible'}}>
+    <div id="gaia-hive-container" className="gaia-hive-demo" style={{
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: 'auto !important', 
+      minHeight: 'fit-content !important',
+      maxHeight: 'none !important',
+      width: '100%', 
+      position: 'relative', 
+      overflow: 'visible',
+      paddingBottom: '150px',
+      marginBottom: '100px'
+    }}>
       <div className="demo-header">
         <h1>🌿 Gaia Hive Mind</h1>
         <p>
@@ -168,7 +247,7 @@ const GaiaHiveDemo = () => {
       </div>
       
       {/* Attribute settings with model selection - MOVED TO TOP */}
-      <div className="demo-attributes-info" style={{display: 'block !important', visibility: 'visible !important'}}>
+      <div id="attribute-settings-container" className="demo-attributes-info" style={{display: 'block !important', visibility: 'visible !important', opacity: 1, zIndex: 100, position: 'relative'}}>
         <h3>Attribute Settings</h3>
         <div className="attributes-grid" style={{display: 'grid', width: '100%'}}>
           {Object.entries(attributeSettings).map(([key, attr]) => (
