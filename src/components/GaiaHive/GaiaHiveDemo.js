@@ -26,23 +26,17 @@ const GaiaHiveDemo = () => {
     const keys = Object.keys(customAttributes);
     let currentIndex = 0;
     
-    const interval = setInterval(() => {
-      if (currentIndex < keys.length) {
-        const key = keys[currentIndex];
-        // Add message to visible list
-        setVisibleMessages(prev => [...prev, key]);
-        // Add timestamp for this message
-        setMessageTimes(prev => ({
-          ...prev,
-          [key]: new Date()
-        }));
-        currentIndex++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 600);
+    // Show all messages immediately instead of animating
+    setVisibleMessages(keys);
     
-    return () => clearInterval(interval);
+    // Set timestamps for all messages
+    const timestamps = {};
+    keys.forEach(key => {
+      timestamps[key] = new Date();
+    });
+    setMessageTimes(timestamps);
+    
+    // No interval to clear anymore
   }, [customAttributes]);
   
   // Format timestamps in a human-readable way
@@ -200,14 +194,7 @@ const GaiaHiveDemo = () => {
               );
             })}
             
-            {/* Show typing indicator if there are still messages to load */}
-            {visibleMessages.length < Object.keys(customAttributes).length && (
-              <div className="typing-indicator">
-                <div className="typing-dot"></div>
-                <div className="typing-dot"></div>
-                <div className="typing-dot"></div>
-              </div>
-            )}
+            {/* Removed typing indicator since we show all messages at once */}
         </div>
       </div>
       
