@@ -134,6 +134,46 @@ const GaiaHiveSimple = ({ query, onResponse, attributes = {} }) => {
           </div>
         </div>
       )}
+      
+      {/* Display all attribute responses */}
+      {state.conversation.length > 0 && (
+        <div className="agent-responses">
+          <h3>Attribute Perspectives</h3>
+          <div className="agent-responses-list">
+            {state.conversation.map(response => (
+              <div key={response.agent} className="agent-response">
+                {(() => {
+                  // Determine color based on agent type
+                  let borderColor = "#6c757d"; // Default gray
+                  
+                  switch(response.agent) {
+                    case "autonomy": borderColor = "#4682B4"; break; // Steel Blue
+                    case "compassion": borderColor = "#E6A8D7"; break; // Pink
+                    case "creativity": borderColor = "#FFD700"; break; // Gold
+                    case "ecological": borderColor = "#228B22"; break; // Forest Green
+                    case "efficiency": borderColor = "#B22222"; break; // Firebrick
+                    case "truthRecognition": borderColor = "#9370DB"; break; // Medium Purple
+                    case "collectiveFlourishin": borderColor = "#20B2AA"; break; // Light Sea Green
+                  }
+                  
+                  return (
+                    <div className="agent-response-content" style={{borderLeftColor: borderColor}}>
+                      <div className="agent-response-header">
+                        <span className="agent-response-name" style={{color: borderColor}}>{response.agentName}</span>
+                        <div className="agent-response-meta">
+                          <span className="agent-response-value">Value: {response.value}/5</span>
+                          <span className="agent-response-model">{response.model?.split('/').pop()?.substring(0, 12) || 'Unknown'}</span>
+                        </div>
+                      </div>
+                      <div className="agent-response-message">{response.message}</div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Only show if we have a final summary */}
       {state.finalSummary && (
