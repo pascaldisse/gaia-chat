@@ -50,7 +50,16 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`API Server running on port ${PORT}`);
   console.log(`http://localhost:${PORT}/api/llm/health`);
+});
+
+// Add proper shutdown handling
+process.on('SIGINT', () => {
+  console.log('\nShutting down API server...');
+  server.close(() => {
+    console.log('API server stopped');
+    process.exit(0);
+  });
 });
