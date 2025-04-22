@@ -45,6 +45,11 @@ const GaiaHiveDemo = () => {
       value: 2, 
       description: "Preference for optimal use of resources and time",
       model: defaultModel
+    },
+    willenskraft: { 
+      value: 4, 
+      description: "Determination and persistence in the face of challenges",
+      model: defaultModel
     }
   });
   
@@ -363,6 +368,9 @@ const GaiaHiveDemo = () => {
                   break;
                 case "efficiency":
                   avatarColor = "#B22222"; // Firebrick
+                  break;
+                case "willenskraft":
+                  avatarColor = "#9932CC"; // Dark Orchid (purple)
                   break;
               }
               

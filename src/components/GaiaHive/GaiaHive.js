@@ -25,7 +25,8 @@ const GaiaHive = ({ query, onResponse, attributes = {} }) => {
     habitat: { value: 3, description: "Importance of preserving native environments" },
     freedom: { value: 2, description: "Preference for non-captive, unconfined existence" },
     empathy: { value: 3, description: "Emotional valuation of relationships" },
-    observation: { value: 3, description: "Preference to learn without altering behavior" }
+    observation: { value: 3, description: "Preference to learn without altering behavior" },
+    willenskraft: { value: 3, description: "Determination and persistence in the face of challenges" }
   };
 
   // Combine default with provided attributes
