@@ -177,6 +177,7 @@
   max-width: 90%;
   justify-content: center;
   border: 1px solid var(--discord-tertiary);
+  flex-direction: row;
 }
 
 .view-toggle button {
@@ -212,6 +213,10 @@
 
 .view-toggle button svg {
   margin-right: var(--spacing-xs);
+}
+
+.view-toggle button span {
+  margin-left: 4px;
 }
 
 /* Chat Components */
@@ -416,14 +421,30 @@
   }
   
   .view-toggle {
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-wrap: nowrap;
+    justify-content: space-between;
   }
   
   .view-toggle button {
-    flex: 1 0 auto;
+    flex: 1;
     font-size: 0.8rem;
-    min-width: 80px;
+    min-width: auto;
+    padding: var(--spacing-xs);
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .view-toggle button span {
+    display: none;
+  }
+  
+  .view-toggle button svg {
+    margin-right: 0 !important;
+    width: 18px;
+    height: 18px;
   }
   
   .message {

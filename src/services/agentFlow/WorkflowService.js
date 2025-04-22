@@ -444,9 +444,11 @@ Try using:
   }
 };
 
-// Execute a workflow
+// Execute a workflow with support for multi-agent interactions
 export const executeWorkflow = async (workflow, input, onUpdate) => {
   try {
+    console.log("Starting workflow execution with multi-agent support");
+    
     // Extract nodes and edges from workflow
     const { nodes, edges } = workflow;
     
@@ -467,7 +469,11 @@ export const executeWorkflow = async (workflow, input, onUpdate) => {
       input: input,
       startTime: Date.now(),
       results: {},
-      intermediateSteps: []
+      intermediateSteps: [],
+      sharedMemory: {}, // New: global memory accessible by all nodes
+      agents: {},       // New: agent registry for multi-agent communication
+      messages: [],     // New: message queue for agent communication
+      teamRegistry: {}, // New: teams of agents working together
     };
     
     // Send initial status update
@@ -478,14 +484,20 @@ export const executeWorkflow = async (workflow, input, onUpdate) => {
       input
     });
     
+    // Perform agent and team discovery before execution
+    // This step identifies and registers all agents and teams in the workflow
+    await discoverAgentsAndTeams(nodes, nodesMap, sessionMemory);
+    
     // Execute flow starting from each starting node
     const results = [];
     
-    // For multi-path workflows, we can execute all starting nodes in parallel
-    // For now, we'll process them sequentially
-    for (const startNodeId of startingNodeIds) {
+    // Identify parallelizable paths
+    const parallelPaths = getParallelExecutionPaths(startingNodeIds, edges, nodesMap);
+    
+    // For multi-path workflows, execute parallel paths concurrently
+    const executionPromises = parallelPaths.map(async (nodeId) => {
       const executionResult = await executeNode(
-        startNodeId, 
+        nodeId, 
         nodesMap, 
         edges, 
         input, 
@@ -493,8 +505,12 @@ export const executeWorkflow = async (workflow, input, onUpdate) => {
         onUpdate
       );
       
-      results.push(executionResult);
-    }
+      return executionResult;
+    });
+    
+    // Wait for all parallel paths to complete
+    const pathResults = await Promise.all(executionPromises);
+    results.push(...pathResults);
     
     // Final result
     const finalResult = {
@@ -536,6 +552,111 @@ export const executeWorkflow = async (workflow, input, onUpdate) => {
   }
 };
 
+// New: Discover and register agents and teams in the workflow
+const discoverAgentsAndTeams = async (nodes, nodesMap, memory) => {
+  console.log("Discovering agents and teams in workflow");
+  
+  // Find all persona nodes
+  const personaNodes = nodes.filter(node => node.type === 'personaNode');
+  
+  // Find all team nodes
+  const teamNodes = nodes.filter(node => node.type === 'teamNode');
+  
+  // Find all memory nodes
+  const memoryNodes = nodes.filter(node => node.type === 'memoryNode');
+  
+  // Find all communication nodes
+  const communicationNodes = nodes.filter(node => node.type === 'communicationNode');
+  
+  // Register all personas as individual agents
+  for (const node of personaNodes) {
+    const agentId = node.id;
+    const personaData = node.data.personaData || {};
+    
+    memory.agents[agentId] = {
+      id: agentId,
+      name: personaData.name || 'Unnamed Agent',
+      role: 'individual',
+      persona: personaData,
+      messages: [],
+      memory: {},
+      teamIds: []
+    };
+    
+    console.log(`Registered individual agent: ${memory.agents[agentId].name}`);
+  }
+  
+  // Register all teams
+  for (const node of teamNodes) {
+    const teamId = node.id;
+    const teamData = node.data || {};
+    
+    memory.teamRegistry[teamId] = {
+      id: teamId,
+      name: teamData.teamName || 'Unnamed Team',
+      description: teamData.teamDescription || '',
+      role: teamData.teamRole || 'coordinator',
+      members: teamData.agents || [],
+      sharedMemory: {},
+      messages: []
+    };
+    
+    // If the team has members, update the agent registry to know which teams they belong to
+    for (const member of teamData.agents || []) {
+      if (memory.agents[member.id]) {
+        memory.agents[member.id].teamIds.push(teamId);
+      }
+    }
+    
+    console.log(`Registered team: ${memory.teamRegistry[teamId].name}`);
+  }
+  
+  // Initialize shared memory from memory nodes
+  for (const node of memoryNodes) {
+    const memoryId = node.id;
+    const memoryData = node.data || {};
+    
+    memory.sharedMemory[memoryId] = {
+      id: memoryId,
+      name: memoryData.memoryName || 'Unnamed Memory',
+      type: memoryData.memoryType || 'simple',
+      data: {},
+      timestamp: Date.now(),
+      accessLog: []
+    };
+    
+    console.log(`Initialized shared memory: ${memory.sharedMemory[memoryId].name}`);
+  }
+  
+  // Initialize communication channels
+  for (const node of communicationNodes) {
+    const channelId = node.id;
+    const channelData = node.data || {};
+    
+    // Add to memory
+    memory.messages.push({
+      id: channelId,
+      name: channelData.name || 'Default Channel',
+      mode: channelData.mode || 'broadcast',
+      format: channelData.format || 'text',
+      messages: [],
+      participants: []
+    });
+    
+    console.log(`Initialized communication channel: ${channelData.name || 'Default Channel'}`);
+  }
+  
+  return memory;
+};
+
+// New: Identify paths that can be executed in parallel
+const getParallelExecutionPaths = (startingNodeIds, edges, nodesMap) => {
+  // For now, we'll just return the starting nodes as parallel paths
+  // But in a more sophisticated implementation, we'd analyze the workflow
+  // to find truly independent execution paths
+  return startingNodeIds;
+};
+
 // Log workflow execution to chat
 const logExecutionToChat = async (workflowId, results) => {
   try {
@@ -567,7 +688,103 @@ const logExecutionToChat = async (workflowId, results) => {
   }
 };
 
-// Recursively execute nodes in the workflow
+// Create a team agent
+export const createTeamAgent = async (teamNode, agents = [], tools = []) => {
+  const teamData = teamNode.data;
+  
+  // Skip if team data is missing
+  if (!teamData) {
+    throw new Error("Invalid team data in node");
+  }
+  
+  // Create a system prompt for the team coordinator
+  const teamMemberDescriptions = agents.map(agent => 
+    `- ${agent.persona.name}: ${agent.persona.systemPrompt || 'No description'}`
+  ).join('\n');
+  
+  // Format tools for prompt template
+  const toolStrings = tools.map(tool => 
+    `- ${tool.name}: ${tool.description || "No description"}`
+  ).join("\n");
+  
+  const teamRole = teamData.teamRole || 'coordinator';
+  let systemPrompt = '';
+  
+  // Role-specific prompts
+  switch(teamRole) {
+    case 'coordinator':
+      systemPrompt = `You are a coordination agent for a team. Your role is to distribute tasks, 
+      manage communication, and ensure the team works effectively together.
+      You will coordinate the following team members:
+      ${teamMemberDescriptions}`;
+      break;
+    case 'debate':
+      systemPrompt = `You are a debate facilitator. Your role is to present different perspectives, 
+      encourage structured argumentation, and help the team arrive at a reasoned conclusion.
+      The debate participants are:
+      ${teamMemberDescriptions}`;
+      break;
+    case 'consensus':
+      systemPrompt = `You are a consensus-building agent. Your role is to identify common ground,
+      highlight areas of agreement, and help the team reach shared understanding and decisions.
+      The team members are:
+      ${teamMemberDescriptions}`;
+      break;
+    case 'specialist':
+      systemPrompt = `You are a specialist team coordinator. Your role is to integrate specialized 
+      expertise from each team member to solve complex problems.
+      The specialists in your team are:
+      ${teamMemberDescriptions}`;
+      break;
+    default:
+      systemPrompt = `You are a team agent named "${teamData.teamName || 'Team Agent'}". 
+      You coordinate the following team members:
+      ${teamMemberDescriptions}`;
+  }
+  
+  // Add tools to the system prompt
+  if (tools.length > 0) {
+    systemPrompt += `\n\nYou have access to the following tools:
+    ${toolStrings}`;
+  }
+  
+  // Create LLM with team-appropriate settings
+  const llm = new ChatDeepInfra({
+    apiKey: API_KEY,
+    modelName: "deepinfra/mixtral-8x7b-instruct",
+    temperature: 0.7,
+    maxTokens: 1500,
+    streaming: true,
+  });
+  
+  // Create a prompt template for the team agent
+  const prompt = ChatPromptTemplate.fromMessages([
+    ["system", systemPrompt + "\n\n{agent_scratchpad}"],
+    ["human", "{input}"]
+  ]);
+  
+  try {
+    // Create the agent
+    const agent = await createOpenAIFunctionsAgent({
+      llm,
+      tools,
+      prompt,
+    });
+    
+    // Create and return the agent executor
+    return new AgentExecutor({
+      agent,
+      tools,
+      maxIterations: 5,
+      returnIntermediateSteps: true,
+    });
+  } catch (error) {
+    console.error("Error creating team agent:", error);
+    throw new Error(`Failed to create team agent: ${error.message}`);
+  }
+};
+
+// Enhanced recursively execute nodes in the workflow with team and multi-agent support
 const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate) => {
   const node = nodesMap.get(nodeId);
   
@@ -641,6 +858,69 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
               connectedFilesData.push(`Error processing file: ${error.message}`);
             }
           }
+          
+          // NEW: Process memory nodes to get shared memory
+          if (connectedNode.type === 'memoryNode') {
+            try {
+              const memoryId = connectedNode.id;
+              
+              // Check if this memory exists in shared memory
+              if (memory.sharedMemory && memory.sharedMemory[memoryId]) {
+                // Record memory access
+                memory.sharedMemory[memoryId].accessLog.push({
+                  nodeId,
+                  operation: 'read',
+                  timestamp: Date.now()
+                });
+                
+                // Get memory data
+                const memoryData = memory.sharedMemory[memoryId].data;
+                
+                // Format for the agent
+                const memoryContent = typeof memoryData === 'object' 
+                  ? JSON.stringify(memoryData, null, 2)
+                  : String(memoryData);
+                
+                connectedFilesData.push(`Shared Memory (${memory.sharedMemory[memoryId].name}):\n\n${memoryContent || "Empty"}`);
+              }
+            } catch (error) {
+              console.error(`Error processing memory node ${connectedId}:`, error);
+              connectedFilesData.push(`Error accessing shared memory: ${error.message}`);
+            }
+          }
+          
+          // NEW: Process communication nodes to get messages
+          if (connectedNode.type === 'communicationNode') {
+            try {
+              const channelId = connectedNode.id;
+              
+              // Find this channel in messages
+              const channel = memory.messages.find(ch => ch.id === channelId);
+              
+              if (channel) {
+                // Register this agent as a participant if not already
+                if (!channel.participants.includes(nodeId)) {
+                  channel.participants.push(nodeId);
+                }
+                
+                // Get the last 10 messages or fewer
+                const recentMessages = channel.messages.slice(-10);
+                
+                if (recentMessages.length > 0) {
+                  const messageContent = recentMessages.map(msg => 
+                    `${msg.sender} (${new Date(msg.timestamp).toLocaleTimeString()}): ${msg.content}`
+                  ).join('\n');
+                  
+                  connectedFilesData.push(`Messages from ${channel.name}:\n\n${messageContent}`);
+                } else {
+                  connectedFilesData.push(`No messages in channel: ${channel.name}`);
+                }
+              }
+            } catch (error) {
+              console.error(`Error processing communication node ${connectedId}:`, error);
+              connectedFilesData.push(`Error accessing messages: ${error.message}`);
+            }
+          }
         }
         
         // Get outgoing tool nodes that this persona can use
@@ -651,7 +931,17 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
         const fileNodeIds = edges
           .filter(edge => edge.source === nodeId && nodesMap.get(edge.target)?.type === 'fileNode')
           .map(edge => edge.target);
+        
+        // NEW: Get outgoing memory nodes that this persona can write to
+        const memoryNodeIds = edges
+          .filter(edge => edge.source === nodeId && nodesMap.get(edge.target)?.type === 'memoryNode')
+          .map(edge => edge.target);
           
+        // NEW: Get outgoing communication nodes that this persona can send messages to
+        const communicationNodeIds = edges
+          .filter(edge => edge.source === nodeId && nodesMap.get(edge.target)?.type === 'communicationNode')
+          .map(edge => edge.target);
+        
         // Create tools from tool nodes
         const tools = await Promise.all(toolNodeIds.map(async id => {
           return await createNodeTool(nodesMap.get(id));
@@ -726,6 +1016,202 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
           tools.push(fileAccessTool);
         }
         
+        // NEW: Add memory access tools for connected memory nodes
+        if (memoryNodeIds.length > 0) {
+          const memoryNodes = memoryNodeIds.map(id => nodesMap.get(id));
+          
+          // Create a dynamic memory read/write tool
+          const memoryTool = new DynamicTool({
+            name: "shared_memory",
+            description: "Read from or write to shared memory. Format: '[read|write]:memory_name:data' - For read, data can be empty.",
+            func: async (memoryCommand) => {
+              try {
+                // Parse the command format: operation:memory_name:data
+                const [operation, memoryName, ...dataParts] = memoryCommand.split(':');
+                const data = dataParts.join(':'); // Rejoin in case the data itself contained colons
+                
+                if (!operation || !memoryName) {
+                  return "Invalid memory command. Format should be: [read|write]:memory_name:data";
+                }
+                
+                // Find the matching memory node
+                const memoryNode = memoryNodes.find(
+                  node => node.data.memoryName.toLowerCase() === memoryName.toLowerCase()
+                );
+                
+                // If no exact match, try a partial match
+                const partialMatchNode = !memoryNode ? memoryNodes.find(
+                  node => node.data.memoryName.toLowerCase().includes(memoryName.toLowerCase())
+                ) : null;
+                
+                const targetNode = memoryNode || partialMatchNode;
+                
+                if (!targetNode) {
+                  return `No memory with name '${memoryName}' found. Available memories: ${memoryNodes.map(n => n.data.memoryName).join(', ')}`;
+                }
+                
+                const memoryId = targetNode.id;
+                
+                // Ensure the memory exists in shared memory
+                if (!memory.sharedMemory[memoryId]) {
+                  memory.sharedMemory[memoryId] = {
+                    id: memoryId,
+                    name: targetNode.data.memoryName,
+                    type: targetNode.data.memoryType || 'simple',
+                    data: {},
+                    timestamp: Date.now(),
+                    accessLog: []
+                  };
+                }
+                
+                // Execute operation
+                switch(operation.toLowerCase()) {
+                  case 'read':
+                    // Record memory access
+                    memory.sharedMemory[memoryId].accessLog.push({
+                      nodeId,
+                      operation: 'read',
+                      timestamp: Date.now()
+                    });
+                    
+                    // Get memory data
+                    const readData = memory.sharedMemory[memoryId].data;
+                    
+                    // Format based on memory type
+                    if (typeof readData === 'object') {
+                      return JSON.stringify(readData, null, 2);
+                    } else {
+                      return String(readData || "Memory is empty");
+                    }
+                    
+                  case 'write':
+                    if (!data) {
+                      return "No data provided for write operation.";
+                    }
+                    
+                    // Record memory access
+                    memory.sharedMemory[memoryId].accessLog.push({
+                      nodeId,
+                      operation: 'write',
+                      timestamp: Date.now()
+                    });
+                    
+                    // Update memory data based on memory type
+                    if (targetNode.data.memoryType === 'structured') {
+                      try {
+                        // Try to parse as JSON
+                        memory.sharedMemory[memoryId].data = JSON.parse(data);
+                      } catch (e) {
+                        // Fallback to string if not valid JSON
+                        memory.sharedMemory[memoryId].data = data;
+                      }
+                    } else {
+                      memory.sharedMemory[memoryId].data = data;
+                    }
+                    
+                    memory.sharedMemory[memoryId].timestamp = Date.now();
+                    
+                    return `Successfully wrote to memory '${targetNode.data.memoryName}'.`;
+                    
+                  default:
+                    return `Unknown operation: ${operation}. Use 'read' or 'write'.`;
+                }
+              } catch (error) {
+                console.error("Error in memory tool:", error);
+                return `Error accessing memory: ${error.message}`;
+              }
+            }
+          });
+          
+          tools.push(memoryTool);
+        }
+        
+        // NEW: Add communication tools for connected communication nodes
+        if (communicationNodeIds.length > 0) {
+          const communicationNodes = communicationNodeIds.map(id => nodesMap.get(id));
+          
+          // Create a dynamic message sending tool
+          const messageTool = new DynamicTool({
+            name: "send_message",
+            description: "Send a message to a communication channel. Format: 'channel_name:message'",
+            func: async (messageCommand) => {
+              try {
+                // Parse the command format: channel_name:message
+                const colonIndex = messageCommand.indexOf(':');
+                
+                if (colonIndex < 0) {
+                  return "Invalid message format. Use 'channel_name:message'";
+                }
+                
+                const channelName = messageCommand.substring(0, colonIndex).trim();
+                const messageContent = messageCommand.substring(colonIndex + 1).trim();
+                
+                if (!channelName || !messageContent) {
+                  return "Both channel name and message content are required.";
+                }
+                
+                // Find the matching communication node
+                const commNode = communicationNodes.find(
+                  node => node.data.name.toLowerCase() === channelName.toLowerCase()
+                );
+                
+                // If no exact match, try a partial match
+                const partialMatchNode = !commNode ? communicationNodes.find(
+                  node => node.data.name.toLowerCase().includes(channelName.toLowerCase())
+                ) : null;
+                
+                const targetNode = commNode || partialMatchNode;
+                
+                if (!targetNode) {
+                  return `No channel named '${channelName}' found. Available channels: ${communicationNodes.map(n => n.data.name).join(', ')}`;
+                }
+                
+                const channelId = targetNode.id;
+                
+                // Find this channel in messages
+                let channel = memory.messages.find(ch => ch.id === channelId);
+                
+                if (!channel) {
+                  // Create the channel if it doesn't exist
+                  channel = {
+                    id: channelId,
+                    name: targetNode.data.name,
+                    mode: targetNode.data.mode || 'broadcast',
+                    format: targetNode.data.format || 'text',
+                    messages: [],
+                    participants: [nodeId]
+                  };
+                  memory.messages.push(channel);
+                } else if (!channel.participants.includes(nodeId)) {
+                  // Add this agent as a participant
+                  channel.participants.push(nodeId);
+                }
+                
+                // Get agent name from registry
+                const agentName = memory.agents[nodeId]?.name || 'Unknown Agent';
+                
+                // Add message to the channel
+                const message = {
+                  id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                  sender: agentName,
+                  senderId: nodeId,
+                  content: messageContent,
+                  timestamp: Date.now()
+                };
+                
+                channel.messages.push(message);
+                
+                return `Message sent to channel '${targetNode.data.name}'.`;
+              } catch (error) {
+                console.error("Error in communication tool:", error);
+                return `Error sending message: ${error.message}`;
+              }
+            }
+          });
+          
+          tools.push(messageTool);
+        }
+        
         // Create and run agent
         const agent = await createPersonaAgent(node, tools);
         
@@ -733,14 +1219,15 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
         const nodeMemory = {
           ...memory,
           currentNode: nodeId,
+          agentId: nodeId,
           tools: toolNodeIds.length,
           files: fileNodeIds.length
         };
         
-        // Enhance the input with file content if available
+        // Enhance the input with file content and other data if available
         let enhancedInput = input;
         if (connectedFilesData.length > 0) {
-          enhancedInput = `${input}\n\nHere are the files for you to process:\n\n${connectedFilesData.join('\n\n')}`;
+          enhancedInput = `${input}\n\nAVAILABLE CONTEXT:\n\n${connectedFilesData.join('\n\n')}`;
         }
         
         // Track progress in the execution
@@ -749,12 +1236,257 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
           memory: nodeMemory
         });
         
+        // Store agent's output in registry for potential team use
+        if (memory.agents[nodeId]) {
+          memory.agents[nodeId].lastOutput = agentResult.output || agentResult;
+        }
+        
         // Store full agent result in memory
         if (!memory.results) memory.results = {};
         memory.results[nodeId] = agentResult;
         
         // For the workflow, we return just the output
         result = agentResult.output || agentResult;
+        break;
+        
+      case 'teamNode':
+        // NEW: Process team node - orchestrate multiple agents
+        console.log(`Executing team node: ${nodeId}`);
+        
+        // Get the team data
+        const teamData = node.data;
+        
+        // Check for connected agents (persona nodes)
+        const connectedAgentIds = edges
+          .filter(edge => edge.target === nodeId && nodesMap.get(edge.source)?.type === 'personaNode')
+          .map(edge => edge.source);
+        
+        if (connectedAgentIds.length === 0) {
+          result = "No agents connected to this team. Connect persona nodes to the team.";
+          break;
+        }
+        
+        // Gather all agents
+        const teamAgents = [];
+        
+        for (const agentId of connectedAgentIds) {
+          // Register the agent if not already in memory
+          if (!memory.agents[agentId]) {
+            const agentNode = nodesMap.get(agentId);
+            if (!agentNode) continue;
+            
+            const personaData = agentNode.data.personaData || {};
+            
+            memory.agents[agentId] = {
+              id: agentId,
+              name: personaData.name || 'Unnamed Agent',
+              role: 'individual',
+              persona: personaData,
+              messages: [],
+              memory: {},
+              teamIds: [nodeId]
+            };
+          } else if (!memory.agents[agentId].teamIds.includes(nodeId)) {
+            // Add this team to the agent's team list
+            memory.agents[agentId].teamIds.push(nodeId);
+          }
+          
+          teamAgents.push(memory.agents[agentId]);
+        }
+        
+        // Update team registry
+        memory.teamRegistry[nodeId] = {
+          id: nodeId,
+          name: teamData.teamName || 'Unnamed Team',
+          description: teamData.teamDescription || '',
+          role: teamData.teamRole || 'coordinator',
+          members: teamAgents.map(a => ({ id: a.id, name: a.name })),
+          sharedMemory: {},
+          messages: []
+        };
+        
+        // Process incoming data similar to persona node
+        const teamContext = [];
+        
+        // Collect data from nodes connected to this team
+        const incomingTeamNodeIds = edges
+          .filter(edge => edge.target === nodeId && !connectedAgentIds.includes(edge.source))
+          .map(edge => edge.source);
+          
+        for (const connectedId of incomingTeamNodeIds) {
+          const connectedNode = nodesMap.get(connectedId);
+          if (!connectedNode) continue;
+          
+          // Process various input node types
+          if (connectedNode.type === 'fileNode') {
+            try {
+              if (!memory.results || !memory.results[connectedId]) {
+                const fileResult = await executeNode(
+                  connectedId, nodesMap, edges, input, memory, onUpdate
+                );
+                teamContext.push(fileResult);
+              } else {
+                teamContext.push(memory.results[connectedId]);
+              }
+            } catch (error) {
+              console.error(`Error processing file for team ${nodeId}:`, error);
+              teamContext.push(`Error processing file: ${error.message}`);
+            }
+          } else if (connectedNode.type === 'memoryNode') {
+            try {
+              const memoryId = connectedNode.id;
+              if (memory.sharedMemory && memory.sharedMemory[memoryId]) {
+                const memoryData = memory.sharedMemory[memoryId].data;
+                const memoryContent = typeof memoryData === 'object' 
+                  ? JSON.stringify(memoryData, null, 2)
+                  : String(memoryData);
+                teamContext.push(`Shared Memory (${memory.sharedMemory[memoryId].name}):\n\n${memoryContent || "Empty"}`);
+              }
+            } catch (error) {
+              console.error(`Error processing memory for team ${nodeId}:`, error);
+              teamContext.push(`Error accessing memory: ${error.message}`);
+            }
+          } else if (memory.results && memory.results[connectedId]) {
+            // Use any other node's result as context
+            teamContext.push(memory.results[connectedId]);
+          }
+        }
+        
+        // Get outgoing tool nodes that this team can use
+        const teamToolNodeIds = edges
+          .filter(edge => edge.source === nodeId && nodesMap.get(edge.target)?.type === 'toolNode')
+          .map(edge => edge.target);
+          
+        // Create tools from tool nodes
+        const teamTools = await Promise.all(teamToolNodeIds.map(async id => {
+          return await createNodeTool(nodesMap.get(id));
+        }));
+        
+        // Create a team agent
+        const teamAgent = await createTeamAgent(node, teamAgents, teamTools);
+        
+        // Enhance the input with context
+        let teamInput = input;
+        if (teamContext.length > 0) {
+          teamInput = `${input}\n\nTEAM CONTEXT:\n\n${teamContext.join('\n\n')}`;
+        }
+        
+        // Add information about which agents are on the team
+        teamInput += `\n\nTEAM COMPOSITION:\n${teamAgents.map(a => 
+          `- ${a.name}: ${a.persona.systemPrompt?.substring(0, 100) || 'No description'}...`
+        ).join('\n')}`;
+        
+        // Execute the team agent
+        const teamResult = await teamAgent.invoke({
+          input: teamInput,
+          memory: { ...memory, currentNode: nodeId, teamId: nodeId }
+        });
+        
+        // Store results
+        if (!memory.results) memory.results = {};
+        memory.results[nodeId] = teamResult;
+        
+        result = teamResult.output || teamResult;
+        break;
+        
+      case 'memoryNode':
+        // NEW: Process memory node
+        console.log(`Executing memory node: ${nodeId}`);
+        
+        // Get memory data
+        const memoryData = node.data;
+        
+        // Initialize this memory if it doesn't exist
+        if (!memory.sharedMemory[nodeId]) {
+          memory.sharedMemory[nodeId] = {
+            id: nodeId,
+            name: memoryData.memoryName || 'Unnamed Memory',
+            type: memoryData.memoryType || 'simple',
+            data: {},
+            timestamp: Date.now(),
+            accessLog: []
+          };
+        }
+        
+        // If there's a direct input, store it in memory
+        if (input && typeof input === 'string' && input.trim().length > 0) {
+          if (memoryData.memoryType === 'structured') {
+            try {
+              // Try to parse as JSON
+              memory.sharedMemory[nodeId].data = JSON.parse(input);
+            } catch (e) {
+              // Fallback to string
+              memory.sharedMemory[nodeId].data = input;
+            }
+          } else {
+            memory.sharedMemory[nodeId].data = input;
+          }
+          
+          memory.sharedMemory[nodeId].timestamp = Date.now();
+          memory.sharedMemory[nodeId].accessLog.push({
+            operation: 'write',
+            source: 'workflow',
+            timestamp: Date.now()
+          });
+        }
+        
+        // Format memory content for output
+        const memoryContent = memory.sharedMemory[nodeId].data;
+        if (typeof memoryContent === 'object') {
+          result = `Memory (${memoryData.memoryName}):\n${JSON.stringify(memoryContent, null, 2)}`;
+        } else {
+          result = `Memory (${memoryData.memoryName}):\n${memoryContent || "Empty"}`;
+        }
+        
+        break;
+        
+      case 'communicationNode':
+        // NEW: Process communication node
+        console.log(`Executing communication node: ${nodeId}`);
+        
+        // Get channel data
+        const channelData = node.data;
+        
+        // Find this channel in messages
+        let channel = memory.messages.find(ch => ch.id === nodeId);
+        
+        if (!channel) {
+          // Create the channel if it doesn't exist
+          channel = {
+            id: nodeId,
+            name: channelData.name || 'Default Channel',
+            mode: channelData.mode || 'broadcast',
+            format: channelData.format || 'text',
+            messages: [],
+            participants: []
+          };
+          memory.messages.push(channel);
+        }
+        
+        // If there's a direct input, add it as a system message
+        if (input && typeof input === 'string' && input.trim().length > 0) {
+          const message = {
+            id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            sender: 'System',
+            senderId: 'system',
+            content: input,
+            timestamp: Date.now()
+          };
+          
+          channel.messages.push(message);
+        }
+        
+        // Format messages for output
+        if (channel.messages.length > 0) {
+          const messageContent = channel.messages.map(msg => 
+            `${msg.sender} (${new Date(msg.timestamp).toLocaleTimeString()}): ${msg.content}`
+          ).join('\n');
+          
+          result = `Channel (${channelData.name}):\n\n${messageContent}`;
+        } else {
+          result = `Channel (${channelData.name}):\nNo messages`;
+        }
+        
         break;
         
       case 'toolNode':
@@ -934,20 +1666,35 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
       )
       .map(edge => edge.target);
       
-    // Process next nodes in sequence
-    let finalResult = result;
-    for (const nextNodeId of nextNodeIds) {
-      finalResult = await executeNode(
-        nextNodeId, 
+    // Check if we can process any of these nodes in parallel
+    if (nextNodeIds.length > 1) {
+      // For now, simple parallel execution of all next nodes
+      const nextResults = await Promise.all(nextNodeIds.map(async (nextNodeId) => {
+        return executeNode(
+          nextNodeId,
+          nodesMap,
+          edges,
+          result, // Use the result of the current node as input
+          memory,  // Pass the updated memory
+          onUpdate
+        );
+      }));
+      
+      // For simplicity, we'll just return the last result
+      return nextResults[nextResults.length - 1];
+    } else if (nextNodeIds.length === 1) {
+      // Process single next node
+      return executeNode(
+        nextNodeIds[0], 
         nodesMap, 
         edges, 
-        result, // Use the result of the current node as input to the next
-        memory, // Pass the updated memory
+        result, // Use the result of the current node as input
+        memory,  // Pass the updated memory
         onUpdate
       );
     }
     
-    return finalResult;
+    return result;
   }
   catch (error) {
     console.error(`Error executing node ${nodeId}:`, error);

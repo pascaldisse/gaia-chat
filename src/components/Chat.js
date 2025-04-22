@@ -504,6 +504,73 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         parsed: extractDiceParams(message)
       });
     }
+    
+    // Check if web search is enabled
+    if (window.webSearchEnabled) {
+      console.log('Web search is enabled, checking for search persona');
+      
+      // Find or enable a persona with search capability
+      const searchPersona = activePersonas.find(p => personaHasTool(p, 'duckDuckGoSearch')) || 
+                         activePersonas.find(p => p.isDefault) || 
+                         activePersonas[0];
+      
+      if (searchPersona) {
+        console.log(`Using ${searchPersona.name} for web search`);
+        
+        // Make sure search is enabled for this persona
+        if (!searchPersona.agentSettings) {
+          searchPersona.agentSettings = { toolConfig: {} };
+        } else if (!searchPersona.agentSettings.toolConfig) {
+          searchPersona.agentSettings.toolConfig = {};
+        }
+        
+        // Enable DuckDuckGo search for this persona
+        searchPersona.agentSettings.toolConfig.duckDuckGoSearch = true;
+        console.log(`Enabled DuckDuckGo search for ${searchPersona.name}`, searchPersona.agentSettings);
+        
+        // Create component reference for search tool
+        const componentRef = {
+          knowledgeDB,
+          generateImage,
+          imageModel,
+          selectedStyle,
+          setCurrentChat
+        };
+        
+        // Create a search tool we can use directly
+        const searchTools = createPersonaTools(componentRef, searchPersona);
+        const searchTool = searchTools.find(tool => tool.name === "duckduckgo_search");
+        
+        if (searchTool) {
+          console.log(`Created search tool for ${searchPersona.name}`);
+          
+          // Add message indicating search is happening
+          setCurrentChat(prev => [...prev, {
+            id: Date.now(),
+            content: `🔍 Searching the web for information related to your message...`,
+            isUser: false,
+            isCommand: true,
+            personaId: searchPersona.id
+          }]);
+          
+          // Execute the search
+          searchTool.func(message)
+            .then(() => {
+              console.log("Web search completed");
+            })
+            .catch(error => {
+              console.error("Web search error:", error);
+              setCurrentChat(prev => [...prev, {
+                id: Date.now(),
+                content: `❌ Error searching the web: ${error.message}`,
+                isUser: false,
+                isCommand: true,
+                personaId: searchPersona.id
+              }]);
+            });
+        }
+      }
+    }
 
     try {
       // Check for direct dice roll commands and handle them before AI response
@@ -810,6 +877,125 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
       case 'imagine':
         setImagePrompt(args);
         setShowImageModal(true);
+        break;
+      case 'search':
+        if (!args || args.trim() === '') {
+          console.warn('Search command requires a query');
+          setCurrentChat(prev => [...prev, {
+            id: Date.now(),
+            content: `⚠️ Please provide a search query. Usage: /search your search query`,
+            isUser: false,
+            isCommand: true,
+            personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
+          }]);
+          return;
+        }
+        
+        // Find a persona with DuckDuckGo search tool enabled
+        const searchEnabledPersona = activePersonas.find(p => 
+          personaHasTool(p, 'duckDuckGoSearch')
+        );
+        
+        if (!searchEnabledPersona) {
+          // No persona has search enabled, enable it for the default persona
+          const defaultPersona = activePersonas.find(p => p.isDefault) || activePersonas[0];
+          
+          if (defaultPersona && defaultPersona.agentSettings) {
+            // Enable the search tool for this persona temporarily
+            if (!defaultPersona.agentSettings.toolConfig) {
+              defaultPersona.agentSettings.toolConfig = {};
+            }
+            defaultPersona.agentSettings.toolConfig.duckDuckGoSearch = true;
+            
+            // Create component reference for tool creation
+            const componentRef = {
+              knowledgeDB,
+              generateImage,
+              imageModel,
+              selectedStyle,
+              setCurrentChat
+            };
+            
+            // Create tools including the search tool
+            const searchTools = createPersonaTools(componentRef, defaultPersona);
+            
+            // Find the search tool
+            const searchTool = searchTools.find(tool => tool.name === "duckduckgo_search");
+            
+            if (searchTool) {
+              // Execute search directly
+              setCurrentChat(prev => [...prev, {
+                id: Date.now(),
+                content: `🔍 Searching the web for: "${args}"...`,
+                isUser: false,
+                isCommand: true,
+                personaId: defaultPersona.id
+              }]);
+              
+              searchTool.func(args)
+                .then(() => {
+                  console.log("Search completed");
+                  // The tool will add its own message to chat with results
+                })
+                .catch(error => {
+                  console.error("Search error:", error);
+                  setCurrentChat(prev => [...prev, {
+                    id: Date.now(),
+                    content: `❌ Error searching the web: ${error.message}`,
+                    isUser: false,
+                    isCommand: true,
+                    personaId: defaultPersona.id
+                  }]);
+                });
+            } else {
+              console.error("Failed to create search tool");
+              setCurrentChat(prev => [...prev, {
+                id: Date.now(),
+                content: `❌ Error: Failed to initialize search tool`,
+                isUser: false,
+                isCommand: true,
+                personaId: defaultPersona.id
+              }]);
+            }
+          }
+        } else {
+          // Found a persona with search enabled, use it
+          const componentRef = {
+            knowledgeDB,
+            generateImage,
+            imageModel,
+            selectedStyle,
+            setCurrentChat
+          };
+          
+          const searchTools = createPersonaTools(componentRef, searchEnabledPersona);
+          const searchTool = searchTools.find(tool => tool.name === "duckduckgo_search");
+          
+          if (searchTool) {
+            setCurrentChat(prev => [...prev, {
+              id: Date.now(),
+              content: `🔍 ${searchEnabledPersona.name} is searching for: "${args}"...`,
+              isUser: false,
+              isCommand: true,
+              personaId: searchEnabledPersona.id
+            }]);
+            
+            searchTool.func(args)
+              .then(() => {
+                console.log("Search completed");
+              })
+              .catch(error => {
+                console.error("Search error:", error);
+                setCurrentChat(prev => [...prev, {
+                  id: Date.now(),
+                  content: `❌ Error searching the web: ${error.message}`,
+                  isUser: false,
+                  isCommand: true,
+                  personaId: searchEnabledPersona.id
+                }]);
+              });
+          }
+        }
         break;
       default:
         console.warn(`Unknown command: /${command}`);
@@ -1368,6 +1554,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
             const [command, ...args] = message.slice(1).split(' ');
             handleCommand(command, args.join(' '));
           } else {
+            // We will handle the webSearchEnabled flag directly in handleSubmit
             handleSubmit(message);
           }
         }}
@@ -1377,6 +1564,19 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           if (controllerRef.current) {
             controllerRef.current.abort();
           }
+        }}
+        onToggleSearch={(enabled) => {
+          // Add a notification to the chat
+          setCurrentChat(prev => [...prev, {
+            id: Date.now(),
+            content: enabled 
+              ? "🔍 Web search enabled. Your messages will now also search the web using DuckDuckGo." 
+              : "🔍 Web search disabled.",
+            isUser: false,
+            isCommand: true,
+            // Use the default persona for system messages if available
+            personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
+          }]);
         }}
       />
 

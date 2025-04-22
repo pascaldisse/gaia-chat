@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Chat from './components/Chat';
 import Sidebar from './components/Sidebar';
 import AgentFlow from './components/AgentFlow/AgentFlow';
+import GaiaHiveDemo from './components/GaiaHive/GaiaHiveDemo';
 import { chatDB, userDB } from './services/db';
 import './styles/theme.css';
 import './styles/Sidebar.css';
@@ -29,32 +30,8 @@ function AppContent() {
   const [editingPersona, setEditingPersona] = useState(null);
   const [activePersonas, setActivePersonas] = useState([]);
   const [activeUsers, setActiveUsers] = useState([]);
-  const [viewMode, setViewMode] = useState('chat'); // 'chat', 'agentflow', 'store', 'admin', 'formatter'
+  const [viewMode, setViewMode] = useState('chat'); // 'chat', 'agentflow', 'store', 'admin', 'hivemind'
   const [sidebarVisible, setSidebarVisible] = useState(false); // Control sidebar visibility
-  const [reducedMotion, setReducedMotion] = useState(false); // For accessibility
-  const [isApplePlatform, setIsApplePlatform] = useState(false); // For Apple-specific features
-  
-  // Detect reduced motion preference
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(mediaQuery.matches);
-    
-    const handleReducedMotionChange = (e) => {
-      setReducedMotion(e.matches);
-    };
-    
-    mediaQuery.addEventListener('change', handleReducedMotionChange);
-    return () => {
-      mediaQuery.removeEventListener('change', handleReducedMotionChange);
-    };
-  }, []);
-  
-  // Detect Apple platform
-  useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
-    const isMacOS = /Macintosh/.test(navigator.userAgent) && !('ontouchend' in document);
-    setIsApplePlatform(isIOS || isMacOS);
-  }, []);
 
   // Load chat history from database
   useEffect(() => {
@@ -349,31 +326,20 @@ function AppContent() {
   };
 
   return (
-    <div className={`app discord-dark ${reducedMotion ? 'reduced-motion' : ''} ${isApplePlatform ? 'apple-platform' : ''}`}>
-      {/* Skip to content link for accessibility */}
-      <a href="#main-content" className="visually-hidden">
-        Skip to main content
-      </a>
-      
+    <div className="app">
       {/* Hamburger menu toggle button */}
       <button 
         className="hamburger-menu" 
         onClick={() => setSidebarVisible(!sidebarVisible)}
         aria-label="Toggle sidebar"
-        aria-expanded={sidebarVisible}
-        aria-controls="sidebar"
       >
-        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
           <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
         </svg>
       </button>
       
       {/* Sidebar with collapsible behavior */}
-      <div 
-        id="sidebar"
-        className={`sidebar-container ${sidebarVisible ? 'visible' : 'hidden'}`}
-        aria-hidden={!sidebarVisible}
-      >
+      <div className={`sidebar-container ${sidebarVisible ? 'visible' : 'hidden'}`}>
         <Sidebar 
           setCurrentChat={setCurrentChat} 
           chatHistory={chatHistory}
@@ -390,153 +356,92 @@ function AppContent() {
         <button 
           className="sidebar-close" 
           onClick={() => setSidebarVisible(false)}
-          aria-label="Close sidebar"
         >
-          <span aria-hidden="true">✕</span>
+          ✕
         </button>
       </div>
       
       {/* Overlay for mobile */}
       {sidebarVisible && 
-        <div 
-          className="sidebar-overlay" 
-          onClick={() => setSidebarVisible(false)}
-          aria-hidden="true"
-        ></div>
+        <div className="sidebar-overlay" onClick={() => setSidebarVisible(false)}></div>
       }
       
-      <div className="view-toggle" role="tablist">
+      <div className="view-toggle">
         <button 
           className={viewMode === 'chat' ? 'active' : ''} 
           onClick={() => setViewMode('chat')}
-          role="tab"
-          aria-selected={viewMode === 'chat'}
-          aria-controls="chat-panel"
-          id="chat-tab"
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '6px' }} aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
           </svg>
-          Chat
+          <span>Chat</span>
         </button>
         <button 
           className={viewMode === 'agentflow' ? 'active' : ''} 
           onClick={() => setViewMode('agentflow')}
-          role="tab"
-          aria-selected={viewMode === 'agentflow'}
-          aria-controls="agentflow-panel"
-          id="agentflow-tab"
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '6px' }} aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h2v3h7zM7 9H4V5h3v4zm10 6h3v4h-3v-4zm0-10h3v4h-3V5z" />
           </svg>
-          Agent Workflow
+          <span>Agent Workflow</span>
         </button>
         <button 
           className={viewMode === 'store' ? 'active' : ''} 
           onClick={() => setViewMode('store')}
-          role="tab"
-          aria-selected={viewMode === 'store'}
-          aria-controls="store-panel"
-          id="store-tab"
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '6px' }} aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z" />
           </svg>
-          Persona Store
+          <span>Persona Store</span>
+        </button>
+        <button 
+          className={viewMode === 'hivemind' ? 'active' : ''} 
+          onClick={() => setViewMode('hivemind')}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+          </svg>
+          <span>Hive Mind</span>
         </button>
         {currentUser?.isAdmin && (
           <button 
             className={viewMode === 'admin' ? 'active' : ''} 
             onClick={() => setViewMode('admin')}
-            role="tab"
-            aria-selected={viewMode === 'admin'}
-            aria-controls="admin-panel"
-            id="admin-tab"
           >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '6px' }} aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
               <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 9.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
             </svg>
-            Admin
+            <span>Admin</span>
           </button>
         )}
       </div>
       
-      <main id="main-content" className="main-container">
-        {viewMode === 'chat' ? (
-          <div 
-            id="chat-panel" 
-            role="tabpanel" 
-            aria-labelledby="chat-tab"
-            className={`tab-panel ${viewMode === 'chat' ? 'active' : ''}`}
-          >
-            <Chat 
-              currentChat={currentChat} 
-              setCurrentChat={setCurrentChat} 
-              model={model}
-              systemPrompt={systemPrompt}
-              personas={personas}
-              activePersonas={activePersonas}
-              setActivePersonas={setActivePersonas}
-              activeUsers={activeUsers}
-              setActiveUsers={setActiveUsers}
-              selectedChatId={selectedChatId}
-              chatHistory={chatHistory}
-              setChatHistory={setChatHistory}
-              reducedMotion={reducedMotion}
-              isApplePlatform={isApplePlatform}
-            />
-          </div>
-        ) : viewMode === 'agentflow' ? (
-          <div 
-            id="agentflow-panel" 
-            role="tabpanel" 
-            aria-labelledby="agentflow-tab"
-            className={`tab-panel ${viewMode === 'agentflow' ? 'active' : ''}`}
-          >
-            <AgentFlow 
-              reducedMotion={reducedMotion}
-              isApplePlatform={isApplePlatform}
-            />
-          </div>
-        ) : viewMode === 'store' ? (
-          <div 
-            id="store-panel" 
-            role="tabpanel" 
-            aria-labelledby="store-tab"
-            className={`tab-panel ${viewMode === 'store' ? 'active' : ''}`}
-          >
-            <PersonaStore 
-              reducedMotion={reducedMotion}
-              isApplePlatform={isApplePlatform}
-            />
-          </div>
-        ) : viewMode === 'admin' ? (
-          <div 
-            id="admin-panel" 
-            role="tabpanel" 
-            aria-labelledby="admin-tab"
-            className={`tab-panel ${viewMode === 'admin' ? 'active' : ''}`}
-          >
-            <AdminDashboard 
-              reducedMotion={reducedMotion}
-              isApplePlatform={isApplePlatform}
-            />
-          </div>
-        ) : (
-          <div 
-            id="store-panel" 
-            role="tabpanel" 
-            aria-labelledby="store-tab"
-            className={`tab-panel active`}
-          >
-            <PersonaStore 
-              reducedMotion={reducedMotion}
-              isApplePlatform={isApplePlatform}
-            />
-          </div>
-        )}
-      </main>
+      {viewMode === 'chat' ? (
+        <Chat 
+          currentChat={currentChat} 
+          setCurrentChat={setCurrentChat} 
+          model={model}
+          systemPrompt={systemPrompt}
+          personas={personas}
+          activePersonas={activePersonas}
+          setActivePersonas={setActivePersonas}
+          activeUsers={activeUsers}
+          setActiveUsers={setActiveUsers}
+          selectedChatId={selectedChatId}
+          chatHistory={chatHistory}
+          setChatHistory={setChatHistory}
+        />
+      ) : viewMode === 'agentflow' ? (
+        <AgentFlow />
+      ) : viewMode === 'store' ? (
+        <PersonaStore />
+      ) : viewMode === 'admin' ? (
+        <AdminDashboard />
+      ) : viewMode === 'hivemind' ? (
+        <GaiaHiveDemo />
+      ) : (
+        <PersonaStore />
+      )}
       
       {editingPersona && (
         <PersonaManager 
@@ -544,11 +449,6 @@ function AppContent() {
           onPersonaUpdate={handleEditPersona}
           onDelete={handleDeletePersona}
           onClose={() => setEditingPersona(null)}
-          reducedMotion={reducedMotion}
-          isApplePlatform={isApplePlatform}
-          aria-modal="true"
-          role="dialog"
-          aria-labelledby="persona-manager-title"
         />
       )}
     </div>

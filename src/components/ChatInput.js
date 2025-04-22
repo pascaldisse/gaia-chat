@@ -4,16 +4,19 @@ import { userDB } from '../services/db';
 import { useUser } from '../contexts/UserContext';
 
 const COMMANDS = [
-  { name: 'imagine', description: 'Generate an image from text description' }
+  { name: 'imagine', description: 'Generate an image from text description' },
+  { name: 'search', description: 'Search the web using DuckDuckGo' }
 ];
 
-const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
+const ChatInput = ({ personas, onSendMessage, isLoading, onCancel, onToggleSearch }) => {
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState([]);
   const [mentionStartIndex, setMentionStartIndex] = useState(null);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [users, setUsers] = useState([]);
+  // Initialize webSearchEnabled from window if it exists
+  const [webSearchEnabled, setWebSearchEnabled] = useState(window.webSearchEnabled || false);
   const { user: currentUser } = useUser();
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -161,10 +164,16 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
     const triggerChar = inputValue[mentionStartIndex];
     
     // Handle commands immediately
-    if (triggerChar === '/' && suggestion.name === 'imagine') {
-      onSendMessage(`/imagine `); // Clear input and trigger command
-      setShowSuggestions(false);
-      return;
+    if (triggerChar === '/') {
+      if (suggestion.name === 'imagine') {
+        onSendMessage(`/imagine `); // Clear input and trigger command
+        setShowSuggestions(false);
+        return;
+      } else if (suggestion.name === 'search') {
+        onSendMessage(`/search `); // Clear input and trigger search command
+        setShowSuggestions(false);
+        return;
+      }
     }
     
     // Handle mentions normally
@@ -185,6 +194,10 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (inputValue.trim()) {
+      // Save the webSearchEnabled state to window so it can be accessed by the Chat component
+      window.webSearchEnabled = webSearchEnabled;
+      console.log('Web search enabled:', webSearchEnabled);
+      
       onSendMessage(inputValue);
       setInputValue('');
       setShowSuggestions(false);
@@ -247,27 +260,49 @@ const ChatInput = ({ personas, onSendMessage, isLoading, onCancel }) => {
           ))}
         </div>
       )}
+      <div className="chat-input-tools">
+        <button 
+          type="button" 
+          className={`web-search-toggle ${webSearchEnabled ? 'enabled' : ''}`}
+          onClick={() => {
+            const newValue = !webSearchEnabled;
+            setWebSearchEnabled(newValue);
+            window.webSearchEnabled = newValue;
+            console.log('Web search toggled to:', newValue);
+            
+            // Call the callback to notify the parent component
+            if (onToggleSearch) {
+              onToggleSearch(newValue);
+            }
+          }}
+          title={webSearchEnabled ? "Web search enabled (DuckDuckGo)" : "Enable web search"}
+        >
+          <span role="img" aria-label="Web Search">🔍</span>
+        </button>
+      </div>
       <textarea
         ref={inputRef}
         value={inputValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        placeholder="Type @ to mention a persona..."
+        placeholder={webSearchEnabled ? "Type @ to mention a persona... Web search enabled 🔍" : "Type @ to mention a persona..."}
         disabled={isLoading}
         rows={3}
       />
-      <button type="submit" disabled={isLoading}>
-        {isLoading ? 'Sending...' : 'Send'}
-      </button>
-      {isLoading && (
-        <button 
-          type="button"
-          className="cancel-button" 
-          onClick={onCancel}
-        >
-          Cancel
+      <div className="chat-input-buttons">
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? 'Sending...' : 'Send'}
         </button>
-      )}
+        {isLoading && (
+          <button 
+            type="button"
+            className="cancel-button" 
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 };
