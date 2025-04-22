@@ -1,7 +1,8 @@
 const { ChatDeepInfra } = require('@langchain/community/chat_models/deepinfra');
 const { ChatPromptTemplate } = require('@langchain/core/prompts');
-const { API_KEY } = require('../../src/config');
-const { PersonaAgent } = require('../../src/services/agentService');
+
+// Import API key directly
+const API_KEY = 'u5q1opMM9uw9x84EJLtxqaQ6HcnXbUAq';
 
 // In-memory storage for personas until we have proper DB integration
 const personas = new Map();

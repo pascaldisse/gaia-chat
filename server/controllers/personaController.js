@@ -1,5 +1,24 @@
 const personaService = require('../services/personaService');
-const { RPGSystem } = require('../../src/utils/RPGSystem');
+
+// Define a simple RPG system for the server since we can't import from the React app
+const RPGSystem = {
+  calculateOutcome: (persona, context) => {
+    return {
+      initiative: { roll: Math.floor(Math.random() * 20) + 1, total: Math.floor(Math.random() * 20) + 1 },
+      talkativeness: { roll: Math.floor(Math.random() * 20) + 1, total: Math.floor(Math.random() * 20) + 1 },
+      confidence: { roll: Math.floor(Math.random() * 20) + 1, total: Math.floor(Math.random() * 20) + 1 },
+      curiosity: { roll: Math.floor(Math.random() * 20) + 1, total: Math.floor(Math.random() * 20) + 1 },
+      empathy: { roll: Math.floor(Math.random() * 20) + 1, total: Math.floor(Math.random() * 20) + 1 },
+      creativity: { roll: Math.floor(Math.random() * 20) + 1, total: Math.floor(Math.random() * 20) + 1 },
+      humor: { roll: Math.floor(Math.random() * 20) + 1, total: Math.floor(Math.random() * 20) + 1 },
+      shouldRespond: true,
+      responsePriority: Math.floor(Math.random() * 20) + 1,
+      assertiveness: ['hesitant', 'neutral', 'assertive'][Math.floor(Math.random() * 3)],
+      questionDepth: ['shallow', 'moderate', 'deep'][Math.floor(Math.random() * 3)],
+      emotionalTone: ['detached', 'neutral', 'empathetic'][Math.floor(Math.random() * 3)]
+    };
+  }
+};
 
 /**
  * Get all personas

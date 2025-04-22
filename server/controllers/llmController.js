@@ -1,5 +1,14 @@
 const { ChatDeepInfra } = require('@langchain/community/chat_models/deepinfra');
-const { MODELS, API_KEY } = require('../../src/config');
+
+// Import API key and models directly since we can't use ES modules in Node.js
+const API_KEY = 'u5q1opMM9uw9x84EJLtxqaQ6HcnXbUAq';
+const MODELS = {
+  LLAMA3_70B: 'meta-llama/Meta-Llama-3-70B-Instruct',
+  MIXTRAL_8X22B: 'mistralai/Mixtral-8x22B-Instruct-v0.1',
+  DEEPSEEK_V3: 'deepseek-ai/DeepSeek-V3',
+  DEEPSEEK_R1: 'deepseek-ai/DeepSeek-R1',
+  DBRX: 'databricks/dbrx-instruct'
+};
 const llmService = require('../services/llmService');
 
 /**
