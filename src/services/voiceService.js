@@ -1,4 +1,5 @@
 import axios from 'axios';
+import API_KEYS from '../config.keys.js';
 
 // Add a debug utility function that can be called from the console
 window.debugGaiaAudio = function() {
@@ -143,8 +144,7 @@ const TTS_ENDPOINTS = {
   kokoro: "https://api.deepinfra.com/v1/inference/hexgrad/Kokoro-82M"
 };
 
-// Import API Key from secure config file
-import API_KEYS from '../config.keys.js';
+// API Key from secure config file
 const API_KEY = `Bearer ${API_KEYS.DEEPINFRA_API_KEY}`;
 
 // Get current TTS engine preference from localStorage, default to zonos
