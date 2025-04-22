@@ -6,6 +6,7 @@ Gaia is an innovative AI chat application that implements a unique RPG-style per
 
 ## Latest Updates
 
+- 🌐 **External API**: New API server for applications to access LLM capabilities
 - 🔊 **Improved Audio System**: Fixed audio playback issues and added new debugging tools
 - 🚀 **Server Persistence**: Enhanced restart script for continuous server operation
 - 🎭 **Expanded Persona Customization**: Updated persona attribute editors with new features
@@ -48,32 +49,42 @@ Gaia is an innovative AI chat application that implements a unique RPG-style per
 
 ## Available Scripts
 
-- `npm start`: Run development server
+- `npm start`: Run development server (React frontend)
 - `npm test`: Launch test runner
 - `npm run build`: Build for production
+- `npm run server`: Run the API server only
+- `npm run dev`: Run both the frontend and API server simultaneously
 - `npm run eject`: Eject from Create React App
 
 ## Documentation
 
-- [API Documentation](src/docs/API.md): Comprehensive API and system documentation
+- [API Documentation](src/docs/API.md): Comprehensive system documentation
 - [Design System](src/docs/DESIGN.md): UI design principles and guidelines
 - [Component Guide](src/docs/API.md#ui-components): UI component documentation
 - [Best Practices](src/docs/API.md#best-practices): Development guidelines
 - [Examples](src/docs/API.md#examples): Code examples and usage patterns
+- [Server API](server/README.md): External API server documentation
 
 ## Architecture
 
 Gaia is built with a modular architecture:
 
 ```
-src/
-├── components/     # React UI components
-├── services/      # Core services and APIs
-├── utils/         # Utility functions
-├── models/        # Data models
-├── config/        # Configuration
-├── styles/        # CSS styles
-└── docs/          # Documentation
+/
+├── src/                # React frontend application
+│   ├── components/     # React UI components
+│   ├── services/       # Core services and APIs
+│   ├── utils/          # Utility functions
+│   ├── models/         # Data models
+│   ├── config/         # Configuration
+│   ├── styles/         # CSS styles
+│   └── docs/           # Documentation
+│
+└── server/             # API Server
+    ├── routes/         # API route definitions
+    ├── controllers/    # Request handlers
+    ├── services/       # Business logic
+    └── examples/       # Example API clients
 ```
 
 ## Core Components
@@ -156,7 +167,14 @@ Gaia supports multiple AI models:
 
 2. Start development server
    ```bash
+   # Start just the React frontend
    npm start
+   
+   # Start just the API server
+   npm run server
+   
+   # Start both frontend and API server
+   npm run dev
    ```
 
 3. Run tests
@@ -171,6 +189,32 @@ Gaia supports multiple AI models:
    
    # The server will automatically restart if it crashes
    ```
+
+### API Server
+
+The new API server allows external applications to access Gaia's LLM capabilities:
+
+```javascript
+// Example: Chat with an LLM
+const response = await fetch('http://localhost:5000/api/llm/chat', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer your_api_key'
+  },
+  body: JSON.stringify({
+    model: 'meta-llama/Meta-Llama-3-70B-Instruct',
+    messages: [
+      { role: 'user', content: 'What is machine learning?' }
+    ]
+  })
+});
+
+const data = await response.json();
+console.log(data.message);
+```
+
+See the [API documentation](server/README.md) for more details.
 
 ## Contributing
 

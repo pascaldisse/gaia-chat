@@ -265,7 +265,7 @@ export function createPersonaTools(chatComponent, persona) {
         
         // Validate the parsed values
         if (isNaN(typeOfDice) || isNaN(numberOfDice) || typeOfDice < 1 || numberOfDice < 1) {
-          const errorMessage = "Invalid dice format. Use 'd' notation (e.g. '2d6') or 'diceType,number' format.";
+          const errorMessage = "Invalid dice parameters. Format should be: sides,count (e.g., '20,2' for 2d20)";
           addToolUsageMessage("Dice Roll", input, errorMessage);
           return errorMessage;
         }

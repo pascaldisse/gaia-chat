@@ -360,6 +360,10 @@ const AgentFlowContent = () => {
     }
   };
   
+  // State for workflow prompt input
+  const [workflowInput, setWorkflowInput] = useState('Process this data and create a report');
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  
   // Execute the current workflow - real implementation
   const executeCurrentWorkflow = async () => {
     if (nodes.length === 0) {
@@ -375,13 +379,19 @@ const AgentFlowContent = () => {
       result: null
     });
     
+    // Show prompt input modal
+    setShowPromptModal(true);
+  };
+  
+  // Handle prompt submission
+  const handlePromptSubmit = () => {
+    setShowPromptModal(false);
+    
     // Show execution modal
     setShowExecution(true);
     
-    // Prompt for user input
-    const userInput = prompt('Enter input for this workflow:', 'Process this data and create a report');
-    if (!userInput) {
-      // User cancelled
+    if (!workflowInput.trim()) {
+      // Empty input
       setExecutionState(prev => ({
         ...prev,
         status: 'cancelled',
@@ -389,13 +399,20 @@ const AgentFlowContent = () => {
           ...prev.logs,
           {
             type: 'info',
-            message: 'Execution cancelled by user',
+            message: 'Execution cancelled: empty input',
             timestamp: Date.now()
           }
         ]
       }));
       return;
     }
+    
+    // Continue with workflow execution with the input
+    continueWorkflowExecution(workflowInput);
+  };
+  
+  // Function to continue execution with the input
+  const continueWorkflowExecution = async (userInput) => {
     
     try {
       // Execute the workflow with real implementation
@@ -1067,6 +1084,45 @@ const AgentFlowContent = () => {
       </div>
       
       {/* Modals */}
+      {showPromptModal && (
+        <div className="agent-modal-backdrop">
+          <div className="agent-modal">
+            <div className="agent-modal-header">
+              <h3>Enter input for this workflow</h3>
+              <button 
+                className="agent-modal-close" 
+                onClick={() => setShowPromptModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="agent-modal-content">
+              <textarea
+                placeholder="Enter your prompt here..."
+                rows={5}
+                style={{ width: '100%' }}
+                value={workflowInput}
+                onChange={(e) => setWorkflowInput(e.target.value)}
+              />
+            </div>
+            <div className="agent-modal-footer">
+              <button 
+                className="agent-modal-button save"
+                onClick={handlePromptSubmit}
+              >
+                Submit Prompt
+              </button>
+              <button 
+                className="agent-modal-button cancel"
+                onClick={() => setShowPromptModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {showPersonaSelector && (
         <PersonaSelector 
           personas={personas} 
