@@ -35,8 +35,18 @@ Gaia is an innovative AI chat application that implements a unique RPG-style per
    ```
 
 2. **Configuration**
-   - Copy `.env.example` to `.env`
-   - Add your API keys and configuration
+   - Copy configuration templates and add your API keys:
+   ```bash
+   # Frontend API keys
+   cp src/config.keys.template.js src/config.keys.js
+   
+   # Server API keys
+   cp server/config.keys.template.js server/config.keys.js
+   
+   # Edit both files to add your actual API keys
+   ```
+   
+   - For other configuration:
    ```bash
    cp .env.example .env
    ```

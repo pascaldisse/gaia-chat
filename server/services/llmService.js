@@ -2,8 +2,9 @@ const { ChatDeepInfra } = require('@langchain/community/chat_models/deepinfra');
 const { ChatPromptTemplate, HumanMessagePromptTemplate } = require('@langchain/core/prompts');
 const { HumanMessage } = require('@langchain/core/messages');
 
-// Import API key directly
-const API_KEY = 'u5q1opMM9uw9x84EJLtxqaQ6HcnXbUAq';
+// Import API key from config file
+const API_KEYS = require('../config.keys.js');
+const API_KEY = API_KEYS.DEEPINFRA_API_KEY;
 
 /**
  * Generate a text completion using the specified model

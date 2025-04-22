@@ -1,4 +1,5 @@
-export const API_KEY = 'u5q1opMM9uw9x84EJLtxqaQ6HcnXbUAq';
+import API_KEYS from './config.keys.js';
+export const API_KEY = API_KEYS.DEEPINFRA_API_KEY;
 export const MODELS = {
   LLAMA3_70B: 'meta-llama/Meta-Llama-3-70B-Instruct',
   MIXTRAL_8X22B: 'mistralai/Mixtral-8x22B-Instruct-v0.1',

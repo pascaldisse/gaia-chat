@@ -143,8 +143,9 @@ const TTS_ENDPOINTS = {
   kokoro: "https://api.deepinfra.com/v1/inference/hexgrad/Kokoro-82M"
 };
 
-// API Key - in a real application, this should be stored securely
-const API_KEY = "Bearer u5q1opMM9uw9x84EJLtxqaQ6HcnXbUAq";
+// Import API Key from secure config file
+import API_KEYS from '../config.keys.js';
+const API_KEY = `Bearer ${API_KEYS.DEEPINFRA_API_KEY}`;
 
 // Get current TTS engine preference from localStorage, default to zonos
 export const getTTSEngine = () => {
