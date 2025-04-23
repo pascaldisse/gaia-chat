@@ -31,24 +31,22 @@ fi
 # Create logs directory if it doesn't exist
 mkdir -p logs
 
-# Ensure http-server is installed
-if ! command -v http-server &> /dev/null; then
-  echo "Installing http-server globally..."
-  npm install -g http-server
-fi
-
-# Copy runtime files to static directory
+# Prepare server directory
 echo "Setting up GaiaScript files..."
-mkdir -p public/gaiascript
-cp src/gaiascript/*.js public/gaiascript/
-cp src/gaiascript/*.gaia public/gaiascript/
-cp src/gaiascript/index.html public/gaiascript/index.html
+mkdir -p src/gaiascript/public
+# Copy runtime JS files but not standalone-server.js
+cp src/gaiascript/gaia-ui-runtime.js src/gaiascript/public/
+cp src/gaiascript/gaia-ui-compiler.js src/gaiascript/public/
+# Copy all gaia files
+cp src/gaiascript/*.gaia src/gaiascript/public/
+# Copy index.html
+cp src/gaiascript/index.html src/gaiascript/public/index.html
 
-# Start GaiaScript server
+# Start GaiaScript standalone server
 echo "Starting GaiaScript server..."
 GAIA_LOG_FILE="logs/gaiascript-server-$(date +%Y%m%d-%H%M%S).log"
 
-(nohup http-server public -p $GAIA_PORT > "$GAIA_LOG_FILE" 2>&1 </dev/null & echo $! > .gaiascript.pid) &
+(nohup node src/gaiascript/standalone-server.js > "$GAIA_LOG_FILE" 2>&1 </dev/null & echo $! > .gaiascript.pid) &
 
 # Give server time to start
 echo "Waiting for GaiaScript server to start..."
@@ -73,7 +71,7 @@ fi
 
 # Display URLs
 if [ $GAIA_STATUS -eq 0 ]; then
-  GAIA_URL="http://localhost:$GAIA_PORT/gaiascript"
+  GAIA_URL="http://localhost:$GAIA_PORT"
   echo "🌐 GaiaScript version is available at: $GAIA_URL"
   
   # Try to open in browser if on macOS
