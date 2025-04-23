@@ -1,0 +1,128 @@
+C〈chat〉chat:⟨{
+  state:⟨
+    messages:[],
+    isLoading:false,
+    inputValue:"",
+    isCancelled:false,
+    showSuggestions:false,
+    filteredSuggestions:[],
+    mentionStartIndex:null,
+    selectedSuggestionIndex:0,
+    webSearchEnabled:false
+  ⟩, 
+  style:⟨
+    container:⟨display:flex, flexDirection:column, height:100vh, padding:0, margin:0⟩,
+    messages:⟨flex:1, overflowY:auto, padding:20px, backgroundColor:#f5f5f5⟩,
+    message:⟨margin:10px 0, padding:10px, borderRadius:8px, maxWidth:80%⟩,
+    userMessage:⟨backgroundColor:#0084ff, color:white, alignSelf:flex-end⟩,
+    aiMessage:⟨backgroundColor:white, color:#333, alignSelf:flex-start, boxShadow:0 1px 2px rgba(0,0,0,0.1)⟩,
+    input:⟨display:flex, padding:10px, borderTop:1px solid #e6e6e6, backgroundColor:white⟩,
+    textarea:⟨flex:1, padding:10px, borderRadius:20px, border:1px solid #e6e6e6, resize:none, fontSize:14px⟩,
+    button:⟨padding:8px 16px, backgroundColor:#0084ff, color:white, border:none, borderRadius:20px, marginLeft:10px, cursor:pointer⟩
+  ⟩,
+  render:⟨
+    П→[
+      (П class:"messages"→messages.map(message⟨
+        П class:(message.isUser|"message user-message"|"message ai-message")→⌑"${message.content}"
+      ⟩)),
+      (П class:"input-container"→[
+        (⌤"textarea" placeholder:"Type your message..." ⇄inputValue @input→handleInput @keydown→handleKeyDown),
+        (⌘"Send"⌘click→handleSubmit isDisabled:isLoading)
+      ])
+    ]
+  ⟩,
+  methods:⟨
+    handleInput:(e)⟨
+      inputValue⊜e.target.value
+      
+      const cursorPos = e.target.selectionStart
+      const value = e.target.value
+      const substring = value.substring(0, cursorPos)
+      const atIndex = substring.lastIndexOf('@')
+      
+      if (atIndex === -1) {
+        showSuggestions⊜false
+        mentionStartIndex⊜null
+        return
+      }
+      
+      mentionStartIndex⊜atIndex
+      const mentionQuery = substring.substring(atIndex + 1)
+      
+      const personaMatches = [
+        {id:"1", name:"Gaia", image:"/persona1.jpg"},
+        {id:"2", name:"Sage", image:"/persona2.jpg"},
+        {id:"3", name:"Guru", image:"/persona3.jpg"}
+      ].filter(p => p.name.toLowerCase().startsWith(mentionQuery.toLowerCase()))
+      
+      filteredSuggestions⊜personaMatches
+      showSuggestions⊜personaMatches.length > 0
+      selectedSuggestionIndex⊜0
+    ⟩,
+    handleKeyDown:(e)⟨
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        handleSubmit()
+      }
+      
+      if (showSuggestions) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          selectedSuggestionIndex⊜(selectedSuggestionIndex + 1) % filteredSuggestions.length
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          selectedSuggestionIndex⊜(selectedSuggestionIndex - 1 + filteredSuggestions.length) % filteredSuggestions.length
+        } else if (e.key === 'Enter') {
+          e.preventDefault()
+          selectSuggestion(filteredSuggestions[selectedSuggestionIndex])
+        } else if (e.key === 'Escape') {
+          showSuggestions⊜false
+        }
+      }
+    ⟩,
+    selectSuggestion:(suggestion)⟨
+      if (mentionStartIndex === null) return
+      
+      const before = inputValue.substring(0, mentionStartIndex)
+      const after = inputValue.substring(document.querySelector('textarea').selectionStart)
+      
+      inputValue⊜`${before}@${suggestion.name} ${after}`.trim()
+      showSuggestions⊜false
+    ⟩,
+    handleSubmit:()⟨
+      if (!inputValue.trim()) return
+      
+      // Add user message
+      messages⊕{
+        id: Date.now(),
+        content: inputValue,
+        isUser: true
+      }
+      
+      // Clear input
+      inputValue⊜""
+      
+      // Show loading
+      isLoading⊜true
+      
+      // Simulate AI response after delay
+      setTimeout(() => {
+        messages⊕{
+          id: Date.now(),
+          content: getAIResponse(inputValue),
+          isUser: false
+        }
+        isLoading⊜false
+      }, 1000)
+    ⟩,
+    getAIResponse:(userInput)⟨
+      const responses = [
+        "I understand your question about " + userInput.substring(0, 20) + "...",
+        "That's an interesting point about " + userInput.substring(0, 15) + "...",
+        "Let me think about " + userInput.substring(0, 10) + "...",
+        "I'd be happy to help with " + userInput.substring(0, 25) + "..."
+      ]
+      return responses[Math.floor(Math.random() * responses.length)]
+    ⟩
+  ⟩
+}⟩

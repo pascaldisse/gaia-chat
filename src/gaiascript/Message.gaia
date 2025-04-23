@@ -1,0 +1,143 @@
+C〈message〉message:⟨{
+  props:⟨
+    content:"",
+    isUser:false,
+    personaId:null,
+    timestamp:null,
+    onRegenerate:null
+  ⟩,
+  state:⟨
+    showActions:false
+  ⟩,
+  style:⟨
+    container:⟨
+      display:flex, 
+      margin:8px 0, 
+      position:relative
+    ⟩,
+    userMessage:⟨
+      alignSelf:flex-end, 
+      backgroundColor:#0084ff, 
+      color:white, 
+      borderRadius:18px, 
+      padding:10px 14px, 
+      maxWidth:80%, 
+      marginLeft:auto
+    ⟩,
+    aiMessage:⟨
+      alignSelf:flex-start, 
+      backgroundColor:white, 
+      color:#333333, 
+      borderRadius:18px, 
+      padding:10px 14px, 
+      boxShadow:0 1px 2px rgba(0,0,0,0.1), 
+      maxWidth:80%
+    ⟩,
+    content:⟨
+      wordBreak:break-word, 
+      whiteSpace:pre-wrap, 
+      lineHeight:1.4
+    ⟩,
+    persona:⟨
+      fontWeight:bold, 
+      marginBottom:4px, 
+      fontSize:12px, 
+      color:#666666
+    ⟩,
+    actionsBtn:⟨
+      position:absolute, 
+      right:0, 
+      top:0, 
+      padding:4px 8px, 
+      background:transparent, 
+      border:none, 
+      cursor:pointer, 
+      opacity:0
+    ⟩,
+    actionsBtnVisible:⟨
+      opacity:1
+    ⟩,
+    actionsMenu:⟨
+      position:absolute, 
+      right:0, 
+      top:24px, 
+      backgroundColor:white, 
+      borderRadius:4px, 
+      boxShadow:0 2px 10px rgba(0,0,0,0.1), 
+      zIndex:100, 
+      display:none
+    ⟩,
+    actionsMenuVisible:⟨
+      display:block
+    ⟩,
+    actionItem:⟨
+      padding:8px 16px, 
+      cursor:pointer, 
+      hover:⟨backgroundColor:#f5f5f5⟩
+    ⟩
+  ⟩,
+  render:⟨
+    П class:(isUser|"message user-message"|"message ai-message") @mouseenter→handleMouseEnter @mouseleave→handleMouseLeave→[
+      (!isUser|П class:"persona"→⌑"${getPersonaName()}"),
+      (П class:"content"→⌑"${content}"),
+      (!isUser|⌘"⋮"⌘click→toggleActions class:(showActions|"actions-btn visible"|"actions-btn")),
+      (!isUser && showActions|П class:"actions-menu"→[
+        (П class:"action-item"⌘click→handleCopy→⌑"Copy"),
+        (П class:"action-item"⌘click→handleRegenerate→⌑"Regenerate response")
+      ])
+    ]
+  ⟩,
+  methods:⟨
+    getPersonaName:()⟨
+      if (personaId) {
+        // In a real implementation, this would lookup the persona name
+        const personas = {
+          "1": "Gaia",
+          "2": "Sage", 
+          "3": "Guru"
+        }
+        return personas[personaId] || "AI Assistant"
+      }
+      return "AI Assistant"
+    ⟩,
+    handleMouseEnter:()⟨
+      // Show the actions button on hover
+      showActions⊜true
+    ⟩,
+    handleMouseLeave:()⟨
+      // Hide the actions button when mouse leaves
+      showActions⊜false
+    ⟩,
+    toggleActions:()⟨
+      // Toggle the actions menu visibility
+      showActions⊜!showActions
+    ⟩,
+    handleCopy:()⟨
+      // Copy message content to clipboard
+      navigator.clipboard.writeText(content)
+        .then(() => {
+          alert("Copied to clipboard!")
+        })
+        .catch(err => {
+          console.error("Failed to copy: ", err)
+        })
+      
+      // Hide the actions menu
+      showActions⊜false
+    ⟩,
+    handleRegenerate:()⟨
+      // Call the onRegenerate callback if provided
+      if (onRegenerate) {
+        onRegenerate({
+          id: Date.now(),
+          content: content,
+          isUser: isUser,
+          personaId: personaId
+        })
+      }
+      
+      // Hide the actions menu
+      showActions⊜false
+    ⟩
+  ⟩
+}⟩

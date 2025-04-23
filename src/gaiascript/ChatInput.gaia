@@ -1,0 +1,232 @@
+C〈chatInput〉chatInput:⟨{
+  props:⟨
+    onSendMessage:null,
+    isLoading:false,
+    onCancel:null,
+    onToggleSearch:null,
+    personas:[]
+  ⟩,
+  state:⟨
+    inputValue:"",
+    showSuggestions:false,
+    filteredSuggestions:[],
+    mentionStartIndex:null,
+    selectedSuggestionIndex:0,
+    webSearchEnabled:false
+  ⟩,
+  style:⟨
+    container:⟨
+      display:flex,
+      flexDirection:column,
+      borderTop:1px solid #e6e6e6,
+      padding:10px,
+      backgroundColor:white
+    ⟩,
+    inputRow:⟨
+      display:flex,
+      alignItems:center
+    ⟩,
+    textarea:⟨
+      flex:1,
+      padding:12px,
+      borderRadius:20px,
+      border:1px solid #e6e6e6,
+      resize:none,
+      fontSize:14px,
+      minHeight:24px,
+      maxHeight:150px,
+      outline:none,
+      focus:⟨borderColor:#0084ff⟩
+    ⟩,
+    button:⟨
+      padding:8px 16px,
+      backgroundColor:#0084ff,
+      color:white,
+      border:none,
+      borderRadius:20px,
+      marginLeft:10px,
+      cursor:pointer,
+      disabled:⟨
+        opacity:0.6, 
+        cursor:not-allowed
+      ⟩
+    ⟩,
+    cancelButton:⟨
+      padding:8px 16px,
+      backgroundColor:#ff3b30,
+      color:white,
+      border:none,
+      borderRadius:20px,
+      marginLeft:10px,
+      cursor:pointer
+    ⟩,
+    suggestions:⟨
+      position:absolute,
+      bottom:70px,
+      left:10px,
+      right:10px,
+      backgroundColor:white,
+      borderRadius:8px,
+      boxShadow:0 2px 10px rgba(0,0,0,0.1),
+      maxHeight:200px,
+      overflowY:auto,
+      zIndex:1000
+    ⟩,
+    suggestionItem:⟨
+      display:flex,
+      alignItems:center,
+      padding:8px 12px,
+      cursor:pointer,
+      hover:⟨backgroundColor:#f5f5f5⟩
+    ⟩,
+    selectedItem:⟨
+      backgroundColor:#f0f7ff
+    ⟩,
+    avatar:⟨
+      width:24px,
+      height:24px,
+      borderRadius:50%,
+      marginRight:8px
+    ⟩,
+    personaName:⟨
+      fontWeight:bold
+    ⟩,
+    personaType:⟨
+      fontSize:12px,
+      color:#666666,
+      marginLeft:8px
+    ⟩,
+    tools:⟨
+      display:flex,
+      marginBottom:8px
+    ⟩,
+    searchToggle:⟨
+      backgroundColor:transparent,
+      border:none,
+      borderRadius:50%,
+      width:30px,
+      height:30px,
+      display:flex,
+      alignItems:center,
+      justifyContent:center,
+      cursor:pointer,
+      marginRight:8px,
+      hover:⟨backgroundColor:#f5f5f5⟩
+    ⟩,
+    searchToggleActive:⟨
+      backgroundColor:#e6f2ff,
+      color:#0084ff
+    ⟩
+  ⟩,
+  render:⟨
+    П class:"chat-input"→[
+      (П class:"tools"→[
+        (⌘""⌘click→toggleSearch class:(webSearchEnabled|"search-toggle active"|"search-toggle")→⌑"🔍")
+      ]),
+      (showSuggestions|П class:"suggestions"→
+        filteredSuggestions.map(suggestion, index⟨
+          П class:(index === selectedSuggestionIndex|"suggestion-item selected"|"suggestion-item") @click→()=>selectSuggestion(suggestion)→[
+            (⌹ src:(suggestion.image || "/default-avatar.png") class:"avatar"),
+            (П class:"persona-name"→⌑"${suggestion.name}"),
+            (П class:"persona-type"→⌑"Persona")
+          ]
+        ⟩)
+      ),
+      (П class:"input-row"→[
+        (⌤"textarea" 
+          placeholder:(webSearchEnabled|"Type your message... Web search enabled 🔍"|"Type your message...") 
+          ⇄inputValue 
+          @input→handleInput 
+          @keydown→handleKeyDown 
+          disabled:isLoading
+        ),
+        (⌘"Send"⌘click→handleSubmit isDisabled:isLoading),
+        (isLoading|⌘"Cancel"⌘click→handleCancel class:"cancel-button")
+      ])
+    ]
+  ⟩,
+  methods:⟨
+    handleInput:(e)⟨
+      inputValue⊜e.target.value
+      
+      const cursorPos = e.target.selectionStart
+      const value = e.target.value
+      const substring = value.substring(0, cursorPos)
+      const atIndex = substring.lastIndexOf('@')
+      
+      if (atIndex === -1) {
+        showSuggestions⊜false
+        mentionStartIndex⊜null
+        return
+      }
+      
+      mentionStartIndex⊜atIndex
+      const mentionQuery = substring.substring(atIndex + 1)
+      
+      // Use personas from props, or fallback to default list
+      const availablePersonas = personas.length > 0 ? personas : [
+        {id:"1", name:"Gaia", image:"/assets/personas/gaia-default.jpeg"},
+        {id:"2", name:"Sage", image:"/default-avatar.png"},
+        {id:"3", name:"Guru", image:"/default-avatar.png"}
+      ]
+      
+      const personaMatches = availablePersonas.filter(p => 
+        p.name.toLowerCase().startsWith(mentionQuery.toLowerCase())
+      )
+      
+      filteredSuggestions⊜personaMatches
+      showSuggestions⊜personaMatches.length > 0
+      selectedSuggestionIndex⊜0
+    ⟩,
+    handleKeyDown:(e)⟨
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        handleSubmit()
+      } else if (showSuggestions) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          selectedSuggestionIndex⊜(selectedSuggestionIndex + 1) % filteredSuggestions.length
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          selectedSuggestionIndex⊜(selectedSuggestionIndex - 1 + filteredSuggestions.length) % filteredSuggestions.length
+        } else if (e.key === 'Enter') {
+          e.preventDefault()
+          selectSuggestion(filteredSuggestions[selectedSuggestionIndex])
+        } else if (e.key === 'Escape') {
+          showSuggestions⊜false
+        }
+      }
+    ⟩,
+    selectSuggestion:(suggestion)⟨
+      if (mentionStartIndex === null) return
+      
+      const before = inputValue.substring(0, mentionStartIndex)
+      const after = inputValue.substring(document.querySelector('textarea').selectionStart)
+      
+      inputValue⊜`${before}@${suggestion.name} ${after}`.trim()
+      showSuggestions⊜false
+    ⟩,
+    handleSubmit:()⟨
+      if (!inputValue.trim()) return
+      
+      if (onSendMessage) {
+        onSendMessage(inputValue)
+      }
+      
+      inputValue⊜""
+      showSuggestions⊜false
+    ⟩,
+    handleCancel:()⟨
+      if (onCancel) {
+        onCancel()
+      }
+    ⟩,
+    toggleSearch:()⟨
+      webSearchEnabled⊜!webSearchEnabled
+      
+      if (onToggleSearch) {
+        onToggleSearch(webSearchEnabled)
+      }
+    ⟩
+  ⟩
+}⟩
