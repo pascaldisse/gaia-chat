@@ -80,17 +80,17 @@ function parseGaiaScript(source) {
     
     // Extract framework sections (§:, γ:, δ:)
     const storeSectionRegex = /§[:]([\s\S]*?)(?=γ:|δ:|$)/;
-    const uiSectionRegex = /γ[:]([\s\S]*?)(?=§:|δ:|$)/;
+    const frameworkUiSectionRegex = /γ[:]([\s\S]*?)(?=§:|δ:|$)/;
     const appSectionRegex = /δ[:]([\s\S]*?)(?=§:|γ:|$)/;
     
     const storeMatch = body.match(storeSectionRegex);
-    const uiMatch = body.match(uiSectionRegex);
+    const frameworkUiMatch = body.match(frameworkUiSectionRegex);
     const appMatch = body.match(appSectionRegex);
     
     framework = {
       components: components.split('⊕'),
       store: storeMatch ? storeMatch[1] : '',
-      ui: uiMatch ? parseSection(uiMatch[1]) : {},
+      ui: frameworkUiMatch ? parseSection(frameworkUiMatch[1]) : {},
       app: appMatch ? parseSection(appMatch[1]) : {}
     };
   }
