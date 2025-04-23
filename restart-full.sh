@@ -1,11 +1,16 @@
 #!/bin/bash
 
-# Restart script for Gaia Chat
-# This script restarts both the frontend and API server
+# Full Restart Script for Gaia Chat
+# This script restarts both the frontend and API server with forceful cleanup
 
-echo "====== Gaia Chat Restart Script ======"
+echo "====== Gaia Chat Full Restart Script ======"
 echo "$(date)"
 echo "--------------------------------"
+
+# Forcefully kill any processes using the API and frontend ports
+echo "Forcefully terminating any existing server processes..."
+lsof -ti :5001 | xargs kill -9 2>/dev/null || echo "No processes using port 5001"
+lsof -ti :3000 | xargs kill -9 2>/dev/null || echo "No processes using port 3000"
 
 # Kill any running server processes
 find_and_kill_process() {
@@ -15,18 +20,18 @@ find_and_kill_process() {
     PID=$(cat ".$1.pid")
     if kill -0 $PID 2>/dev/null; then
       echo "Stopping $1 process with PID $PID..."
-      kill $PID
+      kill -9 $PID
       sleep 2
     else
       echo "No active $1 process found with PID $PID"
     fi
-    rm ".$1.pid"
+    rm -f ".$1.pid"
   else
     # Try to find processes by command pattern
     if [ "$1" = "frontend" ]; then
-      pkill -f "serve -s build" || echo "No frontend processes found"
+      pkill -9 -f "serve -s build" 2>/dev/null || echo "No frontend processes found"
     elif [ "$1" = "api" ]; then
-      pkill -f "node server/index.js" || echo "No API server processes found"
+      pkill -9 -f "node server/index.js" 2>/dev/null || echo "No API server processes found"
     fi
   fi
 }
@@ -99,7 +104,7 @@ verify_server() {
 }
 
 # Check API server status
-API_PORT=5000
+API_PORT=5001
 API_URL="http://localhost:$API_PORT/api/llm/health"
 verify_server "api" "API server" "$API_LOG_FILE"
 API_STATUS=$?
@@ -128,3 +133,16 @@ fi
 echo "--------------------------------"
 echo "✨ Restart completed. Servers will continue running even if terminal is closed."
 echo "👉 To stop the servers later, run: kill $(cat .api.pid 2>/dev/null || echo 'N/A') $(cat .frontend.pid 2>/dev/null || echo 'N/A')"
+echo ""
+echo "⚠️  IMPORTANT: The frontend is using DeepInfra API directly."
+echo "   To fix the 'DeepInfra API direct access not available' error message:"
+echo ""
+echo "   1. Make sure your API key is configured in src/config.keys.js:"
+echo "      - The file should export DEEPINFRA_API_KEY"
+echo "      - If you don't have a file yet, copy from the template:"
+echo "        cp src/config.keys.template.js src/config.keys.js"
+echo ""
+echo "   2. Then edit the file to add your API key:"
+echo "      const API_KEYS = { DEEPINFRA_API_KEY: 'your_api_key_here' };"
+echo ""
+echo "   3. Restart the application with ./restart-full.sh"
