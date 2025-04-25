@@ -1,0 +1,92 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe": ["<GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe>"]
+  "GaiaDesktopApp-arm64-apple-macosx15.0-debug.module": ["<GaiaDesktopApp-arm64-apple-macosx15.0-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe>","<GaiaDesktopApp-arm64-apple-macosx15.0-debug.module>"]
+  "test": ["<GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe>","<GaiaDesktopApp-arm64-apple-macosx15.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp":
+    is-mutated: true
+commands:
+  "/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp-entitlement.plist":
+    tool: write-auxiliary-file
+    inputs: ["<entitlement-plist>","<com.apple.security.get-task-allow>"]
+    outputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp-entitlement.plist"]
+    description: "Write auxiliary file /Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp-entitlement.plist"
+
+  "/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/ContentView.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/GaiaScriptBridge.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/GaiaWebView.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/ResourceBundle.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/main.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/DerivedSources/resource_bundle_accessor.swift"]
+    outputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/sources"]
+    description: "Write auxiliary file /Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/sources"
+
+  "/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/ContentView.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/GaiaScriptBridge.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/GaiaWebView.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/ResourceBundle.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/main.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/resource_bundle_accessor.swift.o"]
+    outputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.product/Objects.LinkFileList"
+
+  "/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp_GaiaDesktopApp.bundle/gaia-default.jpeg":
+    tool: copy-tool
+    inputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/Resources/gaia-default.jpeg"]
+    outputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp_GaiaDesktopApp.bundle/gaia-default.jpeg"]
+    description: "Copying /Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/Resources/gaia-default.jpeg"
+
+  "/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+
+  "<GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe>":
+    tool: phony
+    inputs: ["<GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe-CodeSigning>"]
+    outputs: ["<GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe>"]
+
+  "<GaiaDesktopApp-arm64-apple-macosx15.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/ContentView.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/GaiaScriptBridge.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/GaiaWebView.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/ResourceBundle.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/main.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/resource_bundle_accessor.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/Modules/GaiaDesktopApp.swiftmodule"]
+    outputs: ["<GaiaDesktopApp-arm64-apple-macosx15.0-debug.module>"]
+
+  "C.GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe":
+    tool: shell
+    inputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/ContentView.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/GaiaScriptBridge.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/GaiaWebView.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/ResourceBundle.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/main.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/resource_bundle_accessor.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.product/Objects.LinkFileList"]
+    outputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/GaiaDesktopApp"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug","-o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp","-module-name","GaiaDesktopApp","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-alias","-Xlinker","_GaiaDesktopApp_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.product/Objects.LinkFileList","-target","arm64-apple-macosx12.0","-Xlinker","-add_ast_path","-Xlinker","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/Modules/GaiaDesktopApp.swiftmodule","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "C.GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe-entitlements":
+    tool: shell
+    inputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp-entitlement.plist"]
+    outputs: ["<GaiaDesktopApp-arm64-apple-macosx15.0-debug.exe-CodeSigning>"]
+    description: "Applying debug entitlements to ./.build/arm64-apple-macosx/debug/GaiaDesktopApp"
+    args: ["codesign","--force","--sign","-","--entitlements","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp-entitlement.plist","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp"]
+
+  "C.GaiaDesktopApp-arm64-apple-macosx15.0-debug.module":
+    tool: shell
+    inputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/ContentView.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/GaiaScriptBridge.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/GaiaWebView.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/ResourceBundle.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/main.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/DerivedSources/resource_bundle_accessor.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","<GaiaDesktopApp-arm64-apple-macosx15.0-debug.module-resources>","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/sources"]
+    outputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/ContentView.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/GaiaScriptBridge.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/GaiaWebView.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/ResourceBundle.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/main.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/resource_bundle_accessor.swift.o","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/Modules/GaiaDesktopApp.swiftmodule"]
+    description: "Compiling Swift Module 'GaiaDesktopApp' (6 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","GaiaDesktopApp","-emit-dependencies","-emit-module","-emit-module-path","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/Modules/GaiaDesktopApp.swiftmodule","-output-file-map","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/output-file-map.json","-incremental","-c","@/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp.build/sources","-I","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx12.0","-enable-batch-mode","-index-store-path","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j10","-DSWIFT_PACKAGE","-DDEBUG","-module-cache-path","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","GaiaDesktopApp_main","-swift-version","5","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g"]
+
+  "GaiaDesktopApp-arm64-apple-macosx15.0-debug.module-resources":
+    tool: phony
+    inputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/.build/arm64-apple-macosx/debug/GaiaDesktopApp_GaiaDesktopApp.bundle/gaia-default.jpeg"]
+    outputs: ["<GaiaDesktopApp-arm64-apple-macosx15.0-debug.module-resources>"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Sources/GaiaDesktopApp/","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Package.swift","/Users/pascaldisse/gaia/gaia-chat/GaiaDesktopApp/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+
