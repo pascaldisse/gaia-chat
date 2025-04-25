@@ -51,3 +51,4 @@ docs/gaiascript/*.log
 .api.pid
 .frontend.pid
 .env.local
+.env
