@@ -28,6 +28,22 @@ class GaiaScriptBridge: NSObject, WKScriptMessageHandler {
                     print("New persona added: \(personaData)")
                     // Here you could save the persona to persistent storage if needed
                 }
+            case "sendMessage":
+                if let messageText = dict["message"] as? String,
+                   let personaId = dict["personaId"] as? String {
+                    print("Message from user to persona \(personaId): \(messageText)")
+                    
+                    // Here we would process the message and generate a response
+                    // For now, just echo back a simulated response
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        let response = "I received your message: \"\(messageText)\""
+                        self.sendMessage([
+                            "type": "messageResponse",
+                            "personaId": personaId,
+                            "message": response
+                        ])
+                    }
+                }
             default:
                 break
             }

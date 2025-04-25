@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Content View
 struct ContentView: View {
     @State private var showSettings = false
+    @State private var showTodoList = false
     
     var body: some View {
         ZStack {
@@ -13,7 +14,7 @@ struct ContentView: View {
             GaiaWebView()
                 .edgesIgnoringSafeArea(.all)
             
-            // Control buttons (add chat and settings)
+            // Control buttons (add chat, todo list and settings)
             VStack {
                 Spacer()
                 HStack {
@@ -28,6 +29,24 @@ struct ContentView: View {
                                                       userInfo: ["script": script])
                     }) {
                         Image(systemName: "plus")
+                            .font(.system(size: 20))
+                            .foregroundColor(.blue)
+                            .frame(width: 40, height: 40)
+                            .background(
+                                Circle()
+                                    .fill(Color.white.opacity(0.9))
+                                    .shadow(color: Color.black.opacity(0.2), radius: 5)
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.trailing, 10)
+                    .padding(.bottom, 20)
+                    
+                    // Todo List button
+                    Button(action: {
+                        showTodoList.toggle()
+                    }) {
+                        Image(systemName: "list.bullet")
                             .font(.system(size: 20))
                             .foregroundColor(.blue)
                             .frame(width: 40, height: 40)
@@ -63,6 +82,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
+        }
+        .sheet(isPresented: $showTodoList) {
+            TodoListView()
         }
     }
 }
@@ -101,5 +123,117 @@ struct SettingsView: View {
         }
         .padding()
         .frame(width: 400, height: 300)
+    }
+}
+
+// MARK: - Todo List Item
+struct TodoItem: Identifiable {
+    let id = UUID()
+    var title: String
+    var isCompleted: Bool = false
+    var isBacklog: Bool = false
+}
+
+// MARK: - Todo List View
+struct TodoListView: View {
+    @State private var todoItems = [
+        TodoItem(title: "Implement chat message sending", isCompleted: true),
+        TodoItem(title: "Add UI for persona creation"),
+        TodoItem(title: "Support for multiple personas"),
+        TodoItem(title: "Fix chat bubble positioning"),
+        TodoItem(title: "Improve message formatting", isBacklog: true),
+        TodoItem(title: "Integrate with external AI services", isBacklog: true),
+        TodoItem(title: "Create toolbar customization", isBacklog: true),
+        TodoItem(title: "Add drag handle for window resizing", isBacklog: true)
+    ]
+    
+    @State private var newTodoTitle = ""
+    @State private var showBacklog = false
+    
+    var body: some View {
+        VStack {
+            HStack {
+                Text("Gaia Desktop Todo List")
+                    .font(.headline)
+                Spacer()
+                Toggle("Show Backlog", isOn: $showBacklog)
+            }
+            .padding(.bottom, 10)
+            
+            HStack {
+                TextField("New task...", text: $newTodoTitle)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                
+                Button(action: {
+                    if !newTodoTitle.isEmpty {
+                        todoItems.append(TodoItem(title: newTodoTitle))
+                        newTodoTitle = ""
+                    }
+                }) {
+                    Text("Add")
+                        .padding(.horizontal, 10)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            
+            List {
+                Section(header: Text("Current Tasks")) {
+                    ForEach(todoItems.filter { !$0.isBacklog }) { item in
+                        HStack {
+                            Button(action: {
+                                if let index = todoItems.firstIndex(where: { $0.id == item.id }) {
+                                    todoItems[index].isCompleted.toggle()
+                                }
+                            }) {
+                                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(item.isCompleted ? .green : .gray)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Text(item.title)
+                                .strikethrough(item.isCompleted)
+                                .foregroundColor(item.isCompleted ? .gray : .primary)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                if let index = todoItems.firstIndex(where: { $0.id == item.id }) {
+                                    todoItems[index].isBacklog.toggle()
+                                }
+                            }) {
+                                Image(systemName: "arrow.down.circle")
+                                    .foregroundColor(.blue)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                
+                if showBacklog {
+                    Section(header: Text("Backlog")) {
+                        ForEach(todoItems.filter { $0.isBacklog }) { item in
+                            HStack {
+                                Text(item.title)
+                                    .foregroundColor(.gray)
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    if let index = todoItems.firstIndex(where: { $0.id == item.id }) {
+                                        todoItems[index].isBacklog.toggle()
+                                    }
+                                }) {
+                                    Image(systemName: "arrow.up.circle")
+                                        .foregroundColor(.blue)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .frame(width: 450, height: 500)
     }
 }

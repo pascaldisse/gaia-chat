@@ -401,34 +401,44 @@ struct GaiaWebView: NSViewRepresentable {
             this.renderChatMessages();
             
             // Generate a simple response (in real app, this would use AI)
-            setTimeout(() => {
-                // Simulate response based on personality
-                let response;
-                if (message.toLowerCase().includes('hello') || message.toLowerCase().includes('hi')) {
-                    response = `Hello! I'm ${persona.name}. How can I assist you today?`;
-                } else if (message.toLowerCase().includes('help')) {
-                    response = `I can help you with various tasks. Just let me know what you need!`;
-                } else if (message.toLowerCase().includes('weather')) {
-                    response = `I don't have access to weather data yet, but I can help you with other things!`;
-                } else {
-                    response = `I've received your message. As a demo persona, I have limited responses programmed. In a full implementation, I would use AI to generate contextual replies based on my ${persona.personality} personality.`;
-                }
-                
-                // Add persona response
-                this.state.chatHistory[persona.id].push({
-                    type: 'persona',
-                    content: response,
-                    timestamp: Date.now()
+            // Send message to Swift for processing
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gaiaBridge) {
+                window.webkit.messageHandlers.gaiaBridge.postMessage({
+                    type: 'sendMessage',
+                    personaId: persona.id,
+                    message: message
                 });
-                
-                this.renderChatMessages();
-                
-                // Scroll to bottom
-                const messagesContainer = document.querySelector('.chat-messages');
-                if (messagesContainer) {
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
-            }, 1000);
+            } else {
+                // Fallback for when running without Swift bridge (e.g. in a browser)
+                setTimeout(() => {
+                    // Simulate response based on personality
+                    let response;
+                    if (message.toLowerCase().includes('hello') || message.toLowerCase().includes('hi')) {
+                        response = `Hello! I'm ${persona.name}. How can I assist you today?`;
+                    } else if (message.toLowerCase().includes('help')) {
+                        response = `I can help you with various tasks. Just let me know what you need!`;
+                    } else if (message.toLowerCase().includes('weather')) {
+                        response = `I don't have access to weather data yet, but I can help you with other things!`;
+                    } else {
+                        response = `I've received your message. As a demo persona, I have limited responses programmed. In a full implementation, I would use AI to generate contextual replies based on my ${persona.personality} personality.`;
+                    }
+                    
+                    // Add persona response
+                    this.state.chatHistory[persona.id].push({
+                        type: 'persona',
+                        content: response,
+                        timestamp: Date.now()
+                    });
+                    
+                    this.renderChatMessages();
+                    
+                    // Scroll to bottom
+                    const messagesContainer = document.querySelector('.chat-messages');
+                    if (messagesContainer) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }, 1000);
+            }
         },
         
         startIdleAnimations: function() {
@@ -696,6 +706,29 @@ struct GaiaWebView: NSViewRepresentable {
                 // Update settings from Swift
                 app.state.settings = {...app.state.settings, ...message.settings};
                 app.render();
+            } else if (message.type === "messageResponse") {
+                // Handle response to a message
+                const personaId = message.personaId;
+                const responseText = message.message;
+                
+                if (!app.state.chatHistory[personaId]) {
+                    app.state.chatHistory[personaId] = [];
+                }
+                
+                // Add persona response
+                app.state.chatHistory[personaId].push({
+                    type: 'persona',
+                    content: responseText,
+                    timestamp: Date.now()
+                });
+                
+                app.renderChatMessages();
+                
+                // Scroll to bottom
+                const messagesContainer = document.querySelector('.chat-messages');
+                if (messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
             }
         }
     };
