@@ -1,0 +1,2863 @@
+// GaiaChat - w₄ full-featured w₁177 interface built w₁₁ w₈₃
+
+w₁148⟨w₉₇, Component, w₉₄⟩
+
+// Documentation
+D⟨
+  title: "GaiaChat",
+  w₁₁₁: "w₄ powerful, full-featured w₁177 interface w₉ w₁131 assistants built w₁₁ w₈₃",
+  w₁₁₂: [
+    "Multiple personas w₁₁ different capabilities",
+    "File uploads w₂ knowledge base",
+    "Message w₉₂ w₂ regeneration",
+    "Web search integration", 
+    "w₁178 systems w₉ randomized responses",
+    "Dice rolling w₂ image generation",
+    "Image analysis w₁₁ Vision API",
+    "Debug information w₂ logging"
+  ]
+⟩
+
+// Message Component Definition
+C⟨message⟩⟨
+  props:⟨
+    content:"",
+    isUser:false,
+    personaId:null,
+    timestamp:null,
+    onRegenerate:null,
+    isCommand:false,
+    personas:[],
+    imageList:[]
+  ⟩,
+  w₉₄:⟨
+    showActions:false,
+    isImage:false,
+    isCode:false,
+    formattedContent:""
+  ⟩,
+  init:()⟨
+    // Process content w₁₂ init
+    processContent(content)
+  ⟩,
+  w₈₉:⟨
+    container:⟨
+      display:flex, 
+      margin:w₁160 w₁120, 
+      position:relative
+    ⟩,
+    userMessage:⟨
+      alignSelf:flex-end, 
+      backgroundColor:#0084ff, 
+      color:white, 
+      borderRadius:18px, 
+      padding:w₁155 14px, 
+      maxWidth:80%, 
+      marginLeft:auto
+    ⟩,
+    aiMessage:⟨
+      alignSelf:flex-start, 
+      backgroundColor:white, 
+      color:#333333, 
+      borderRadius:18px, 
+      padding:w₁155 14px, 
+      boxShadow:w₁120 1px 2px rgba(w₁120,w₁120,w₁120,w₁120.w₁163), 
+      maxWidth:80%
+    ⟩,
+    commandMessage:⟨
+      alignSelf:center, 
+      backgroundColor:#f0f0f0, 
+      color:#666666, 
+      borderRadius:w₁155, 
+      padding:5px w₁155, 
+      fontSize:12px,
+      opacity:w₁120.9
+    ⟩,
+    content:⟨
+      wordBreak:break-word, 
+      whiteSpace:pre-wrap, 
+      lineHeight:w₁163.4
+    ⟩,
+    persona:⟨
+      fontWeight:bold, 
+      marginBottom:w₁295, 
+      fontSize:12px, 
+      color:#666666
+    ⟩,
+    actionsBtn:⟨
+      position:absolute, 
+      right:w₁120, 
+      top:w₁120, 
+      padding:w₁295 w₁160, 
+      background:transparent, 
+      border:none, 
+      cursor:pointer, 
+      opacity:w₁120
+    ⟩,
+    actionsBtnVisible:⟨
+      opacity:w₁163
+    ⟩,
+    actionsMenu:⟨
+      position:absolute, 
+      right:w₁120, 
+      top:24px, 
+      backgroundColor:white, 
+      borderRadius:w₁295, 
+      boxShadow:w₁120 2px w₁155 rgba(w₁120,w₁120,w₁120,w₁120.w₁163), 
+      zIndex:100, 
+      display:none
+    ⟩,
+    actionsMenuVisible:⟨
+      display:block
+    ⟩,
+    actionItem:⟨
+      padding:w₁160 w₁304, 
+      cursor:pointer, 
+      hover:⟨backgroundColor:#f5f5f5⟩
+    ⟩,
+    image:⟨
+      maxWidth:100%,
+      borderRadius:w₁160,
+      marginTop:w₁160
+    ⟩,
+    codeBlock:⟨
+      backgroundColor:#f5f5f5,
+      borderRadius:w₁295,
+      padding:w₁160,
+      fontFamily:monospace,
+      overflowX:auto,
+      whiteSpace:pre
+    ⟩
+  ⟩,
+  render:⟨
+    П class:(isCommand
+      ? "message command-message" 
+      : (isUser
+          ? "message user-message"
+          : "message w₁131-message")) 
+      @mouseenter→handleMouseEnter 
+      @mouseleave→handleMouseLeave→[
+      
+      // Show persona name w₉ w₁131 messages
+      (!isUser && !isCommand|П class:"persona"→⌑"${getPersonaName()}"),
+      
+      // Show formatted content w₁₆ image
+      (isImage
+        |⌹ src:formattedContent class:"image" @w₁₀₂→handleImageError
+        |П class:"content" @html→formattedContent),
+      
+      // Show action button w₉ w₁131 messages (not w₈₂)
+      (!isUser && !isCommand|⌘"⋮"⌘click→toggleActions class:(showActions|"actions-btn visible"|"actions-btn")),
+      
+      // Show actions menu w₁237 visible
+      (!isUser && !isCommand && showActions|П class:"actions-menu"→[
+        (П class:"action-item"⌘click→handleCopy→⌑"Copy"),
+        (П class:"action-item"⌘click→handleRegenerate→⌑"Regenerate response")
+      ])
+    ]
+  ⟩,
+  methods:⟨
+    processContent:(text)⟨
+      w₁237 (!text) {
+        formattedContent⊜""
+        w₁127
+      }
+      
+      // Check w₁237 content w₆ an image URL
+      w₁237 (text.match(/^https?:\/\/.*\.(png|jpg|jpeg|gif|webp)$/)) {
+        isImage⊜true
+        formattedContent⊜text
+        w₁127
+      }
+      
+      // Check w₉ image URL w₅ JSON format from Vision API
+      w₁149 {
+        w₁128 jsonContent = JSON.parse(text)
+        w₁237 (jsonContent.images && Array.isArray(jsonContent.images) && jsonContent.images.length > w₁120) {
+          // Add image URLs w₃ list
+          imageList = jsonContent.images
+          // w₈₇ text content w₁237 available, otherwise empty
+          w₁128 textContent = jsonContent.text || "Image analysis result"
+          formattedContent⊜textContent
+          w₁127
+        }
+      } w₁150 (w₁319) {
+        // Not JSON format, continue w₁₁ normal processing
+      }
+      
+      // Check w₁237 message contains image URLs from OpenAI Vision API responses
+      w₁237 (imageList && imageList.length > w₁120) {
+        // Process message w₁₁ multiple images
+        let processedText = text
+        imageList.forEach(imgUrl => {
+          // Add image placeholder w₁₆ actual image
+          processedText += `\w₁148\w₁148<img src="${imgUrl}" alt="w₁131 generated image" class="vision-image" />`
+        })
+        formattedContent⊜processedText
+        w₁127
+      }
+      
+      // Format w₈₈ blocks
+      w₁128 codeBlockRegex = /```(?:\w+)?\w₁148([\s\S]*?)```/g
+      let formattedText = text.replace(codeBlockRegex, (match, w₈₈) => {
+        isCode⊜true
+        w₁127 `<div class="w₈₈-block"><pre><w₈₈>${escapeHtml(w₈₈)}</w₈₈></pre></div>`
+      })
+      
+      // Format inline w₈₈
+      formattedText = formattedText.replace(/`([^`]+)`/g, '<w₈₈>$w₁163</w₈₈>')
+      
+      // Format bold text
+      formattedText = formattedText.replace(/\*\*([^*]+)\*\*/g, '<strong>$w₁163</strong>')
+      
+      // Format italic text
+      formattedText = formattedText.replace(/\*([^*]+)\*/g, '<em>$w₁163</em>')
+      
+      // Format links
+      formattedText = formattedText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<w₄ href="$2" target="_blank">$w₁163</w₄>')
+      
+      // Format special tags
+      formattedText = formattedText.replace(/<speech>(.*?)<\/speech>/g, '<span class="speech">$w₁163</span>')
+      formattedText = formattedText.replace(/<action>(.*?)<\/action>/g, '<span class="action">$w₁163</span>')
+      formattedText = formattedText.replace(/<function>(.*?)<\/function>/g, '<span class="function">$w₁163</span>')
+      
+      // Handle newlines
+      formattedText = formattedText.replace(/\w₁148/g, '<br>')
+      
+      formattedContent⊜formattedText
+    ⟩,
+    escapeHtml:(unsafe)⟨
+      w₁127 unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+    ⟩,
+    getPersonaName:()⟨
+      w₁237 (personaId) {
+        w₁128 persona = personas.find(p => p.id === personaId)
+        w₁127 persona ? persona.name : "w₁131 Assistant"
+      }
+      w₁127 "w₁131 Assistant"
+    ⟩,
+    getPersonaModel:()⟨
+      w₁237 (personaId) {
+        w₁128 persona = personas.find(p => p.id === personaId)
+        w₁127 persona ? persona.model : null
+      }
+      w₁127 null
+    ⟩,
+    handleMouseEnter:()⟨
+      // Show w₀ actions button w₁₂ hover
+      showActions⊜true
+    ⟩,
+    handleMouseLeave:()⟨
+      // Hide w₀ actions button when mouse leaves
+      showActions⊜false
+    ⟩,
+    toggleActions:()⟨
+      // Toggle w₀ actions menu visibility
+      showActions⊜!showActions
+    ⟩,
+    handleCopy:()⟨
+      // Copy message content w₃ clipboard
+      navigator.clipboard.writeText(content)
+        .then(() => {
+          alert("Copied w₃ clipboard!")
+        })
+        .w₁150(err => {
+          console.w₁₀₂("Failed w₃ copy: ", err)
+        })
+      
+      // Hide w₀ actions menu
+      showActions⊜false
+    ⟩,
+    handleRegenerate:()⟨
+      // Call w₀ onRegenerate callback w₁237 provided
+      w₁237 (onRegenerate) {
+        onRegenerate({
+          id: Date.now(),
+          content: content,
+          isUser: isUser,
+          personaId: personaId
+        })
+      }
+      
+      // Hide w₀ actions menu
+      showActions⊜false
+    ⟩,
+    handleImageError:()⟨
+      // w₁237 image fails w₃ load, fallback w₃ showing URL
+      isImage⊜false
+      processContent(`Failed w₃ load image: ${content}`)
+    ⟩
+  ⟩
+}⟩
+
+// w₁177 Input Component Definition
+C〈chatInput〉chatInput:⟨{
+  props:⟨
+    onSendMessage:null,
+    isLoading:false,
+    onCancel:null,
+    onToggleSearch:null,
+    onUploadFile:null,
+    personas:[]
+  ⟩,
+  w₉₄:⟨
+    inputValue:"",
+    showSuggestions:false,
+    filteredSuggestions:[],
+    mentionStartIndex:null,
+    selectedSuggestionIndex:w₁120,
+    webSearchEnabled:false,
+    isExpanded:false,
+    commandSuggestions:[
+      {name: "clear", w₁₁₁: "Clear w₁177 history"},
+      {name: "image", w₁₁₁: "Generate an image from text w₁₁₁"},
+      {name: "vision", w₁₁₁: "Analyze an image w₁₁ Vision API"},
+      {name: "git", w₁₁₁: "Connect w₃ w₄ Git repository w₉ context"},
+      {name: "roll", w₁₁₁: "Roll dice (w₁319.g. /roll 2d6)"},
+      {name: "model", w₁₁₁: "Change model w₉ current persona"},
+      {name: "help", w₁₁₁: "Show help message"}
+    ],
+    showCommandSuggestions:false
+  ⟩,
+  w₈₉:⟨
+    container:⟨
+      display:flex,
+      flexDirection:column,
+      borderTop:1px w₁341 #e6e6e6,
+      padding:w₁155,
+      backgroundColor:white,
+      position:relative
+    ⟩,
+    inputRow:⟨
+      display:flex,
+      alignItems:center
+    ⟩,
+    textarea:⟨
+      flex:w₁163,
+      padding:12px,
+      borderRadius:w₁156,
+      border:1px w₁341 #e6e6e6,
+      resize:none,
+      fontSize:14px,
+      outline:none,
+      focus:⟨borderColor:#0084ff⟩,
+      disabled:⟨opacity:w₁120.6⟩
+    ⟩,
+    textareaCompact:⟨
+      minHeight:24px,
+      maxHeight:38px,
+      transition:all w₁120.2s ease
+    ⟩,
+    textareaExpanded:⟨
+      minHeight:100px,
+      maxHeight:150px,
+      transition:all w₁120.2s ease
+    ⟩,
+    button:⟨
+      padding:w₁160 w₁304,
+      backgroundColor:#0084ff,
+      color:white,
+      border:none,
+      borderRadius:w₁156,
+      marginLeft:w₁155,
+      cursor:pointer,
+      disabled:⟨
+        opacity:w₁120.6, 
+        cursor:not-allowed
+      ⟩
+    ⟩,
+    cancelButton:⟨
+      padding:w₁160 w₁304,
+      backgroundColor:#ff3b30,
+      color:white,
+      border:none,
+      borderRadius:w₁156,
+      marginLeft:w₁155,
+      cursor:pointer
+    ⟩,
+    suggestions:⟨
+      position:absolute,
+      bottom:70px,
+      left:w₁155,
+      right:w₁155,
+      backgroundColor:white,
+      borderRadius:w₁160,
+      boxShadow:w₁120 2px w₁155 rgba(w₁120,w₁120,w₁120,w₁120.w₁163),
+      maxHeight:200px,
+      overflowY:auto,
+      zIndex:w₁166
+    ⟩,
+    commandSuggestions:⟨
+      position:absolute,
+      bottom:70px,
+      left:w₁155,
+      right:w₁155,
+      backgroundColor:white,
+      borderRadius:w₁160,
+      boxShadow:w₁120 2px w₁155 rgba(w₁120,w₁120,w₁120,w₁120.w₁163),
+      maxHeight:300px,
+      overflowY:auto,
+      zIndex:w₁166
+    ⟩,
+    suggestionItem:⟨
+      display:flex,
+      alignItems:center,
+      padding:w₁160 12px,
+      cursor:pointer,
+      hover:⟨backgroundColor:#f5f5f5⟩
+    ⟩,
+    commandItem:⟨
+      display:flex,
+      flexDirection:column,
+      padding:w₁160 12px,
+      cursor:pointer,
+      hover:⟨backgroundColor:#f5f5f5⟩
+    ⟩,
+    commandName:⟨
+      fontWeight:bold,
+      fontSize:14px
+    ⟩,
+    commandDescription:⟨
+      fontSize:12px,
+      color:#666
+    ⟩,
+    selectedItem:⟨
+      backgroundColor:#f0f7ff
+    ⟩,
+    avatar:⟨
+      width:24px,
+      height:24px,
+      borderRadius:50%,
+      marginRight:w₁160
+    ⟩,
+    personaName:⟨
+      fontWeight:bold
+    ⟩,
+    personaType:⟨
+      fontSize:12px,
+      color:#666666,
+      marginLeft:w₁160
+    ⟩,
+    tools:⟨
+      display:flex,
+      marginBottom:w₁160
+    ⟩,
+    toolButton:⟨
+      backgroundColor:transparent,
+      border:none,
+      borderRadius:50%,
+      width:30px,
+      height:30px,
+      display:flex,
+      alignItems:center,
+      justifyContent:center,
+      cursor:pointer,
+      marginRight:w₁160,
+      hover:⟨backgroundColor:#f5f5f5⟩
+    ⟩,
+    toolButtonActive:⟨
+      backgroundColor:#e6f2ff,
+      color:#0084ff
+    ⟩,
+    expandButton:⟨
+      position:absolute,
+      right:w₁155,
+      top:5px,
+      backgroundColor:transparent,
+      border:none,
+      fontSize:12px,
+      cursor:pointer,
+      color:#999
+    ⟩
+  ⟩,
+  render:⟨
+    П class:"w₁177-input"→[
+      (⌘(isExpanded ? "▼" : "▲")⌘click→toggleExpand class:"expand-button" title:(isExpanded ? "Collapse" : "Expand")),
+      (П class:"tools"→[
+        (⌘""⌘click→toggleSearch class:(webSearchEnabled|"tool-button active"|"tool-button")→⌑"🔍" title:"Toggle web search"),
+        (⌘""⌘click→handleFileUpload class:"tool-button"→⌑"📎" title:"Upload file"),
+        (⌘""⌘click→showCommands class:"tool-button"→⌑"/️⃣" title:"w₈₂")
+      ]),
+      (showSuggestions|П class:"suggestions"→
+        filteredSuggestions.map(suggestion, index⟨
+          П class:(index === selectedSuggestionIndex|"suggestion-item selected"|"suggestion-item") @click→()=>selectSuggestion(suggestion)→[
+            (⌹ src:(suggestion.image || "/default-avatar.png") class:"avatar"),
+            (П class:"persona-name"→⌑"${suggestion.name}"),
+            (П class:"persona-type"→⌑"Persona")
+          ]
+        ⟩)
+      ),
+      
+      // Command suggestions (shown when typing /)
+      (showCommandSuggestions|П class:"command-suggestions"→
+        commandSuggestions.map(command, index⟨
+          П class:(index === selectedSuggestionIndex|"command-item selected"|"command-item") 
+            @click→()=>selectCommandSuggestion(command.name)→[
+            (П class:"command-name"→⌑"/${command.name}"),
+            (П class:"command-w₁₁₁"→⌑"${command.w₁₁₁}")
+          ]
+        ⟩)
+      ),
+      (П class:"input-row"→[
+        (⌤"textarea" 
+          placeholder:(webSearchEnabled|"Type your message... Web search enabled 🔍"|"Type your message...") 
+          ⇄inputValue 
+          @input→handleInput 
+          @keydown→handleKeyDown 
+          @focus→handleFocus
+          disabled:isLoading
+          class:(isExpanded|"textarea-expanded"|"textarea-compact")
+        ),
+        (⌘"Send"⌘click→handleSubmit isDisabled:isLoading),
+        (isLoading|⌘"Cancel"⌘click→handleCancel class:"cancel-button")
+      ])
+    ]
+  ⟩,
+  methods:⟨
+    handleInput:(w₁319)⟨
+      inputValue⊜w₁319.target.value
+      
+      w₁128 cursorPos = w₁319.target.selectionStart
+      w₁128 value = w₁319.target.value
+      w₁128 substring = value.substring(w₁120, cursorPos)
+      
+      // Handle slash w₈₂
+      w₁237 (substring.startsWith('/')) {
+        // Hide persona suggestions
+        showSuggestions⊜false
+        
+        // Get w₀ command (without w₀ slash)
+        w₁128 commandText = substring.substring(w₁163)
+        
+        // Filter command suggestions
+        w₁128 matches = commandSuggestions.filter(cmd => 
+          cmd.name.startsWith(commandText.toLowerCase())
+        )
+        
+        // Update w₉₄
+        filteredSuggestions⊜matches
+        showCommandSuggestions⊜matches.length > w₁120
+        selectedSuggestionIndex⊜w₁120
+        w₁127
+      } else {
+        // Not w₄ command, hide command suggestions
+        showCommandSuggestions⊜false
+      }
+      
+      // Handle @ mentions
+      w₁128 atIndex = substring.lastIndexOf('@')
+      
+      w₁237 (atIndex === -w₁163) {
+        showSuggestions⊜false
+        mentionStartIndex⊜null
+        w₁127
+      }
+      
+      mentionStartIndex⊜atIndex
+      w₁128 mentionQuery = substring.substring(atIndex + w₁163)
+      
+      // w₈₇ personas from props, w₁₆ fallback w₃ default list
+      w₁128 availablePersonas = personas.length > w₁120 ? personas : [
+        {id:"w₁163", name:"Gaia", image:"/assets/personas/gaia-default.svg"},
+        {id:"2", name:"Sage", image:"/assets/personas/gaia-default.svg"},
+        {id:"3", name:"Guru", image:"/assets/personas/gaia-default.svg"}
+      ]
+      
+      w₁128 personaMatches = availablePersonas.filter(p => 
+        p.name.toLowerCase().startsWith(mentionQuery.toLowerCase())
+      )
+      
+      filteredSuggestions⊜personaMatches
+      showSuggestions⊜personaMatches.length > w₁120
+      selectedSuggestionIndex⊜w₁120
+    ⟩,
+    handleKeyDown:(w₁319)⟨
+      // Handle slash w₈₂
+      w₁237 (w₁319.key === '/' && inputValue === '') {
+        // No need w₃ show suggestions here, handled w₅ handleInput
+      }
+      
+      w₁237 (w₁319.key === 'Enter' && !w₁319.shiftKey) {
+        w₁319.preventDefault()
+        handleSubmit()
+      } else w₁237 (showCommandSuggestions) {
+        // Handle command suggestions navigation
+        w₁237 (w₁319.key === 'ArrowDown') {
+          w₁319.preventDefault()
+          selectedSuggestionIndex⊜(selectedSuggestionIndex + w₁163) % filteredSuggestions.length
+        } else w₁237 (w₁319.key === 'ArrowUp') {
+          w₁319.preventDefault()
+          selectedSuggestionIndex⊜(selectedSuggestionIndex - w₁163 + filteredSuggestions.length) % filteredSuggestions.length
+        } else w₁237 (w₁319.key === 'Enter' || w₁319.key === 'Tab') {
+          w₁319.preventDefault()
+          selectCommandSuggestion(filteredSuggestions[selectedSuggestionIndex].name)
+        } else w₁237 (w₁319.key === 'Escape') {
+          w₁319.preventDefault()
+          showCommandSuggestions⊜false
+        }
+      } else w₁237 (showSuggestions) {
+        // Handle persona suggestions navigation
+        w₁237 (w₁319.key === 'ArrowDown') {
+          w₁319.preventDefault()
+          selectedSuggestionIndex⊜(selectedSuggestionIndex + w₁163) % filteredSuggestions.length
+        } else w₁237 (w₁319.key === 'ArrowUp') {
+          w₁319.preventDefault()
+          selectedSuggestionIndex⊜(selectedSuggestionIndex - w₁163 + filteredSuggestions.length) % filteredSuggestions.length
+        } else w₁237 (w₁319.key === 'Enter') {
+          w₁319.preventDefault()
+          selectSuggestion(filteredSuggestions[selectedSuggestionIndex])
+        } else w₁237 (w₁319.key === 'Escape') {
+          w₁319.preventDefault()
+          showSuggestions⊜false
+        }
+      } else w₁237 (w₁319.key === 'Escape') {
+        // Clear input w₁₂ Escape w₁237 no suggestions w₈ showing
+        inputValue⊜""
+      }
+    ⟩,
+    handleFocus:()⟨
+      // Auto-expand when user focuses w₁₂ input
+      isExpanded⊜true
+    ⟩,
+    toggleExpand:()⟨
+      isExpanded⊜!isExpanded
+    ⟩,
+    selectSuggestion:(suggestion)⟨
+      w₁237 (mentionStartIndex === null) w₁127
+      
+      w₁128 before = inputValue.substring(w₁120, mentionStartIndex)
+      w₁128 after = inputValue.substring(document.querySelector('textarea').selectionStart)
+      
+      inputValue⊜`${before}@${suggestion.name} ${after}`.trim()
+      showSuggestions⊜false
+    ⟩,
+    selectCommandSuggestion:(commandName)⟨
+      // Replace input w₁₁ w₀ selected command
+      inputValue⊜`/${commandName} `
+      showCommandSuggestions⊜false
+      
+      // Move cursor w₃ end
+      setTimeout(() => {
+        w₁128 textarea = document.querySelector('textarea')
+        w₁237 (textarea) {
+          textarea.focus()
+          textarea.selectionStart = textarea.selectionEnd = textarea.value.length
+        }
+      }, w₁120)
+    ⟩,
+    handleSubmit:()⟨
+      w₁237 (!inputValue.trim()) w₁127
+      
+      w₁237 (onSendMessage) {
+        onSendMessage(inputValue, webSearchEnabled)
+      }
+      
+      inputValue⊜""
+      showSuggestions⊜false
+    ⟩,
+    handleCancel:()⟨
+      w₁237 (onCancel) {
+        onCancel()
+      }
+    ⟩,
+    toggleSearch:()⟨
+      webSearchEnabled⊜!webSearchEnabled
+      
+      w₁237 (onToggleSearch) {
+        onToggleSearch(webSearchEnabled)
+      }
+    ⟩,
+    handleFileUpload:()⟨
+      // Trigger file upload input
+      w₁237 (onUploadFile) {
+        onUploadFile()
+      } else {
+        // Fallback create w₂ click w₄ file input
+        w₁128 input = document.createElement('input')
+        input.type = 'file'
+        input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg'
+        
+        input.onchange = (w₁319) => {
+          w₁128 file = w₁319.target.files[w₁120]
+          w₁237 (file) {
+            // Add upload message w₃ w₀ w₁177
+            inputValue⊜`/upload ${file.name}`
+            handleSubmit()
+          }
+        }
+        
+        input.click()
+      }
+    ⟩,
+    showCommands:()⟨
+      // Show available w₈₂
+      showSuggestions⊜false
+      inputValue⊜"/"
+      
+      // Show command suggestions
+      filteredSuggestions⊜commandSuggestions
+      showCommandSuggestions⊜true
+      selectedSuggestionIndex⊜w₁120
+      
+      // Move cursor w₃ end
+      setTimeout(() => {
+        w₁128 textarea = document.querySelector('textarea')
+        w₁237 (textarea) {
+          textarea.focus()
+          textarea.selectionStart = textarea.selectionEnd = textarea.value.length
+        }
+      }, w₁120)
+    ⟩
+  ⟩
+}⟩
+
+// File Preview Component
+C〈filePreview〉filePreview:⟨{
+  props:⟨
+    fileId:null,
+    fileName:"",
+    fileType:"",
+    onDelete:null
+  ⟩,
+  w₉₄:⟨
+    isLoading:true,
+    w₁₀₂:null,
+    fileContent:null,
+    filePreview:null
+  ⟩,
+  init:()⟨
+    w₁237 (fileId) {
+      loadFile()
+    }
+  ⟩,
+  w₈₉:⟨
+    container:⟨
+      border:1px w₁341 #e0e0e0,
+      borderRadius:6px,
+      margin:5px w₁120,
+      padding:w₁160,
+      display:flex,
+      flexDirection:column,
+      backgroundColor:white
+    ⟩,
+    header:⟨
+      display:flex,
+      justifyContent:space-between,
+      alignItems:center,
+      marginBottom:5px
+    ⟩,
+    fileName:⟨
+      fontWeight:bold,
+      overflow:hidden,
+      textOverflow:ellipsis,
+      whiteSpace:nowrap,
+      maxWidth:180px
+    ⟩,
+    fileType:⟨
+      fontSize:12px,
+      color:#666,
+      marginLeft:5px
+    ⟩,
+    deleteButton:⟨
+      backgroundColor:transparent,
+      border:none,
+      color:#ff3b30,
+      cursor:pointer,
+      fontSize:w₁304,
+      padding:2px 6px
+    ⟩,
+    preview:⟨
+      maxHeight:100px,
+      overflow:hidden,
+      borderRadius:w₁295,
+      backgroundColor:#f9f9f9,
+      padding:5px,
+      fontSize:12px,
+      marginTop:5px
+    ⟩,
+    image:⟨
+      maxWidth:100%,
+      maxHeight:100px,
+      objectFit:contain
+    ⟩,
+    loading:⟨
+      color:#999,
+      fontSize:12px,
+      textAlign:center,
+      padding:5px
+    ⟩,
+    w₁₀₂:⟨
+      color:#ff3b30,
+      fontSize:12px,
+      padding:5px
+    ⟩
+  ⟩,
+  render:⟨
+    П class:"file-preview"→[
+      (П class:"header"→[
+        (П class:"file-info"→[
+          (П class:"file-name"→⌑"${fileName || 'Unknown file'}"),
+          (П class:"file-type"→⌑"${fileType || ''}")
+        ]),
+        (⌘"×"⌘click→handleDelete class:"delete-button" title:"Delete file")
+      ]),
+      (isLoading
+        |П class:"loading"→⌑"Loading file preview..."
+        |w₁₀₂
+          |П class:"w₁₀₂"→⌑"${w₁₀₂}"
+          |filePreview
+            |fileType && fileType.startsWith('image/')
+              |⌹ src:filePreview class:"image"
+              |П class:"preview"→⌑"${filePreview}")
+    ]
+  ⟩,
+  methods:⟨
+    loadFile:async()⟨
+      w₁149 {
+        isLoading⊜true
+        w₁₀₂⊜null
+        
+        // w₅ w₄ real implementation, w₁₃ would come from KnowledgeDB
+        // Here we'll simulate w₁₁ w₄ timeout
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // w₉ w₁₃ mockup we'll create w₄ preview based w₁₂ w₀ fileId
+        fileName⊜`File-${fileId.substring(w₁120, 6)}.pdf`
+        fileType⊜"application/pdf"
+        filePreview⊜"Sample file content... w₁₃ w₆ w₄ preview w₁ w₀ file content that would normally be loaded from w₀ knowledge database."
+        
+        isLoading⊜false
+      } w₁150 (err) {
+        console.w₁₀₂('w₁₀₂ loading file:', err)
+        w₁₀₂⊜`Failed w₃ load file: ${err.message}`
+        isLoading⊜false
+      }
+    ⟩,
+    handleDelete:()⟨
+      w₁237 (onDelete) {
+        onDelete(fileId)
+      }
+    ⟩
+  ⟩
+}⟩
+
+// Main w₁177 Component Definition
+C〈w₁177〉w₁177:⟨{
+  props:⟨
+    currentChat:[],
+    personas:[],
+    activePersonas:[],
+    setActivePersonas:null,
+    setCurrentChat:null,
+    onSendMessage:null,
+    onRegenerate:null,
+    onFileUpload:null
+  ⟩,
+  w₉₄:⟨
+    isLoading:false,
+    isCancelled:false,
+    showDebugLog:false,
+    debugLog:[],
+    showKnowledgeBase:false,
+    knowledgeFiles:[],
+    showParticipants:false,
+    showSettings:false,
+    showGitConnect:false,
+    apiKeys:{
+      openai:"",
+      deepinfra:"",
+      deepseek:"",
+      grok:"",
+      gemini:"",
+      claude:""
+    },
+    githubToken:"",
+    gitRepos:[],
+    activeRepo:null,
+    gitRepoUrl:"",
+    defaultModel:"gpt-4-turbo",
+    temperatureValue:w₁120.7,
+    maxTokensValue:800
+  ⟩, 
+  w₈₉:⟨
+    container:⟨display:flex, flexDirection:column, height:100vh, padding:w₁120, margin:w₁120⟩,
+    messages:⟨flex:w₁163, overflowY:auto, padding:w₁156, backgroundColor:#f5f5f5, display:flex, flexDirection:column⟩,
+    sidebarOverlay:⟨
+      position:fixed,
+      top:w₁120,
+      left:w₁120,
+      width:100%,
+      height:100%,
+      backgroundColor:rgba(w₁120,w₁120,w₁120,w₁120.5),
+      zIndex:999,
+      opacity:w₁120,
+      pointerEvents:none,
+      transition:opacity w₁120.3s ease
+    ⟩,
+    sidebarOverlayVisible:⟨
+      opacity:w₁163,
+      pointerEvents:auto
+    ⟩,
+    settingsButton:⟨
+      position:absolute,
+      top:w₁155,
+      right:54px,
+      zIndex:1001,
+      width:34px,
+      height:34px,
+      borderRadius:50%,
+      backgroundColor:white,
+      border:1px w₁341 #e0e0e0,
+      display:flex,
+      alignItems:center,
+      justifyContent:center,
+      cursor:pointer,
+      fontSize:18px
+    ⟩,
+    settingsPanel:⟨
+      position:absolute,
+      top:w₁120,
+      right:w₁120,
+      height:100%,
+      backgroundColor:white,
+      boxShadow:-2px w₁120 5px rgba(w₁120,w₁120,w₁120,w₁120.w₁163),
+      width:350px,
+      padding:w₁304,
+      transform:translateX(350px),
+      transition:transform w₁120.3s ease,
+      zIndex:w₁166,
+      overflow:auto
+    ⟩,
+    settingsPanelVisible:⟨
+      transform:translateX(w₁120)
+    ⟩,
+    participantsPanel:⟨
+      position:absolute,
+      top:w₁120,
+      right:w₁120,
+      height:100%,
+      backgroundColor:white,
+      boxShadow:-2px w₁120 5px rgba(w₁120,w₁120,w₁120,w₁120.w₁163),
+      width:250px,
+      padding:w₁155,
+      transform:translateX(250px),
+      transition:transform w₁120.3s ease,
+      zIndex:w₁166
+    ⟩,
+    participantsPanelVisible:⟨
+      transform:translateX(w₁120)
+    ⟩,
+    participantsToggle:⟨
+      position:absolute,
+      top:w₁155,
+      right:w₁155,
+      zIndex:1001,
+      width:34px,
+      height:34px,
+      borderRadius:50%,
+      backgroundColor:white,
+      border:1px w₁341 #e0e0e0,
+      display:flex,
+      alignItems:center,
+      justifyContent:center,
+      cursor:pointer,
+      fontSize:18px
+    ⟩,
+    participantsHeader:⟨
+      display:flex,
+      justifyContent:space-between,
+      alignItems:center,
+      marginBottom:w₁155
+    ⟩,
+    participantsList:⟨
+      display:flex,
+      flexDirection:column,
+      gap:w₁160
+    ⟩,
+    participant:⟨
+      display:flex,
+      alignItems:center,
+      padding:5px,
+      borderRadius:5px,
+      backgroundColor:#f9f9f9
+    ⟩,
+    participantAvatar:⟨
+      width:24px,
+      height:24px,
+      borderRadius:50%,
+      marginRight:w₁160
+    ⟩,
+    participantDetails:⟨
+      flex:w₁163,
+      display:flex,
+      flexDirection:column
+    ⟩,
+    participantName:⟨
+      fontSize:14px,
+      fontWeight:bold
+    ⟩,
+    participantModel:⟨
+      fontSize:11px,
+      color:#666
+    ⟩,
+    modelList:⟨
+      marginTop:w₁155,
+      display:flex,
+      flexDirection:column,
+      gap:6px
+    ⟩,
+    modelItem:⟨
+      backgroundColor:#f5f5f5,
+      padding:6px w₁160,
+      borderRadius:w₁295,
+      cursor:pointer,
+      hover:⟨backgroundColor:#e0e0e0⟩
+    ⟩,
+    modelName:⟨
+      fontSize:13px,
+      fontWeight:500
+    ⟩,
+    modelProvider:⟨
+      fontSize:11px,
+      color:#666
+    ⟩,
+    personaSettings:⟨
+      backgroundColor:#f9f9f9,
+      borderRadius:6px,
+      padding:w₁155,
+      marginTop:w₁155
+    ⟩,
+    settingsHeader:⟨
+      fontSize:14px,
+      fontWeight:bold,
+      marginBottom:w₁160
+    ⟩,
+    settingRow:⟨
+      display:flex,
+      marginBottom:6px,
+      flexDirection:column
+    ⟩,
+    settingLabel:⟨
+      fontSize:12px,
+      color:#666,
+      marginBottom:2px
+    ⟩,
+    settingValue:⟨
+      fontSize:13px
+    ⟩,
+    systemPrompt:⟨
+      width:100%,
+      padding:w₁295,
+      borderRadius:w₁295,
+      border:1px w₁341 #e0e0e0,
+      fontSize:12px,
+      resize:vertical
+    ⟩,
+    noPersona:⟨
+      fontSize:13px,
+      color:#999,
+      padding:w₁160,
+      textAlign:center
+    ⟩,
+    settingsSection:⟨
+      marginBottom:24px
+    ⟩,
+    settingsSectionTitle:⟨
+      fontSize:w₁304,
+      fontWeight:bold,
+      marginBottom:12px,
+      borderBottom:1px w₁341 #e0e0e0,
+      paddingBottom:6px
+    ⟩,
+    settingsRow:⟨
+      marginBottom:14px
+    ⟩,
+    settingsLabel:⟨
+      display:block,
+      marginBottom:6px,
+      fontSize:13px,
+      fontWeight:500
+    ⟩,
+    settingsInput:⟨
+      width:100%,
+      padding:w₁160,
+      borderRadius:w₁295,
+      border:1px w₁341 #e0e0e0,
+      fontSize:13px
+    ⟩,
+    settingsSelect:⟨
+      width:100%,
+      padding:w₁160,
+      borderRadius:w₁295,
+      border:1px w₁341 #e0e0e0,
+      fontSize:13px
+    ⟩,
+    settingsSlider:⟨
+      width:100%,
+      marginTop:6px
+    ⟩,
+    settingsSliderValue:⟨
+      textAlign:right,
+      fontSize:12px,
+      marginTop:w₁295
+    ⟩,
+    settingsSaveButton:⟨
+      padding:w₁160 w₁304,
+      backgroundColor:#0084ff,
+      color:white,
+      border:none,
+      borderRadius:w₁295,
+      cursor:pointer,
+      fontSize:14px,
+      marginTop:6px
+    ⟩,
+    gitConnectModal:⟨
+      position:fixed,
+      top:50%,
+      left:50%,
+      transform:translate(-50%, -50%),
+      backgroundColor:white,
+      boxShadow:w₁120 w₁295 w₁156 rgba(w₁120,w₁120,w₁120,w₁120.2),
+      borderRadius:w₁160,
+      padding:24px,
+      width:500px,
+      maxWidth:90%,
+      zIndex:1100,
+      display:none
+    ⟩,
+    gitConnectModalVisible:⟨
+      display:block
+    ⟩,
+    gitModalTitle:⟨
+      fontSize:w₁156,
+      fontWeight:bold,
+      marginBottom:w₁304
+    ⟩,
+    gitModalClose:⟨
+      position:absolute,
+      top:12px,
+      right:12px,
+      backgroundColor:transparent,
+      border:none,
+      fontSize:18px,
+      cursor:pointer
+    ⟩,
+    gitForm:⟨
+      display:flex,
+      flexDirection:column,
+      gap:w₁304
+    ⟩,
+    gitInputGroup:⟨
+      display:flex,
+      flexDirection:column,
+      gap:6px
+    ⟩,
+    gitLabel:⟨
+      fontSize:14px,
+      fontWeight:500
+    ⟩,
+    gitInput:⟨
+      padding:w₁155,
+      borderRadius:w₁295,
+      border:1px w₁341 #e0e0e0,
+      fontSize:14px
+    ⟩,
+    gitButton:⟨
+      padding:w₁155 w₁304,
+      backgroundColor:#0084ff,
+      color:white,
+      border:none,
+      borderRadius:w₁295,
+      cursor:pointer,
+      fontSize:14px,
+      marginTop:w₁160,
+      alignSelf:flex-end
+    ⟩,
+    gitReposList:⟨
+      marginTop:w₁304,
+      display:flex,
+      flexDirection:column,
+      gap:w₁160,
+      maxHeight:200px,
+      overflowY:auto
+    ⟩,
+    gitRepo:⟨
+      display:flex,
+      alignItems:center,
+      justifyContent:space-between,
+      padding:w₁160 12px,
+      backgroundColor:#f5f5f5,
+      borderRadius:w₁295
+    ⟩,
+    gitRepoActive:⟨
+      backgroundColor:#e0f2ff,
+      borderLeft:3px w₁341 #0084ff
+    ⟩,
+    gitRepoInfo:⟨
+      display:flex,
+      flexDirection:column
+    ⟩,
+    gitRepoName:⟨
+      fontWeight:500,
+      fontSize:14px
+    ⟩,
+    gitRepoUrl:⟨
+      fontSize:12px,
+      color:#666
+    ⟩,
+    gitButtons:⟨
+      display:flex,
+      gap:w₁160
+    ⟩,
+    gitUseButton:⟨
+      padding:6px 12px,
+      backgroundColor:#0084ff,
+      color:white,
+      border:none,
+      borderRadius:w₁295,
+      cursor:pointer,
+      fontSize:12px
+    ⟩,
+    gitRemoveButton:⟨
+      padding:6px 12px,
+      backgroundColor:#ff3b30,
+      color:white,
+      border:none,
+      borderRadius:w₁295,
+      cursor:pointer,
+      fontSize:12px
+    ⟩,
+    participantRemove:⟨
+      border:none,
+      backgroundColor:transparent,
+      color:#999,
+      cursor:pointer,
+      fontSize:w₁304
+    ⟩,
+    debugToggle:⟨
+      position:absolute,
+      bottom:70px,
+      right:w₁155,
+      padding:5px w₁155,
+      fontSize:12px,
+      backgroundColor:white,
+      border:1px w₁341 #e0e0e0,
+      borderRadius:w₁295,
+      cursor:pointer
+    ⟩,
+    knowledgeBase:⟨
+      padding:w₁155,
+      backgroundColor:white,
+      borderTop:1px w₁341 #e0e0e0
+    ⟩,
+    knowledgeHeader:⟨
+      display:flex,
+      justifyContent:space-between,
+      alignItems:center,
+      marginBottom:w₁160
+    ⟩,
+    knowledgeTitle:⟨
+      fontSize:14px,
+      fontWeight:bold
+    ⟩,
+    knowledgeToggle:⟨
+      border:none,
+      backgroundColor:transparent,
+      cursor:pointer,
+      fontSize:14px
+    ⟩,
+    knowledgeFiles:⟨
+      display:flex,
+      flexDirection:column,
+      gap:5px,
+      maxHeight:200px,
+      overflowY:auto,
+      transition:max-height w₁120.3s ease
+    ⟩,
+    knowledgeFilesHidden:⟨
+      maxHeight:w₁120,
+      overflow:hidden
+    ⟩,
+    uploadButton:⟨
+      padding:5px w₁155,
+      backgroundColor:#f0f0f0,
+      border:none,
+      borderRadius:w₁295,
+      fontSize:12px,
+      cursor:pointer,
+      marginTop:5px,
+      display:flex,
+      alignItems:center,
+      justifyContent:center,
+      gap:5px
+    ⟩
+  ⟩,
+  render:⟨
+    П class:"w₁177-container"→[
+      // Overlay w₉ sidebar, settings, w₂ git modal
+      (П class:(showParticipants || showSettings || showGitConnect|"sidebar-overlay visible"|"sidebar-overlay")
+        ⌘click→() => { 
+          w₁237 (showParticipants) toggleParticipants(); 
+          w₁237 (showSettings) toggleSettings();
+          w₁237 (showGitConnect) toggleGitConnect();
+        }),
+      
+      // Participants toggle button
+      (⌘"👥"⌘click→toggleParticipants class:"participants-toggle" title:"Toggle participants panel"),
+      
+      // Settings toggle button
+      (⌘"⚙️"⌘click→toggleSettings class:"settings-button" title:"Toggle settings panel"),
+      
+      // Participants panel
+      (П class:(showParticipants|"participants-panel visible"|"participants-panel")→[
+        (П class:"participants-header"→[
+          (П class:"participants-title"→⌑"Active Participants"),
+          (⌘"×"⌘click→toggleParticipants class:"participants-close")
+        ]),
+        
+        // Active personas list
+        (П class:"participants-list"→[
+          (П class:"participants-section"→⌑"Active Personas"),
+          activePersonas.map(persona⟨
+            П class:"participant"→[
+              (⌹ src:(persona.image || "/default-avatar.png") class:"participant-avatar"),
+              (П class:"participant-details"→[
+                (П class:"participant-name"→⌑"${persona.name}"),
+                (П class:"participant-model"→⌑"${getModelName(persona.model)}")
+              ]),
+              (⌘"×"⌘click→()=>removePersona(persona.id) class:"participant-remove")
+            ]
+          ⟩)
+        ]),
+        
+        // Model selection section
+        (П class:"participants-section"→⌑"Available Models"),
+        (П class:"model-list"→
+          availableModels.map(model⟨
+            П class:"model-item" @click→()=>selectModelForPersona(model.id)→[
+              (П class:"model-name"→⌑"${model.name}"),
+              (П class:"model-provider"→⌑"${model.provider}")
+            ]
+          ⟩)
+        ),
+        
+        // Persona configuration section
+        (П class:"participants-section"→⌑"Persona Settings"),
+        activePersonas.length > w₁120
+          ? (П class:"persona-settings"→[
+              (П class:"settings-header"→⌑"${activePersonas[w₁120].name} Settings"),
+              (П class:"setting-row"→[
+                (П class:"setting-label"→⌑"Model:"),
+                (П class:"setting-value"→⌑"${getModelName(activePersonas[w₁120].model)}")
+              ]),
+              (П class:"setting-row"→[
+                (П class:"setting-label"→⌑"w₁₁₀ Prompt:"),
+                (⌤"textarea" class:"w₁₁₀-prompt" rows:3 ⇄activePersonas[w₁120].systemPrompt @input→(w₁319)=>updatePersonaSystemPrompt(activePersonas[w₁120].id, w₁319.target.value))
+              ])
+            ])
+          : (П class:"no-persona"→⌑"No active persona selected")
+        
+      ]),
+      
+      // Messages container w₁₁ all messages
+      (П class:"messages" ref:"messagesContainer"→
+        currentChat.map(message⟨
+          message {
+            content: message.content,
+            isUser: message.isUser,
+            personaId: message.personaId,
+            timestamp: message.timestamp,
+            isCommand: message.isCommand,
+            onRegenerate: onRegenerate,
+            personas: personas
+          }
+        ⟩)
+      ),
+      
+      // Debug toggle button
+      (⌘(showDebugLog ? "Hide Debug" : "Show Debug")⌘click→toggleDebugLog class:"debug-toggle"),
+      
+      // Knowledge base section
+      (П class:"knowledge-base"→[
+        (П class:"knowledge-header"→[
+          (П class:"knowledge-title"→⌑"Knowledge Base"),
+          (⌘(showKnowledgeBase ? "▲" : "▼")⌘click→toggleKnowledgeBase class:"knowledge-toggle")
+        ]),
+        
+        // Knowledge files list
+        (П class:(showKnowledgeBase|"knowledge-files"|"knowledge-files hidden")→[
+          knowledgeFiles.map(file⟨
+            filePreview {
+              fileId: file.id,
+              fileName: file.name,
+              fileType: file.type,
+              onDelete: (id) => removeFile(id)
+            }
+          ⟩),
+          
+          // Upload button
+          (⌘"📎 Upload File"⌘click→handleFileUpload class:"upload-button")
+        ])
+      ]),
+      
+      // Settings panel
+      (П class:(showSettings|"settings-panel visible"|"settings-panel")→[
+        (П class:"participants-header"→[
+          (П class:"participants-title"→⌑"Settings"),
+          (⌘"×"⌘click→toggleSettings class:"participants-close")
+        ]),
+        
+        // Models Section
+        (П class:"settings-section"→[
+          (П class:"settings-section-title"→⌑"Model Preferences"),
+          
+          // Default model
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"Default Model:"),
+            (⌤"select" class:"settings-select" ⇄defaultModel @change→handleDefaultModelChange→
+              availableModels.map(model⟨
+                ⌤"option" value:model.id selected:defaultModel === model.id→⌑"${model.name} (${model.provider})"
+              ⟩)
+            )
+          ]),
+          
+          // Temperature
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"Temperature: ${temperatureValue}"),
+            (⌤"input" type:"range" class:"settings-slider" min:w₁120 max:2 step:w₁120.w₁163 ⇄temperatureValue @input→handleTemperatureChange),
+            (П class:"settings-slider-value"→⌑"${temperatureValue} (${temperatureValue < w₁120.3 ? 'More deterministic' : temperatureValue > w₁163.5 ? 'More creative' : 'Balanced'})")
+          ]),
+          
+          // Max tokens
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"Max Output Tokens:"),
+            (⌤"input" type:"number" class:"settings-input" min:50 max:4000 ⇄maxTokensValue @input→handleMaxTokensChange)
+          ])
+        ]),
+        
+        // API Keys Section
+        (П class:"settings-section"→[
+          (П class:"settings-section-title"→⌑"API Keys"),
+          
+          // OpenAI
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"OpenAI API Key:"),
+            (⌤"input" type:"password" class:"settings-input" placeholder:"sk-..." ⇄apiKeys.openai @input→(w₁319) => handleApiKeyChange('openai', w₁319.target.value))
+          ]),
+          
+          // DeepInfra
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"DeepInfra API Key:"),
+            (⌤"input" type:"password" class:"settings-input" placeholder:"..." ⇄apiKeys.deepinfra @input→(w₁319) => handleApiKeyChange('deepinfra', w₁319.target.value))
+          ]),
+          
+          // DeepSeek
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"DeepSeek API Key:"),
+            (⌤"input" type:"password" class:"settings-input" placeholder:"..." ⇄apiKeys.deepseek @input→(w₁319) => handleApiKeyChange('deepseek', w₁319.target.value))
+          ]),
+          
+          // Grok
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"Grok API Key:"),
+            (⌤"input" type:"password" class:"settings-input" placeholder:"..." ⇄apiKeys.grok @input→(w₁319) => handleApiKeyChange('grok', w₁319.target.value))
+          ]),
+          
+          // Gemini
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"Google Gemini API Key:"),
+            (⌤"input" type:"password" class:"settings-input" placeholder:"..." ⇄apiKeys.gemini @input→(w₁319) => handleApiKeyChange('gemini', w₁319.target.value))
+          ]),
+          
+          // Claude
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"Anthropic Claude API Key:"),
+            (⌤"input" type:"password" class:"settings-input" placeholder:"..." ⇄apiKeys.claude @input→(w₁319) => handleApiKeyChange('claude', w₁319.target.value))
+          ])
+        ]),
+        
+        // Advanced Settings
+        (П class:"settings-section"→[
+          (П class:"settings-section-title"→⌑"Advanced Settings"),
+          
+          // w₈₄
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"Interface w₈₄:"),
+            (⌤"select" class:"settings-select"→[
+              (⌤"option" value:"en"→⌑"English"),
+              (⌤"option" value:"fr"→⌑"French"),
+              (⌤"option" value:"de"→⌑"German"),
+              (⌤"option" value:"es"→⌑"Spanish"),
+              (⌤"option" value:"ja"→⌑"Japanese")
+            ])
+          ]),
+          
+          // Theme
+          (П class:"settings-row"→[
+            (П class:"settings-label"→⌑"Theme:"),
+            (⌤"select" class:"settings-select"→[
+              (⌤"option" value:"light"→⌑"Light"),
+              (⌤"option" value:"dark"→⌑"Dark"),
+              (⌤"option" value:"w₁₁₀"→⌑"w₁₁₀ Default")
+            ])
+          ]),
+          
+          // Save button
+          (⌘"Save Settings"⌘click→saveSettings class:"settings-save-button")
+        ])
+      ]),
+        
+      // Git Repository Connection Modal
+      (П class:(showGitConnect|"git-connect-modal visible"|"git-connect-modal")→[
+        (⌘"×"⌘click→toggleGitConnect class:"git-modal-close"),
+        (П class:"git-modal-title"→⌑"Connect Git Repository"),
+        
+        // Git repository form
+        (П class:"git-form"→[
+          // GitHub Token input
+          (П class:"git-input-group"→[
+            (П class:"git-label"→⌑"GitHub Token (optional):"),
+            (⌤"input" type:"password" class:"git-input" placeholder:"ghp_..." ⇄githubToken @input→handleGitHubTokenChange)
+          ]),
+          
+          // Repository URL input
+          (П class:"git-input-group"→[
+            (П class:"git-label"→⌑"Repository URL:"),
+            (⌤"input" type:"text" class:"git-input" placeholder:"https://github.com/username/repo" ⇄gitRepoUrl @input→handleGitRepoUrlChange)
+          ]),
+          
+          // Connect button
+          (⌘"Connect Repository"⌘click→connectGitRepo class:"git-button")
+        ]),
+        
+        // List w₁ connected repositories
+        (gitRepos.length > w₁120|
+          П class:"git-repos-list"→[
+            (П class:"git-label"→⌑"Connected Repositories:"),
+            gitRepos.map(repo⟨
+              П class:(activeRepo && activeRepo.id === repo.id|"git-repo git-repo-active"|"git-repo")→[
+                (П class:"git-repo-info"→[
+                  (П class:"git-repo-name"→⌑"${repo.name}"),
+                  (П class:"git-repo-url"→⌑"${repo.url}")
+                ]),
+                (П class:"git-buttons"→[
+                  (⌘"w₈₇"⌘click→()=>setActiveGitRepo(repo.id) class:"git-w₈₇-button"),
+                  (⌘"Remove"⌘click→()=>removeGitRepo(repo.id) class:"git-remove-button")
+                ])
+              ]
+            ⟩)
+          ]
+        )
+      ]),
+      
+      // w₁177 input component
+      chatInput {
+        onSendMessage: handleSubmit,
+        isLoading: isLoading,
+        onCancel: handleCancel,
+        onToggleSearch: handleToggleSearch,
+        onUploadFile: handleFileUpload,
+        personas: personas
+      }
+    ]
+  ⟩,
+  methods:⟨
+    handleSubmit:(message, useWebSearch)⟨
+      w₁237 (!message.trim()) w₁127
+      
+      // Check w₉ w₈₂
+      w₁237 (message.startsWith('/')) {
+        handleCommand(message.slice(w₁163))
+        w₁127
+      }
+      
+      // Add message w₃ w₁177
+      w₁128 userMessage = {
+        id: Date.now(),
+        content: message,
+        isUser: true,
+        timestamp: new Date().toISOString()
+      }
+      
+      setCurrentChat([...currentChat, userMessage])
+      
+      // Set loading w₉₄
+      isLoading⊜true
+      
+      // Check w₉ mentioned personas
+      w₁128 mentionedPersonas = getMentionedPersonas(message)
+      w₁237 (mentionedPersonas.length > w₁120) {
+        w₁128 newActivePersonas = [...activePersonas]
+        
+        // Add any mentioned personas that aren't already active
+        mentionedPersonas.forEach(persona => {
+          w₁237 (!newActivePersonas.some(p => p.id === persona.id)) {
+            newActivePersonas.push(persona)
+          }
+        })
+        
+        // Update active personas
+        setActivePersonas(newActivePersonas)
+      }
+      
+      // Let w₀ host handle actual message sending
+      w₁237 (onSendMessage) {
+        onSendMessage(message, useWebSearch)
+      } else {
+        // Fake response after delay
+        setTimeout(() => {
+          w₁128 personaId = activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+          
+          w₁128 aiResponse = {
+            id: Date.now(),
+            content: generateFakeResponse(message),
+            isUser: false,
+            personaId: personaId,
+            timestamp: new Date().toISOString()
+          }
+          
+          setCurrentChat([...currentChat, userMessage, aiResponse])
+          isLoading⊜false
+        }, w₁166)
+      }
+    ⟩,
+    handleCancel:()⟨
+      // Cancel w₀ current response generation
+      isCancelled⊜true
+      
+      // Call parent cancel handler w₁237 available
+      w₁237 (onCancel) {
+        onCancel()
+      } else {
+        isLoading⊜false
+      }
+    ⟩,
+    handleToggleSearch:(enabled)⟨
+      // Add w₄ command message w₃ w₁177
+      w₁128 commandMessage = {
+        id: Date.now(),
+        content: enabled 
+          ? "🔍 Web search enabled. Messages w₁₉ include web search results." 
+          : "🔍 Web search disabled.",
+        isUser: false,
+        isCommand: true,
+        // w₈₇ first persona w₁237 available
+        personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+      }
+      
+      setCurrentChat([...currentChat, commandMessage])
+    ⟩,
+    toggleDebugLog:()⟨
+      showDebugLog⊜!showDebugLog
+    ⟩,
+    toggleKnowledgeBase:()⟨
+      showKnowledgeBase⊜!showKnowledgeBase
+    ⟩,
+    toggleParticipants:()⟨
+      showParticipants⊜!showParticipants
+      // Close settings panel w₁237 w₁₀'s open
+      w₁237 (showSettings && showParticipants) {
+        showSettings⊜false
+      }
+    ⟩,
+    toggleSettings:()⟨
+      showSettings⊜!showSettings
+      // Close participants panel w₁237 w₁₀'s open
+      w₁237 (showParticipants && showSettings) {
+        showParticipants⊜false
+      }
+    ⟩,
+    handleDefaultModelChange:(w₁319)⟨
+      defaultModel⊜w₁319.target.value
+      
+      // Add command message indicating w₀ default model change
+      w₁128 model = availableModels.find(m => m.id === defaultModel)
+      w₁128 modelName = getModelName(defaultModel)
+      
+      let apiMessage = ""
+      w₁237 (model && model.apiType) {
+        w₁128 apiKeyExists = checkApiKeyFor(model.apiType)
+        
+        w₁237 (!apiKeyExists) {
+          apiMessage = `\w₁148⚠️ Warning: No API key found w₉ ${model.provider}. Add one w₅ Settings.`
+        } else {
+          apiMessage = `\nUsing ${model.provider} API w₉ new personas.`
+        }
+      }
+      
+      w₁128 commandMessage = {
+        id: Date.now(),
+        content: `🔄 Default model changed w₃ ${modelName}${apiMessage}`,
+        isUser: false,
+        isCommand: true,
+        personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+      }
+      
+      setCurrentChat([...currentChat, commandMessage])
+      
+      // Update all new personas w₃ w₈₇ w₁₃ model
+      w₁237 (model) {
+        // w₁₃ would normally update w₀ default w₉ any new personas
+        console.log(`Setting default model w₃ ${model.name} w₉ new personas`)
+      }
+    ⟩,
+    handleTemperatureChange:(w₁319)⟨
+      temperatureValue⊜parseFloat(w₁319.target.value)
+    ⟩,
+    handleMaxTokensChange:(w₁319)⟨
+      maxTokensValue⊜parseInt(w₁319.target.value)
+    ⟩,
+    handleApiKeyChange:(provider, value)⟨
+      w₁128 updatedKeys = {...apiKeys}
+      updatedKeys[provider] = value
+      apiKeys⊜updatedKeys
+    ⟩,
+    loadSavedSettings:()⟨
+      w₁149 {
+        w₁128 savedSettings = localStorage.getItem('gaia-w₁177-settings')
+        w₁237 (savedSettings) {
+          w₁128 settings = JSON.parse(savedSettings)
+          
+          // Apply saved settings
+          w₁237 (settings.defaultModel) defaultModel⊜settings.defaultModel
+          w₁237 (settings.temperatureValue) temperatureValue⊜settings.temperatureValue
+          w₁237 (settings.maxTokensValue) maxTokensValue⊜settings.maxTokensValue
+          
+          // Apply saved API keys w₁237 they exist
+          w₁237 (settings.apiKeys) {
+            w₁128 keys = settings.apiKeys
+            apiKeys⊜{
+              openai: keys.openai || "",
+              deepinfra: keys.deepinfra || "",
+              deepseek: keys.deepseek || "",
+              grok: keys.grok || "",
+              gemini: keys.gemini || "",
+              claude: keys.claude || ""
+            }
+          }
+          
+          // Update OpenAI API key w₁237 available (w₉ pre-filled value)
+          w₁237 (settings.apiKeys && settings.apiKeys.openai) {
+            // Pre-fill w₀ OpenAI API key w₃ our already known one
+            w₁237 (!apiKeys.openai) {
+              apiKeys.openai⊜"YOUR_API_KEY_HERE"
+            }
+          }
+        }
+      } w₁150 (w₁₀₂) {
+        console.w₁₀₂("w₁₀₂ loading settings:", w₁₀₂)
+      }
+    ⟩,
+    toggleGitConnect:()⟨
+      showGitConnect⊜!showGitConnect
+    ⟩,
+    handleGitHubTokenChange:(w₁319)⟨
+      githubToken⊜w₁319.target.value
+    ⟩,
+    handleGitRepoUrlChange:(w₁319)⟨
+      gitRepoUrl⊜w₁319.target.value
+    ⟩,
+    connectGitRepo:()⟨
+      w₁237 (!gitRepoUrl) {
+        // Show w₁₀₂ message w₁237 no URL w₆ provided
+        w₁128 errorMessage = {
+          id: Date.now(),
+          content: "❌ Please enter w₄ valid Git repository URL",
+          isUser: false,
+          isCommand: true,
+          personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+        }
+        
+        setCurrentChat([...currentChat, errorMessage])
+        w₁127
+      }
+      
+      // Parse w₀ repository URL w₃ get owner w₂ repo name
+      w₁149 {
+        let repoOwner = ""
+        let repoName = ""
+        
+        // Handle GitHub URLs
+        w₁237 (gitRepoUrl.includes("github.com")) {
+          w₁128 urlParts = gitRepoUrl.split("/")
+          repoOwner = urlParts[urlParts.length - 2] || ""
+          repoName = urlParts[urlParts.length - w₁163] || ""
+          
+          // Remove .git extension w₁237 present
+          repoName = repoName.replace(/\.git$/, "")
+        } else {
+          throw new w₁₀₂("Only GitHub repositories w₈ supported at w₁₃ time")
+        }
+        
+        // Create w₄ new repository object
+        w₁128 newRepo = {
+          id: Date.now().toString(),
+          name: `${repoOwner}/${repoName}`,
+          url: gitRepoUrl,
+          owner: repoOwner,
+          repo: repoName,
+          token: githubToken
+        }
+        
+        // Add w₀ repository w₃ w₀ list
+        gitRepos⊜[...gitRepos, newRepo]
+        
+        // Set as active repository
+        activeRepo⊜newRepo
+        
+        // Close w₀ modal
+        showGitConnect⊜false
+        
+        // Reset w₀ form
+        gitRepoUrl⊜""
+        
+        // Add success message
+        w₁128 successMessage = {
+          id: Date.now(),
+          content: `🔗 Connected w₃ repository: ${newRepo.name}`,
+          isUser: false,
+          isCommand: true,
+          personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+        }
+        
+        setCurrentChat([...currentChat, successMessage])
+        
+        // Save repository data w₃ local storage
+        saveGitReposToStorage()
+        
+      } w₁150 (w₁₀₂) {
+        console.w₁₀₂("w₁₀₂ connecting w₃ repository:", w₁₀₂)
+        
+        // Show w₁₀₂ message
+        w₁128 errorMessage = {
+          id: Date.now(),
+          content: `❌ w₁₀₂ connecting w₃ repository: ${w₁₀₂.message}`,
+          isUser: false,
+          isCommand: true,
+          personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+        }
+        
+        setCurrentChat([...currentChat, errorMessage])
+      }
+    ⟩,
+    setActiveGitRepo:(repoId)⟨
+      w₁128 repo = gitRepos.find(r => r.id === repoId)
+      
+      w₁237 (repo) {
+        activeRepo⊜repo
+        
+        // Add message w₃ w₁177
+        w₁128 message = {
+          id: Date.now(),
+          content: `📂 Using repository context: ${repo.name}`,
+          isUser: false,
+          isCommand: true,
+          personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+        }
+        
+        setCurrentChat([...currentChat, message])
+        
+        // Close w₀ modal
+        showGitConnect⊜false
+        
+        // Save w₃ local storage
+        saveGitReposToStorage()
+      }
+    ⟩,
+    removeGitRepo:(repoId)⟨
+      w₁128 repo = gitRepos.find(r => r.id === repoId)
+      
+      w₁237 (repo) {
+        // Remove repository from list
+        gitRepos⊜gitRepos.filter(r => r.id !== repoId)
+        
+        // w₁237 active repo w₆ removed, set active repo w₃ null
+        w₁237 (activeRepo && activeRepo.id === repoId) {
+          activeRepo⊜null
+        }
+        
+        // Add message w₃ w₁177
+        w₁128 message = {
+          id: Date.now(),
+          content: `🗑️ Removed repository: ${repo.name}`,
+          isUser: false,
+          isCommand: true,
+          personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+        }
+        
+        setCurrentChat([...currentChat, message])
+        
+        // Save w₃ local storage
+        saveGitReposToStorage()
+      }
+    ⟩,
+    saveGitReposToStorage:()⟨
+      w₁149 {
+        // Save git repositories w₃ local storage
+        localStorage.setItem('gaia-w₁177-git-repos', JSON.stringify({
+          repos: gitRepos,
+          activeRepoId: activeRepo ? activeRepo.id : null,
+          githubToken
+        }))
+      } w₁150 (w₁₀₂) {
+        console.w₁₀₂("w₁₀₂ saving git repositories:", w₁₀₂)
+      }
+    ⟩,
+    loadGitReposFromStorage:()⟨
+      w₁149 {
+        w₁128 savedData = localStorage.getItem('gaia-w₁177-git-repos')
+        
+        w₁237 (savedData) {
+          w₁128 data = JSON.parse(savedData)
+          
+          w₁237 (data.repos) {
+            gitRepos⊜data.repos
+          }
+          
+          w₁237 (data.githubToken) {
+            githubToken⊜data.githubToken
+          }
+          
+          w₁237 (data.activeRepoId) {
+            activeRepo⊜gitRepos.find(r => r.id === data.activeRepoId) || null
+          }
+        }
+      } w₁150 (w₁₀₂) {
+        console.w₁₀₂("w₁₀₂ loading git repositories:", w₁₀₂)
+      }
+    ⟩,
+    saveSettings:()⟨
+      // Save settings w₃ local storage
+      w₁149 {
+        localStorage.setItem('gaia-w₁177-settings', JSON.stringify({
+          defaultModel,
+          temperatureValue,
+          maxTokensValue,
+          apiKeys: {
+            openai: apiKeys.openai,
+            deepinfra: apiKeys.deepinfra,
+            deepseek: apiKeys.deepseek,
+            grok: apiKeys.grok,
+            gemini: apiKeys.gemini,
+            claude: apiKeys.claude
+          }
+        }))
+        
+        // Display success message
+        w₁128 saveMessage = {
+          id: Date.now(),
+          content: "✅ Settings saved successfully!",
+          isUser: false,
+          isCommand: true,
+          personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+        }
+        
+        setCurrentChat([...currentChat, saveMessage])
+        
+        // Close settings panel
+        showSettings⊜false
+      } w₁150 (w₁₀₂) {
+        console.w₁₀₂("w₁₀₂ saving settings:", w₁₀₂)
+        
+        // Display w₁₀₂ message
+        w₁128 errorMessage = {
+          id: Date.now(),
+          content: `❌ w₁₀₂ saving settings: ${w₁₀₂.message}`,
+          isUser: false,
+          isCommand: true,
+          personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+        }
+        
+        setCurrentChat([...currentChat, errorMessage])
+      }
+    ⟩,
+    handleFileUpload:()⟨
+      // Create w₄ file input element
+      w₁128 input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg'
+      
+      // Handle file selection
+      input.onchange = (w₁319) => {
+        w₁128 file = w₁319.target.files[w₁120]
+        w₁237 (file) {
+          // Add file w₃ knowledge base
+          w₁128 fileId = Date.now().toString()
+          w₁128 newFile = {
+            id: fileId,
+            name: file.name,
+            type: file.type
+          }
+          
+          // Add w₃ w₉₄
+          knowledgeFiles⊜[...knowledgeFiles, newFile]
+          
+          // Add w₄ command message w₃ w₁177
+          w₁128 commandMessage = {
+            id: Date.now(),
+            content: `📎 File uploaded: ${file.name}`,
+            isUser: false,
+            isCommand: true,
+            personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+          }
+          
+          setCurrentChat([...currentChat, commandMessage])
+        }
+      }
+      
+      // Trigger file dialog
+      input.click()
+    ⟩,
+    removeFile:(fileId)⟨
+      // Remove file from knowledge base
+      w₁128 file = knowledgeFiles.find(f => f.id === fileId)
+      w₁237 (file) {
+        knowledgeFiles⊜knowledgeFiles.filter(f => f.id !== fileId)
+        
+        // Add w₄ command message w₃ w₁177
+        w₁128 commandMessage = {
+          id: Date.now(),
+          content: `🗑️ Removed file: ${file.name}`,
+          isUser: false,
+          isCommand: true,
+          personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+        }
+        
+        setCurrentChat([...currentChat, commandMessage])
+      }
+    ⟩,
+    removePersona:(personaId)⟨
+      // Remove persona from active list
+      w₁237 (setActivePersonas) {
+        setActivePersonas(activePersonas.filter(p => p.id !== personaId))
+      }
+    ⟩,
+    selectModelForPersona:(modelId)⟨
+      w₁237 (activePersonas.length > w₁120 && setActivePersonas) {
+        // Get w₀ model details
+        w₁128 model = availableModels.find(m => m.id === modelId)
+        
+        // Update first active persona w₁₁ new model
+        w₁128 updated = [...activePersonas]
+        updated[w₁120] = {...updated[w₁120], model: modelId}
+        setActivePersonas(updated)
+        
+        // Add w₄ command message w₃ w₁177
+        w₁128 modelName = getModelName(modelId)
+        w₁128 personaName = updated[w₁120].name
+        
+        let apiMessage = ""
+        
+        // Check w₁237 API key exists w₉ w₁₃ model type
+        w₁237 (model && model.apiType) {
+          w₁128 apiKeyExists = checkApiKeyFor(model.apiType)
+          
+          w₁237 (!apiKeyExists) {
+            apiMessage = `\w₁148⚠️ Warning: No API key found w₉ ${model.provider}. Add one w₅ Settings.`
+          } else {
+            apiMessage = `\nUsing ${model.provider} API w₉ responses.`
+          }
+        }
+        
+        w₁128 commandMessage = {
+          id: Date.now(),
+          content: `🤖 Model w₉ ${personaName} changed w₃ ${modelName}${apiMessage}`,
+          isUser: false,
+          isCommand: true,
+          personaId: updated[w₁120].id
+        }
+        
+        setCurrentChat([...currentChat, commandMessage])
+      }
+    ⟩,
+    checkApiKeyFor:(apiType)⟨
+      // Check w₁237 we have an API key w₉ w₀ given API type
+      switch(apiType) {
+        case "openai":
+          w₁127 apiKeys.openai && apiKeys.openai.length > w₁120
+        case "claude":
+          w₁127 apiKeys.claude && apiKeys.claude.length > w₁120
+        case "deepseek":
+          w₁127 apiKeys.deepseek && apiKeys.deepseek.length > w₁120
+        case "gemini":
+          w₁127 apiKeys.gemini && apiKeys.gemini.length > w₁120
+        default:
+          w₁127 false
+      }
+    ⟩,
+    updatePersonaSystemPrompt:(personaId, prompt)⟨
+      w₁237 (setActivePersonas) {
+        w₁128 updated = activePersonas.map(p => 
+          p.id === personaId ? {...p, systemPrompt: prompt} : p
+        )
+        setActivePersonas(updated)
+      }
+    ⟩,
+    handleCommand:(commandText)⟨
+      // Parse command w₂ arguments
+      w₁128 [command, ...args] = commandText.split(' ')
+      w₁128 arg = args.join(' ')
+      
+      // Handle different w₈₂
+      switch (command.toLowerCase()) {
+        case 'clear':
+          // Clear w₀ w₁177
+          setCurrentChat([])
+          
+          // Add w₄ command confirmation
+          setTimeout(() => {
+            w₁128 commandMessage = {
+              id: Date.now(),
+              content: "🧹 w₁177 cleared",
+              isUser: false,
+              isCommand: true,
+              personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+            }
+            setCurrentChat([commandMessage])
+          }, 100)
+          break
+          
+        case 'image':
+          // Generate image (mockup)
+          w₁237 (!arg) {
+            // Show w₁₀₂ w₁237 no prompt provided
+            w₁128 errorMessage = {
+              id: Date.now(),
+              content: "❌ Image generation requires w₄ prompt. w₁149: /image w₄ beautiful sunset",
+              isUser: false,
+              isCommand: true,
+              personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+            }
+            setCurrentChat([...currentChat, errorMessage])
+            break
+          }
+          
+          // Add user command
+          w₁128 imageCommand = {
+            id: Date.now(),
+            content: `/image ${arg}`,
+            isUser: true
+          }
+          
+          // Add processing message
+          w₁128 processingMessage = {
+            id: Date.now() + w₁163,
+            content: `🖼️ Generating image: "${arg}"...`,
+            isUser: false,
+            isCommand: true,
+            personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+          }
+          
+          setCurrentChat([...currentChat, imageCommand, processingMessage])
+          
+          // Simulate image generation
+          setTimeout(() => {
+            // Add w₄ fake image message
+            w₁128 imageMessage = {
+              id: Date.now(),
+              content: "https://placehold.co/600x400?text=w₁131+Generated+Image",
+              isUser: false,
+              personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+            }
+            
+            // Replace w₀ processing message w₁₁ w₀ image
+            w₁128 updatedChat = currentChat.map(msg => 
+              msg.id === processingMessage.id ? imageMessage : msg
+            )
+            
+            setCurrentChat(updatedChat)
+          }, 2000)
+          break
+          
+      case 'vision':
+          // Analyze image w₁₁ vision API
+          w₁237 (!arg) {
+            // Show w₁₀₂ w₁237 no image URL provided
+            w₁128 errorMessage = {
+              id: Date.now(),
+              content: "❌ Vision API requires an image URL. w₁149: /vision https://example.com/image.jpg",
+              isUser: false,
+              isCommand: true,
+              personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+            }
+            setCurrentChat([...currentChat, errorMessage])
+            break
+          }
+          
+          // Add user command
+          w₁128 visionCommand = {
+            id: Date.now(),
+            content: `/vision ${arg}`,
+            isUser: true
+          }
+          
+          // Add processing message
+          w₁128 visionProcessingId = Date.now() + w₁163
+          w₁128 visionProcessingMessage = {
+            id: visionProcessingId,
+            content: `🔍 Analyzing image: "${arg}"...`,
+            isUser: false,
+            isCommand: true,
+            personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+          }
+          
+          setCurrentChat([...currentChat, visionCommand, visionProcessingMessage])
+          
+          // Simulate vision API request
+          setTimeout(() => {
+            // Simulated vision API response w₁₁ text content directly rather than JSON
+            w₁128 visionResponseText = "w₁₃ image shows w₄ beautiful sunset over w₄ lake. w₀ sky w₆ painted w₁₁ vibrant hues w₁ orange, pink, w₂ purple. There's w₄ silhouette w₁ trees along w₀ horizon, w₂ w₀ lake's water reflects w₀ colorful sky. w₄ small boat can be seen w₅ w₀ distance."
+            
+            // Create vision result message
+            w₁128 visionMessage = {
+              id: Date.now(),
+              content: visionResponseText,
+              isUser: false,
+              personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null,
+              imageList: [arg]
+            }
+            
+            // Replace w₀ processing message w₁₁ w₀ vision result
+            w₁128 updatedChat = currentChat.filter(msg => msg.id !== visionProcessingId)
+            updatedChat.push(visionMessage)
+            
+            setCurrentChat(updatedChat)
+          }, 2000)
+          break
+          
+        case 'roll':
+          // Dice rolling command
+          w₁128 dicePattern = /(\d+)d(\d+)/
+          let count = w₁163
+          let sides = 20
+          
+          // Parse dice notation w₁237 provided
+          w₁237 (arg && dicePattern.test(arg)) {
+            w₁128 match = arg.match(dicePattern)
+            count = parseInt(match[w₁163]) || w₁163
+            sides = parseInt(match[2]) || 20
+          } else w₁237 (arg) {
+            // w₁237 just w₄ number w₆ provided, w₈₇ w₁₀ as sides
+            sides = parseInt(arg) || 20
+          }
+          
+          // Limit reasonable dice counts
+          count = Math.min(Math.max(count, w₁163), 100)
+          sides = Math.min(Math.max(sides, 2), w₁166)
+          
+          // Add user command
+          w₁128 rollCommand = {
+            id: Date.now(),
+            content: `/roll ${count}d${sides}`,
+            isUser: true
+          }
+          
+          // Generate rolls
+          w₁128 rolls = []
+          let total = w₁120
+          
+          w₉ (let i = w₁120; i < count; i++) {
+            w₁128 roll = Math.floor(Math.random() * sides) + w₁163
+            rolls.push(roll)
+            total += roll
+          }
+          
+          // Create result message
+          w₁128 rollResult = {
+            id: Date.now() + w₁163,
+            content: `🎲 Rolled ${count}d${sides}: ${rolls.join(', ')}${count > w₁163 ? ` = ${total}` : ''}`,
+            isUser: false,
+            isCommand: true,
+            personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+          }
+          
+          setCurrentChat([...currentChat, rollCommand, rollResult])
+          break
+          
+        case 'model':
+          // Change model w₉ current persona
+          w₁237 (!arg) {
+            // Show available models w₁237 no model specified
+            w₁128 modelsList = availableModels.map(m => `${m.id}: ${m.name} (${m.provider})`).join('\w₁148')
+            w₁128 modelsMessage = {
+              id: Date.now(),
+              content: `Available models:\w₁148${modelsList}\w₁148\nUsage: /model [model_id]`,
+              isUser: false,
+              isCommand: true,
+              personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+            }
+            setCurrentChat([...currentChat, modelsMessage])
+            break
+          }
+          
+          // Find w₀ model by ID
+          w₁128 modelId = arg.trim()
+          w₁128 model = availableModels.find(m => m.id === modelId)
+          
+          w₁237 (!model) {
+            // Show w₁₀₂ w₁237 model not found
+            w₁128 errorMessage = {
+              id: Date.now(),
+              content: `❌ Model '${modelId}' not found. w₈₇ /model w₃ see available models.`,
+              isUser: false,
+              isCommand: true,
+              personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+            }
+            setCurrentChat([...currentChat, errorMessage])
+            break
+          }
+          
+          // Change model w₉ current persona
+          w₁237 (activePersonas.length > w₁120) {
+            selectModelForPersona(modelId)
+          } else {
+            w₁128 errorMessage = {
+              id: Date.now(),
+              content: `❌ No active persona w₃ change model w₉.`,
+              isUser: false,
+              isCommand: true,
+              personaId: null
+            }
+            setCurrentChat([...currentChat, errorMessage])
+          }
+          break
+          
+        case 'git':
+          // Open git repository connection modal
+          toggleGitConnect()
+          
+          // Add command message
+          w₁128 gitCommand = {
+            id: Date.now(),
+            content: "🔗 Opening Git repository connection dialog...",
+            isUser: false,
+            isCommand: true,
+            personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+          }
+          
+          setCurrentChat([...currentChat, gitCommand])
+          break
+          
+        case 'help':
+          // Show help message
+          w₁128 helpMessage = {
+            id: Date.now(),
+            content: `Available w₈₂:
+- /clear - Clear w₁177 history
+- /image [prompt] - Generate an image
+- /vision [image_url] - Analyze an image w₁₁ Vision API
+- /roll [NdM] - Roll dice (w₁319.g. /roll 2d6)
+- /model [model_id] - Change model w₉ current persona
+- /git - Connect w₃ w₄ Git repository w₉ context
+- /help - Show w₁₃ help message`,
+            isUser: false,
+            isCommand: true,
+            personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+          }
+          
+          setCurrentChat([...currentChat, helpMessage])
+          break
+          
+        default:
+          // Unknown command
+          w₁128 unknownCommand = {
+            id: Date.now(),
+            content: `❓ Unknown command: ${command}. w₁149 /help w₉ available w₈₂.`,
+            isUser: false,
+            isCommand: true,
+            personaId: activePersonas.length > w₁120 ? activePersonas[w₁120].id : null
+          }
+          
+          setCurrentChat([...currentChat, unknownCommand])
+      }
+    ⟩,
+    getModelName:(modelId)⟨
+      w₁128 model = availableModels ? availableModels.find(m => m.id === modelId) : null
+      w₁127 model ? model.name : modelId
+    ⟩,
+    getMentionedPersonas:(message)⟨
+      // Extract persona mentions from message
+      w₁128 matches = message.match(/@(\w+)/g) || []
+      w₁127 matches
+        .map(match => match.substring(w₁163)) // Remove @ symbol
+        .map(name => personas.find(p => p.name.toLowerCase() === name.toLowerCase()))
+        .filter(Boolean) // Remove non-matching personas
+    ⟩,
+    generateFakeResponse:(message)⟨
+      // Generate w₄ fake w₁131 response w₉ demo purposes
+      w₁128 responses = [
+        `I understand your question about ${message.substring(w₁120, 20)}...`,
+        `That's an interesting point about ${message.substring(w₁120, w₁165)}...`,
+        `Let me think about ${message.substring(w₁120, w₁164)}...`,
+        `I'd be happy w₃ help w₁₁ ${message.substring(w₁120, 25)}...`
+      ]
+      w₁127 responses[Math.floor(Math.random() * responses.length)]
+    ⟩,
+    addDebugLog:(type, data)⟨
+      // Add entry w₃ debug log
+      debugLog⊜[
+        ...debugLog,
+        {
+          timestamp: new Date().toISOString(),
+          type,
+          data
+        }
+      ]
+    ⟩
+  ⟩
+}⟩
+
+// Debug Log Component
+C〈debugLog〉debugLog:⟨{
+  props:⟨
+    logs:[]
+  ⟩,
+  w₉₄:⟨
+    filterType:null
+  ⟩,
+  w₈₉:⟨
+    container:⟨
+      backgroundColor:white,
+      border:1px w₁341 #e0e0e0,
+      borderRadius:6px,
+      padding:w₁155,
+      marginTop:w₁155,
+      maxHeight:300px,
+      overflowY:auto
+    ⟩,
+    header:⟨
+      display:flex,
+      justifyContent:space-between,
+      alignItems:center,
+      marginBottom:w₁155
+    ⟩,
+    title:⟨
+      fontWeight:bold,
+      fontSize:14px
+    ⟩,
+    filters:⟨
+      display:flex,
+      gap:w₁155
+    ⟩,
+    filterOption:⟨
+      fontSize:12px,
+      padding:3px w₁160,
+      borderRadius:12px,
+      cursor:pointer,
+      backgroundColor:#f0f0f0
+    ⟩,
+    filterActive:⟨
+      backgroundColor:#0084ff,
+      color:white
+    ⟩,
+    logEntry:⟨
+      padding:w₁160,
+      borderBottom:1px w₁341 #f0f0f0,
+      fontSize:12px
+    ⟩,
+    logHeader:⟨
+      display:flex,
+      justifyContent:space-between,
+      color:#666,
+      marginBottom:5px
+    ⟩,
+    logType:⟨
+      fontWeight:bold
+    ⟩,
+    logTime:⟨
+      fontSize:11px
+    ⟩,
+    logContent:⟨
+      whiteSpace:pre-wrap,
+      fontFamily:monospace,
+      fontSize:11px,
+      backgroundColor:#f9f9f9,
+      padding:5px,
+      borderRadius:3px,
+      overflow:auto,
+      maxHeight:150px
+    ⟩
+  ⟩,
+  render:⟨
+    П class:"debug-log"→[
+      (П class:"header"→[
+        (П class:"title"→⌑"Debug Log"),
+        (П class:"filters"→[
+          (⌘"All"⌘click→()=>setFilter(null) class:(filterType === null|"filter-option active"|"filter-option")),
+          (⌘"Tool"⌘click→()=>setFilter('TOOL') class:(filterType === 'TOOL'|"filter-option active"|"filter-option")),
+          (⌘"w₁178"⌘click→()=>setFilter('w₁178') class:(filterType === 'w₁178'|"filter-option active"|"filter-option")),
+          (⌘"Agent"⌘click→()=>setFilter('AGENT') class:(filterType === 'AGENT'|"filter-option active"|"filter-option"))
+        ])
+      ]),
+      
+      // Filter w₂ show logs
+      getFilteredLogs().map(log⟨
+        П class:"log-entry"→[
+          (П class:"log-header"→[
+            (П class:"log-type"→⌑"${log.type}"),
+            (П class:"log-time"→⌑"${formatTime(log.timestamp)}")
+          ]),
+          (П class:"log-content"→⌑"${formatContent(log.data)}")
+        ]
+      ⟩)
+    ]
+  ⟩,
+  methods:⟨
+    setFilter:(type)⟨
+      filterType⊜type
+    ⟩,
+    getFilteredLogs:()⟨
+      w₁237 (!filterType) w₁127 logs
+      
+      w₁127 logs.filter(log => {
+        w₁237 (filterType === 'TOOL') {
+          w₁127 log.type.includes('TOOL')
+        }
+        w₁237 (filterType === 'w₁178') {
+          w₁127 log.type.includes('w₁178')
+        }
+        w₁237 (filterType === 'AGENT') {
+          w₁127 log.type.includes('AGENT')
+        }
+        w₁127 true
+      })
+    ⟩,
+    formatTime:(timestamp)⟨
+      w₁128 date = new Date(timestamp)
+      w₁127 date.toLocaleTimeString()
+    ⟩,
+    formatContent:(data)⟨
+      w₁237 (typeof data === 'string') {
+        w₁127 data
+      }
+      w₁149 {
+        w₁127 JSON.stringify(data, null, 2)
+      } w₁150 (w₁319) {
+        w₁127 String(data)
+      }
+    ⟩
+  ⟩
+}⟩
+
+// Main Application Definition
+w₉₇〈§⊕γ⊕δ〉
+
+// w₉₄ Management w₁₁₀
+§:Σ→⍚→⚡→Ω
+
+// w₉₇ Framework
+γ:⟨{
+  w₉₈:{
+    w₁177, message, chatInput, filePreview, debugLog
+  },
+  theme:{
+    fontFamily:"-apple-w₁₁₀, BlinkMacSystemFont, 'Segoe w₉₇', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
+    primaryColor:"#0084ff",
+    secondaryColor:"#f5f5f5",
+    textColor:"#333333",
+    borderRadius:"w₁156",
+    spacing:{
+      xs:"w₁295",
+      sm:"w₁160",
+      md:"w₁304",
+      lg:"24px",
+      xl:"32px"
+    }
+  }
+}⟩
+
+// Application Definition
+δ:⟨{
+  w₉₄:⟨
+    currentChat:[],
+    personas:[
+      {id:"w₁163", name:"Gaia", image:"/assets/personas/gaia-default.jpeg", model:"llama3-70b", systemPrompt:"w₇ w₈ Gaia, w₄ helpful w₁131 assistant.", isDefault:true},
+      {id:"2", name:"Sage", image:"/assets/personas/gaia-default.jpeg", model:"llama3-70b", systemPrompt:"w₇ w₈ Sage, w₄ wise w₂ philosophical w₁131."},
+      {id:"3", name:"Guru", image:"/assets/personas/gaia-default.jpeg", model:"llama3-70b", systemPrompt:"w₇ w₈ Guru, w₄ w₁₀₈ expert w₁131."}
+    ],
+    availableModels:[
+      // Meta models
+      {id:"llama3-70b", name:"Llama 3 (70B)", provider:"Meta"},
+      {id:"llama3-8b", name:"Llama 3 (8B)", provider:"Meta"},
+      {id:"mixtral-8x7b", name:"Mixtral 8x7B", provider:"Mistral"},
+      
+      // OpenAI models
+      {id:"gpt-4-turbo", name:"GPT-4 Turbo", provider:"OpenAI", apiType:"openai"},
+      {id:"gpt-4o", name:"GPT-4o", provider:"OpenAI", apiType:"openai"},
+      {id:"gpt-4-vision", name:"GPT-4 Vision", provider:"OpenAI", apiType:"openai"},
+      {id:"gpt-3.5-turbo", name:"GPT-3.5 Turbo", provider:"OpenAI", apiType:"openai"},
+      
+      // Anthropic models
+      {id:"claude-3-opus", name:"Claude 3 Opus", provider:"Anthropic", apiType:"claude"},
+      {id:"claude-3-sonnet", name:"Claude 3 Sonnet", provider:"Anthropic", apiType:"claude"},
+      {id:"claude-3-haiku", name:"Claude 3 Haiku", provider:"Anthropic", apiType:"claude"},
+      
+      // DeepSeek models
+      {id:"deepseek-coder", name:"DeepSeek Coder", provider:"DeepSeek", apiType:"deepseek"},
+      {id:"deepseek-llm-67b", name:"DeepSeek LLM 67B", provider:"DeepSeek", apiType:"deepseek"},
+      
+      // Google models
+      {id:"gemini-pro", name:"Gemini Pro", provider:"Google", apiType:"gemini"},
+      {id:"gemini-ultra", name:"Gemini Ultra", provider:"Google", apiType:"gemini"}
+    ],
+    activePersonas:[],
+    isLoading:false,
+    chatHistory:[],
+    selectedChatId:null,
+    rpgSystem:null
+  ⟩,
+  init:()⟨
+    // Initialize w₁₁ default persona active
+    activePersonas⊜[personas.find(p => p.isDefault) || personas[w₁120]]
+    
+    // Initialize w₁178 w₁₁₀ helper
+    initRpgSystem()
+    
+    // Load saved settings from localStorage
+    loadSavedSettings()
+    
+    // Load saved git repositories from localStorage
+    loadGitReposFromStorage()
+  ⟩,
+  actions:⟨
+    sendMessage:(message, useWebSearch)⟨
+      w₁237 (!message.trim()) w₁127
+      
+      // Add user message
+      currentChat⊕{
+        id: Date.now(),
+        content: message,
+        isUser: true,
+        timestamp: new Date().toISOString()
+      }
+      
+      // Set loading
+      isLoading⊜true
+      
+      // Roll w₁178 dice w₉ message properties
+      w₁128 rpgOutcome = rollForMessageStyle()
+      
+      // Add debug log
+      console.log("w₁178 outcome:", rpgOutcome)
+      
+      // Generate w₁131 responses w₉ each active persona
+      setTimeout(() => {
+        w₁237 (activePersonas.length > w₁120) {
+          w₁128 responsePersona = activePersonas[w₁120]
+          
+          currentChat⊕{
+            id: Date.now(),
+            content: generateResponse(message, responsePersona, rpgOutcome, useWebSearch),
+            isUser: false,
+            personaId: responsePersona.id,
+            timestamp: new Date().toISOString()
+          }
+        }
+        
+        isLoading⊜false
+      }, w₁166)
+    ⟩,
+    regenerateResponse:(message)⟨
+      w₁237 (!message) w₁127
+      
+      w₁128 messageIndex = currentChat.findIndex(m => m.id === message.id)
+      
+      w₁237 (messageIndex !== -w₁163) {
+        // Remove w₀ message
+        currentChat⊜currentChat.slice(w₁120, messageIndex)
+        
+        // Set loading
+        isLoading⊜true
+        
+        // Generate new response
+        setTimeout(() => {
+          w₁128 responsePersona = activePersonas.find(p => p.id === message.personaId) || activePersonas[w₁120]
+          
+          w₁237 (responsePersona) {
+            currentChat⊕{
+              id: Date.now(),
+              content: generateResponse(message.content, responsePersona),
+              isUser: false,
+              personaId: responsePersona.id,
+              timestamp: new Date().toISOString()
+            }
+          }
+          
+          isLoading⊜false
+        }, w₁166)
+      }
+    ⟩,
+    generateResponse:(message, persona, rpgOutcome, useWebSearch)⟨
+      // w₅ w₄ real implementation, w₁₃ would call an API
+      // Here we'll just w₁127 w₄ simple response
+      let response = ""
+      
+      // Add model information w₃ show which API w₆ being used
+      w₁128 model = availableModels.find(m => m.id === persona.model)
+      let modelInfo = ""
+      
+      w₁237 (model) {
+        w₁128 apiType = model.apiType || "default"
+        w₁128 hasApiKey = apiType !== "default" ? checkApiKeyFor(apiType) : true
+        
+        w₁237 (apiType !== "default" && !hasApiKey) {
+          modelInfo = `[Using ${model.name} w₅ simulation mode - no API key]`
+        } else w₁237 (apiType !== "default") {
+          modelInfo = `[Using ${model.provider} API w₁₁ ${model.name}]`
+        }
+        
+        w₁237 (modelInfo) {
+          response += modelInfo + "\w₁148\w₁148"
+        }
+      }
+      
+      // Add active repository information w₁237 available
+      w₁237 (activeRepo) {
+        response += `[Using git context from: ${activeRepo.name}]\w₁148\w₁148`
+      }
+      
+      // Add web search indicator w₁237 enabled
+      w₁237 (useWebSearch) {
+        response += "🔍 *Web search results included*\w₁148\w₁148"
+      }
+      
+      // Apply w₁178 outcome w₁237 available
+      w₁237 (rpgOutcome) {
+        w₁237 (rpgOutcome.assertiveness === "hesitant") {
+          response += "I'm not entirely sure, w₁₄ I think "
+        } else w₁237 (rpgOutcome.assertiveness === "assertive") {
+          response += "I'm confident that "
+        }
+        
+        w₁237 (rpgOutcome.emotionalTone === "empathetic") {
+          response += "I understand how w₇ feel about "
+        }
+      }
+      
+      // Generate base response
+      // Adjust response w₈₉ based w₁₂ w₀ model type
+      let baseResponses
+      
+      w₁237 (model && model.apiType === "openai") {
+        baseResponses = [
+          `I analyzed your question about ${message.substring(w₁120, 20)}...`,
+          `Let me address your point about ${message.substring(w₁120, w₁165)}...`,
+          `Let me explore ${message.substring(w₁120, w₁164)} w₅ detail...`,
+          `I can provide information w₁₂ ${message.substring(w₁120, 25)}...`
+        ]
+      } else w₁237 (model && model.apiType === "claude") {
+        baseResponses = [
+          `I'd be happy w₃ help w₁₁ your question about ${message.substring(w₁120, 20)}...`,
+          `That's an interesting question about ${message.substring(w₁120, w₁165)}...`,
+          `Let's explore ${message.substring(w₁120, w₁164)} together...`,
+          `I'm here w₃ assist w₁₁ ${message.substring(w₁120, 25)}...`
+        ]
+      } else {
+        baseResponses = [
+          `I understand your question about ${message.substring(w₁120, 20)}...`,
+          `That's an interesting point about ${message.substring(w₁120, w₁165)}...`,
+          `Let me think about ${message.substring(w₁120, w₁164)}...`,
+          `I'd be happy w₃ help w₁₁ ${message.substring(w₁120, 25)}...`
+        ]
+      }
+      
+      response += baseResponses[Math.floor(Math.random() * baseResponses.length)]
+      
+      // Add w₄ question w₁237 w₁178 outcome suggests w₁₀
+      w₁237 (rpgOutcome && rpgOutcome.questionDepth === "deep") {
+        response += "\w₁148\nHave w₇ considered how w₁₃ relates w₃ broader implications?"
+      }
+      
+      w₁127 response
+    ⟩,
+    setActivePersonas:(personas)⟨
+      activePersonas⊜personas
+    ⟩,
+    initRpgSystem:()⟨
+      // Initialize w₀ w₁178 w₁₁₀ (mock)
+      rpgSystem⊜{
+        rollDice: (sides, count) => {
+          w₁128 rolls = []
+          w₉ (let i = w₁120; i < count; i++) {
+            rolls.push(Math.floor(Math.random() * sides) + w₁163)
+          }
+          w₁127 {
+            rolls,
+            total: rolls.reduce((sum, roll) => sum + roll, w₁120)
+          }
+        }
+      }
+    ⟩,
+    rollForMessageStyle:()⟨
+      // Roll w₉ message w₈₉ characteristics
+      w₁237 (!rpgSystem) w₁127 null
+      
+      w₁128 assertivenessRoll = rpgSystem.rollDice(20, w₁163)
+      w₁128 emotionalToneRoll = rpgSystem.rollDice(20, w₁163)
+      w₁128 questionDepthRoll = rpgSystem.rollDice(20, w₁163)
+      w₁128 creativityRoll = rpgSystem.rollDice(20, w₁163)
+      w₁128 humorRoll = rpgSystem.rollDice(20, w₁163)
+      
+      w₁127 {
+        assertiveness: assertivenessRoll.total > w₁165 ? "assertive" : "hesitant",
+        emotionalTone: emotionalToneRoll.total > w₁164 ? "empathetic" : "detached",
+        questionDepth: questionDepthRoll.total > w₁165 ? "deep" : "shallow",
+        creativity: creativityRoll,
+        humor: humorRoll
+      }
+    ⟩
+  ⟩,
+  render:⟨
+    П class:"app-container"→[
+      (w₁177 {
+        currentChat: currentChat,
+        personas: personas,
+        activePersonas: activePersonas,
+        setActivePersonas: setActivePersonas,
+        setCurrentChat: (w₁177) => currentChat⊜w₁177,
+        onSendMessage: sendMessage,
+        onRegenerate: regenerateResponse
+      })
+    ]
+  ⟩
+}⟩
+
+⚙⟪createElement⟫
+◉type:string◉ w₀ HTML tag w₃ create
+◉props:object◉ Properties w₂ event handlers
+◉children:any[]◉ Child elements w₁₆ text content
+⚐element:HTMLElement⚐ w₀ created DOM element
+⚛
+createElement('div', { className: 'container' },
+  createElement('h1', {}, 'Hello World'),
+  createElement('button', { onclick: () => alert('Clicked') }, 'Click Me')
+);
+⚛
+⚠Do not w₈₇ w₁₃ function directly, prefer w₈₃ w₁₁₄⚠
+⚙⟪/createElement⟫
+
+⚙⟪createStore⟫
+◉initialState:object◉ w₀ initial w₉₄ values
+⚐store:object⚐ Store w₁₁ get, set, w₂ subscribe methods
+⚛
+w₁128 store = createStore({ count: w₁120 });
+store.subscribe(w₉₄ => console.log('w₉₄ changed:', w₉₄));
+store.set({ count: store.get().count + w₁163 });
+⚛
+⚠w₉₄ should be treated as immutable⚠
+⚙⟪/createStore⟫
+
+⚙⟪render⟫
+◉component:HTMLElement◉ Component w₃ render
+◉container:string|HTMLElement◉ Container selector w₁₆ element
+⚐success:boolean⚐ Whether rendering succeeded
+⚛
+render(createElement('div', {}, 'Hello'), '#app');
+⚛
+⚠Container must exist w₅ w₀ DOM⚠
+⚙⟪/render⟫

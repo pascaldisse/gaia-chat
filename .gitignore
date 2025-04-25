@@ -50,3 +50,4 @@ docs/gaiascript/docs/GAIASCRIPT_REFERENCE.md
 docs/gaiascript/*.log
 .api.pid
 .frontend.pid
+.env.local
