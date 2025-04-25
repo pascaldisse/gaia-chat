@@ -1743,9 +1743,9 @@ C〈w₁177〉w₁177:⟨{
           
           // Update OpenAI API key w₁237 available (w₉ pre-filled value)
           w₁237 (settings.apiKeys && settings.apiKeys.openai) {
-            // Pre-fill w₀ OpenAI API key w₃ our already known one
+            // Pre-fill w₀ OpenAI API key from environment variable
             w₁237 (!apiKeys.openai) {
-              apiKeys.openai⊜"" // API key removed for security
+              apiKeys.openai⊜process.env.REACT_APP_OPENAI_API_KEY || ""
             }
           }
         }
