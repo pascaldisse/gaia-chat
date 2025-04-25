@@ -1745,7 +1745,7 @@ C〈w₁177〉w₁177:⟨{
           w₁237 (settings.apiKeys && settings.apiKeys.openai) {
             // Pre-fill w₀ OpenAI API key w₃ our already known one
             w₁237 (!apiKeys.openai) {
-              apiKeys.openai⊜"YOUR_API_KEY_HERE"
+              apiKeys.openai⊜"" // API key removed for security
             }
           }
         }
