@@ -887,22 +887,7 @@ C〈w₁177〉w₁177:⟨{
   w₈₉:⟨
     container:⟨display:flex, flexDirection:column, height:100vh, padding:w₁120, margin:w₁120⟩,
     messages:⟨flex:w₁163, overflowY:auto, padding:w₁156, backgroundColor:#f5f5f5, display:flex, flexDirection:column⟩,
-    sidebarOverlay:⟨
-      position:fixed,
-      top:w₁120,
-      left:w₁120,
-      width:100%,
-      height:100%,
-      backgroundColor:rgba(w₁120,w₁120,w₁120,w₁120.5),
-      zIndex:999,
-      opacity:w₁120,
-      pointerEvents:none,
-      transition:opacity w₁120.3s ease
-    ⟩,
-    sidebarOverlayVisible:⟨
-      opacity:w₁163,
-      pointerEvents:auto
-    ⟩,
+
     settingsButton:⟨
       position:absolute,
       top:w₁155,
@@ -1299,13 +1284,8 @@ C〈w₁177〉w₁177:⟨{
   ⟩,
   render:⟨
     П class:"w₁177-container"→[
-      // Overlay w₉ sidebar, settings, w₂ git modal
-      (П class:(showParticipants || showSettings || showGitConnect|"sidebar-overlay visible"|"sidebar-overlay")
-        ⌘click→() => { 
-          w₁237 (showParticipants) toggleParticipants(); 
-          w₁237 (showSettings) toggleSettings();
-          w₁237 (showGitConnect) toggleGitConnect();
-        }),
+      // Modal backdrop handlers integrated with each panel
+      // No separate overlay element needed
       
       // Participants toggle button
       (⌘"👥"⌘click→toggleParticipants class:"participants-toggle" title:"Toggle participants panel"),
