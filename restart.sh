@@ -50,6 +50,31 @@ if ! command -v serve &> /dev/null; then
   npm install -g serve
 fi
 
+# Run the fix_compiler script to setup the compiler
+echo "Setting up GaiaScript compiler..."
+chmod +x fix_compiler.sh
+./fix_compiler.sh
+
+if [ $? -ne 0 ]; then
+  echo "GaiaScript compiler setup failed! Exiting."
+  exit 1
+fi
+
+# Step 1: Compare build output with src files
+echo "Comparing build output with source files..."
+chmod +x compare_build.sh
+./compare_build.sh
+
+if [ $? -ne 0 ]; then
+  echo "Warning: Compiled output doesn't match expected source files."
+  read -p "Continue with the build anyway? (y/n) " continue_build
+  if [ "$continue_build" != "y" ]; then
+    echo "Build aborted."
+    exit 1
+  fi
+  echo "Continuing with the build despite comparison failure..."
+fi
+
 # Build the app
 echo "Building application..."
 npm run build
