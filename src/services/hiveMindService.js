@@ -14,15 +14,16 @@ export class AttributeAgent {
     this.history = [];
   }
 
-  // Generate a response based on the attribute's perspective
-  async generateResponse(query, conversationHistory = []) {
+  // Generate a response based on the attribute's perspective with streaming
+  async generateResponse(query, conversationHistory = [], onUpdate = null) {
     try {
-      // Create the chat model
+      // Create the chat model with streaming enabled
       const chat = new ChatDeepInfra({
         apiKey: API_KEY,
         modelName: this.modelId,
         temperature: 0.7,
-        maxTokens: 500
+        maxTokens: 500,
+        streaming: true // Enable streaming
       });
 
       // Build a prompt template for this attribute agent
@@ -41,29 +42,66 @@ focus on how compassion might lead you to consider how the solution affects user
         ["human", query]
       ]);
 
-      // Generate the completion
-      const response = await prompt.pipe(chat).invoke({});
+      // Create a response object that will be updated during streaming
+      const responseObj = {
+        agent: this.attribute.name.toLowerCase(),
+        agentName: this.attribute.name,
+        message: "",
+        model: this.modelId,
+        value: this.attribute.value
+      };
+
+      if (onUpdate) {
+        // Initial callback with empty message
+        onUpdate(responseObj);
+      }
+
+      // Generate the streaming completion
+      let fullResponse = "";
+      
+      const events = await prompt.pipe(chat).stream();
+      
+      for await (const event of events) {
+        if (event.content) {
+          fullResponse += event.content;
+          
+          // Update the response object with the new content
+          responseObj.message = fullResponse;
+          
+          // Call the callback if provided
+          if (onUpdate) {
+            onUpdate({...responseObj});
+          }
+        }
+      }
 
       // Add to this agent's history
       this.history.push({ role: "human", content: query });
-      this.history.push({ role: "assistant", content: response.content });
+      this.history.push({ role: "assistant", content: fullResponse });
 
+      // Return the complete response
       return {
         agent: this.attribute.name.toLowerCase(),
         agentName: this.attribute.name,
-        message: response.content,
+        message: fullResponse,
         model: this.modelId,
         value: this.attribute.value
       };
     } catch (error) {
       console.error(`Error generating response for ${this.attribute.name}:`, error);
-      return {
+      const errorResponse = {
         agent: this.attribute.name.toLowerCase(),
         agentName: this.attribute.name,
         message: `Error: Unable to generate a response from the ${this.attribute.name} perspective.`,
         model: this.modelId,
         value: this.attribute.value
       };
+      
+      if (onUpdate) {
+        onUpdate(errorResponse);
+      }
+      
+      return errorResponse;
     }
   }
 }
@@ -74,15 +112,16 @@ export class HiveMindSummary {
     this.attributes = attributes;
   }
 
-  // Generate a summary based on individual attribute responses
-  async generateSummary(query, attributeResponses, summaryModel) {
+  // Generate a summary based on individual attribute responses with streaming
+  async generateSummary(query, attributeResponses, summaryModel, onUpdate = null) {
     try {
-      // Create the chat model for summary
+      // Create the chat model for summary with streaming enabled
       const chat = new ChatDeepInfra({
         apiKey: API_KEY,
         modelName: summaryModel,
         temperature: 0.7,
-        maxTokens: 800
+        maxTokens: 800,
+        streaming: true // Enable streaming
       });
 
       // Format the attribute responses for the summary prompt
@@ -109,13 +148,37 @@ ${formattedResponses}
 Please provide a balanced response that integrates these perspectives, giving appropriate weight to each attribute.`]
       ]);
 
-      // Generate the summary
-      const response = await prompt.pipe(chat).invoke({});
+      // Generate the streaming summary
+      let fullSummary = "";
+      
+      if (onUpdate) {
+        // Initial callback with empty summary
+        onUpdate(fullSummary);
+      }
+      
+      const events = await prompt.pipe(chat).stream();
+      
+      for await (const event of events) {
+        if (event.content) {
+          fullSummary += event.content;
+          
+          // Call the callback if provided
+          if (onUpdate) {
+            onUpdate(fullSummary);
+          }
+        }
+      }
 
-      return response.content;
+      return fullSummary;
     } catch (error) {
       console.error("Error generating Hive Mind summary:", error);
-      return "Error: Unable to generate a summary response from the Hive Mind.";
+      const errorMessage = "Error: Unable to generate a summary response from the Hive Mind.";
+      
+      if (onUpdate) {
+        onUpdate(errorMessage);
+      }
+      
+      return errorMessage;
     }
   }
 }

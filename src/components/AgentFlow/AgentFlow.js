@@ -98,6 +98,7 @@ const AgentFlowContent = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes());
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const [selectedElements, setSelectedElements] = useState({ nodes: [], edges: [] });
   
   // State for modals
   const [showPersonaSelector, setShowPersonaSelector] = useState(false);
@@ -742,6 +743,47 @@ const AgentFlowContent = () => {
     return selectedNode ? selectedNode.data : null;
   };
   
+  // Handle deleting nodes and their edges
+  const handleDeleteSelectedNodes = () => {
+    // Get IDs of selected nodes to delete
+    const selectedNodeIds = nodes
+      .filter(node => node.selected)
+      .map(node => node.id);
+    
+    if (selectedNodeIds.length === 0) {
+      alert('Please select one or more nodes to delete');
+      return;
+    }
+    
+    // Remove selected nodes
+    setNodes(nds => nds.filter(node => !node.selected));
+    
+    // Remove any edges connected to deleted nodes
+    setEdges(eds => eds.filter(edge => 
+      !selectedNodeIds.includes(edge.source) && 
+      !selectedNodeIds.includes(edge.target)
+    ));
+    
+    // Clear the selection
+    setSelectedElements({ nodes: [], edges: [] });
+  };
+  
+  // Add keyboard shortcut for delete
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.key === 'Delete' || event.key === 'Backspace') && 
+          !event.target.matches('input, textarea, select')) {
+        handleDeleteSelectedNodes();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges]);
+  
   return (
     <div className="agent-flow-container" role="application" aria-label="Agent Workflow Editor">
       <div className="agent-flow-header">
@@ -843,6 +885,24 @@ const AgentFlowContent = () => {
           role="button"
           aria-label="Drag to add Persona node"
           tabIndex="0"
+          onClick={() => {
+            // Create a persona node at a default position
+            const newNode = {
+              id: `${Date.now()}`,
+              type: 'personaNode',
+              position: { x: 250, y: 150 },
+              data: {
+                personaData: {},
+                onEdit: () => setShowPersonaSelector(true),
+                onSettings: () => {}
+              }
+            };
+            setNodes((nds) => nds.concat(newNode));
+            
+            // Select the node immediately so we can open the persona selector
+            setSelectedNodeId(newNode.id);
+            setShowPersonaSelector(true);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               // Create a persona node at a default position
@@ -857,6 +917,10 @@ const AgentFlowContent = () => {
                 }
               };
               setNodes((nds) => nds.concat(newNode));
+              
+              // Select the node immediately so we can open the persona selector
+              setSelectedNodeId(newNode.id);
+              setShowPersonaSelector(true);
             }
           }}
         >
@@ -867,6 +931,51 @@ const AgentFlowContent = () => {
           draggable
           onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'teamNode');
+          }}
+          role="button"
+          aria-label="Drag to add Team node"
+          tabIndex="0"
+          onClick={() => {
+            // Create a team node at a default position
+            const newNode = {
+              id: `${Date.now()}`,
+              type: 'teamNode',
+              position: { x: 250, y: 150 },
+              data: {
+                teamName: 'Agent Team',
+                teamDescription: 'A team of collaborative agents',
+                agents: [],
+                teamRole: 'coordinator',
+                onEdit: () => setShowTeamSelector(true),
+                onSettings: () => {
+                  // Additional team settings if needed
+                  console.log('Team settings button clicked');
+                }
+              }
+            };
+            setNodes((nds) => nds.concat(newNode));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              // Create a team node at a default position
+              const newNode = {
+                id: `${Date.now()}`,
+                type: 'teamNode',
+                position: { x: 250, y: 150 },
+                data: {
+                  teamName: 'Agent Team',
+                  teamDescription: 'A team of collaborative agents',
+                  agents: [],
+                  teamRole: 'coordinator',
+                  onEdit: () => setShowTeamSelector(true),
+                  onSettings: () => {
+                    // Additional team settings if needed
+                    console.log('Team settings button clicked');
+                  }
+                }
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
           }}
         >
           <div className="tool-node team">Team</div>
@@ -880,6 +989,26 @@ const AgentFlowContent = () => {
           role="button"
           aria-label="Drag to add Tool node"
           tabIndex="0"
+          onClick={() => {
+            // Create a tool node at a default position
+            const newNode = {
+              id: `${Date.now()}`,
+              type: 'toolNode',
+              position: { x: 250, y: 200 },
+              data: {
+                toolType: 'generic',
+                toolName: 'New Tool',
+                toolDescription: 'Configure this tool',
+                toolConfig: {},
+                onConfigure: () => setShowToolConfig(true)
+              }
+            };
+            setNodes((nds) => nds.concat(newNode));
+            
+            // Select the node immediately so we can open the tool configuration
+            setSelectedNodeId(newNode.id);
+            setShowToolConfig(true);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               // Create a tool node at a default position
@@ -896,6 +1025,10 @@ const AgentFlowContent = () => {
                 }
               };
               setNodes((nds) => nds.concat(newNode));
+              
+              // Select the node immediately so we can open the tool configuration
+              setSelectedNodeId(newNode.id);
+              setShowToolConfig(true);
             }
           }}
         >
@@ -910,6 +1043,26 @@ const AgentFlowContent = () => {
           role="button"
           aria-label="Drag to add File node"
           tabIndex="0"
+          onClick={() => {
+            // Create a file node at a default position
+            const newNode = {
+              id: `${Date.now()}`,
+              type: 'fileNode',
+              position: { x: 250, y: 250 },
+              data: {
+                fileName: 'Select File',
+                fileType: 'unknown',
+                fileSize: '0 KB',
+                onSelect: () => setShowFileSelector(true),
+                onPreview: () => {}
+              }
+            };
+            setNodes((nds) => nds.concat(newNode));
+            
+            // Select the node immediately so we can open the file selector
+            setSelectedNodeId(newNode.id);
+            setShowFileSelector(true);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               // Create a file node at a default position
@@ -926,6 +1079,10 @@ const AgentFlowContent = () => {
                 }
               };
               setNodes((nds) => nds.concat(newNode));
+              
+              // Select the node immediately so we can open the file selector
+              setSelectedNodeId(newNode.id);
+              setShowFileSelector(true);
             }
           }}
         >
@@ -938,6 +1095,53 @@ const AgentFlowContent = () => {
           onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'communicationNode');
           }}
+          role="button"
+          aria-label="Drag to add Communication node"
+          tabIndex="0"
+          onClick={() => {
+            // Create a communication node at a default position
+            const newNode = {
+              id: `${Date.now()}`,
+              type: 'communicationNode',
+              position: { x: 250, y: 250 },
+              data: {
+                name: 'Communication Channel',
+                mode: 'broadcast',
+                description: 'Communication channel for agents',
+                format: 'text',
+                onEdit: () => {
+                  alert('Communication channel configuration dialog will appear here');
+                },
+                onView: () => {
+                  alert('Message history will appear here');
+                }
+              }
+            };
+            setNodes((nds) => nds.concat(newNode));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              // Create a communication node at a default position
+              const newNode = {
+                id: `${Date.now()}`,
+                type: 'communicationNode',
+                position: { x: 250, y: 250 },
+                data: {
+                  name: 'Communication Channel',
+                  mode: 'broadcast',
+                  description: 'Communication channel for agents',
+                  format: 'text',
+                  onEdit: () => {
+                    alert('Communication channel configuration dialog will appear here');
+                  },
+                  onView: () => {
+                    alert('Message history will appear here');
+                  }
+                }
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
+          }}
         >
           <div className="tool-node communication">Communication</div>
         </div>
@@ -946,6 +1150,53 @@ const AgentFlowContent = () => {
           draggable
           onDragStart={(event) => {
             event.dataTransfer.setData('application/reactflow', 'memoryNode');
+          }}
+          role="button"
+          aria-label="Drag to add Memory node"
+          tabIndex="0"
+          onClick={() => {
+            // Create a memory node at a default position
+            const newNode = {
+              id: `${Date.now()}`,
+              type: 'memoryNode',
+              position: { x: 250, y: 300 },
+              data: {
+                memoryName: 'Shared Memory',
+                memoryType: 'simple',
+                memoryDescription: 'Shared memory for agent collaboration',
+                memorySize: 0,
+                onEdit: () => {
+                  alert('Memory configuration dialog will appear here');
+                },
+                onView: () => {
+                  alert('Memory contents will appear here');
+                }
+              }
+            };
+            setNodes((nds) => nds.concat(newNode));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              // Create a memory node at a default position
+              const newNode = {
+                id: `${Date.now()}`,
+                type: 'memoryNode',
+                position: { x: 250, y: 300 },
+                data: {
+                  memoryName: 'Shared Memory',
+                  memoryType: 'simple',
+                  memoryDescription: 'Shared memory for agent collaboration',
+                  memorySize: 0,
+                  onEdit: () => {
+                    alert('Memory configuration dialog will appear here');
+                  },
+                  onView: () => {
+                    alert('Memory contents will appear here');
+                  }
+                }
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
           }}
         >
           <div className="tool-node memory">Memory</div>
@@ -960,6 +1211,19 @@ const AgentFlowContent = () => {
           role="button"
           aria-label="Drag to add Trigger node"
           tabIndex="0"
+          onClick={() => {
+            // Create a trigger node at a default position
+            const newNode = {
+              id: `${Date.now()}`,
+              type: 'triggerNode',
+              position: { x: 250, y: 300 },
+              data: {
+                label: 'New Trigger',
+                icon: 'lightning-bolt'
+              }
+            };
+            setNodes((nds) => nds.concat(newNode));
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               // Create a trigger node at a default position
@@ -987,6 +1251,19 @@ const AgentFlowContent = () => {
           role="button"
           aria-label="Drag to add Action node"
           tabIndex="0"
+          onClick={() => {
+            // Create an action node at a default position
+            const newNode = {
+              id: `${Date.now()}`,
+              type: 'actionNode',
+              position: { x: 250, y: 350 },
+              data: {
+                label: 'New Action',
+                color: 'blue'
+              }
+            };
+            setNodes((nds) => nds.concat(newNode));
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               // Create an action node at a default position
@@ -1014,6 +1291,19 @@ const AgentFlowContent = () => {
           role="button"
           aria-label="Drag to add Decision node"
           tabIndex="0"
+          onClick={() => {
+            // Create a decision node at a default position
+            const newNode = {
+              id: `${Date.now()}`,
+              type: 'decisionNode',
+              position: { x: 250, y: 400 },
+              data: {
+                label: 'New Decision',
+                color: 'green'
+              }
+            };
+            setNodes((nds) => nds.concat(newNode));
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               // Create a decision node at a default position
@@ -1051,6 +1341,9 @@ const AgentFlowContent = () => {
           onDragOver={onDragOver}
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
+          onSelectionChange={(elements) => setSelectedElements(elements)}
+          selectNodesOnDrag={true}
+          multiSelectionKeyCode="Control"
           fitView
           attributionPosition="bottom-right"
           aria-label="Interactive workflow diagram"
@@ -1058,10 +1351,79 @@ const AgentFlowContent = () => {
         >
           <Controls 
             showZoom={true}
-            showFitView={true}
+            showFitView={false}
             showInteractive={false}
             position="bottom-right"
           />
+          <div 
+            className="react-flow__custom-controls" 
+            style={{ 
+              position: 'absolute', 
+              bottom: '10px', 
+              right: '10px', 
+              zIndex: 5, 
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <button 
+              type="button" 
+              className="react-flow__controls-button" 
+              title="Delete selected nodes" 
+              aria-label="Delete selected nodes"
+              onClick={handleDeleteSelectedNodes}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #eee',
+                borderRadius: '4px',
+                padding: '4px',
+                margin: '2px',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                color: '#f44336'
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
+            <button 
+              type="button" 
+              className="react-flow__controls-button" 
+              title="Fit view" 
+              aria-label="Fit view"
+              onClick={() => {
+                if (reactFlowInstance) {
+                  reactFlowInstance.fitView();
+                }
+              }}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #eee',
+                borderRadius: '4px',
+                padding: '4px',
+                margin: '2px',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 30" width="14" height="14">
+                <path d="M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z"></path>
+              </svg>
+            </button>
+          </div>
           <Background variant="dots" gap={16} size={1} color="#2f3136" />
         </ReactFlow>
       </div>

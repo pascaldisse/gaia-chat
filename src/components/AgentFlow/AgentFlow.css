@@ -594,6 +594,45 @@
   background-color: var(--discord-accent);
 }
 
+/* Custom control buttons */
+.react-flow__custom-controls {
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+}
+
+.react-flow__controls-button {
+  background-color: #40444b;
+  border: 1px solid var(--discord-tertiary);
+  color: var(--text-normal);
+  border-radius: var(--border-radius-md);
+  padding: 4px;
+  margin: 2px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.react-flow__controls-button:hover {
+  background-color: var(--discord-accent);
+}
+
+.react-flow__controls-button[title="Delete selected nodes"] {
+  color: var(--status-red);
+}
+
+.react-flow__controls-button[title="Delete selected nodes"]:hover {
+  background-color: var(--status-red);
+  color: white;
+}
+
 .react-flow__controls button:focus-visible {
   box-shadow: var(--focus-ring);
   outline: none;

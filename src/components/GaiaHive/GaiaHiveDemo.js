@@ -131,20 +131,49 @@ const GaiaHiveDemo = () => {
     console.log('GAIA HIVE DEMO: Received response from GaiaHive:', result);
     console.log('GAIA HIVE DEMO: Conversation history:', conversationHistory);
     
-    setResponse(result);
-    setIsProcessing(false);
+    // Update the final response if provided
+    if (result !== undefined) {
+      setResponse(result);
+    }
+    
+    // Only mark processing as complete when truly finished
+    // (if result is provided and conversation history exists)
+    if (result && conversationHistory && conversationHistory.length > 0 && 
+        conversationHistory.every(msg => msg.message && msg.message.length > 0)) {
+      setIsProcessing(false);
+    }
     
     // Update conversation history if provided
-    if (conversationHistory) {
-      // Update timestamps for all responses
+    if (conversationHistory && conversationHistory.length > 0) {
+      // Update timestamps for all responses that have content
       const timestamps = { ...messageTimes };
       conversationHistory.forEach(msg => {
-        timestamps[msg.agent] = new Date();
+        // Only update timestamp if the message actually has content
+        // or if it doesn't already have a timestamp
+        if ((msg.message && msg.message.length > 0) || !timestamps[msg.agent]) {
+          timestamps[msg.agent] = new Date();
+        }
       });
       setMessageTimes(timestamps);
       
-      // Set conversation
-      setConversation(conversationHistory);
+      // Set conversation - Preserve existing messages if new ones are empty
+      setConversation(prevConversation => {
+        if (prevConversation.length === 0) {
+          return conversationHistory;
+        }
+        
+        // Merge previous conversation with new updates
+        return conversationHistory.map((newMsg, index) => {
+          // If the message is empty, use previous content if available
+          if (!newMsg.message && prevConversation[index] && prevConversation[index].message) {
+            return {
+              ...newMsg,
+              message: prevConversation[index].message
+            };
+          }
+          return newMsg;
+        });
+      });
       
       // Make sure all attribute IDs are in visible messages
       setVisibleMessages(conversationHistory.map(msg => msg.agent));

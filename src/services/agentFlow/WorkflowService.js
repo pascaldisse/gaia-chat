@@ -632,18 +632,47 @@ const discoverAgentsAndTeams = async (nodes, nodesMap, memory) => {
   for (const node of communicationNodes) {
     const channelId = node.id;
     const channelData = node.data || {};
+    const channelMode = channelData.mode || 'broadcast';
     
-    // Add to memory
-    memory.messages.push({
+    // Create channel configuration based on mode
+    let channelConfig = {
       id: channelId,
       name: channelData.name || 'Default Channel',
-      mode: channelData.mode || 'broadcast',
+      mode: channelMode,
       format: channelData.format || 'text',
       messages: [],
       participants: []
-    });
+    };
     
-    console.log(`Initialized communication channel: ${channelData.name || 'Default Channel'}`);
+    // Add mode-specific fields
+    switch (channelMode) {
+      case 'round-robin':
+        channelConfig.speakerOrder = [];
+        channelConfig.currentSpeakerIndex = 0;
+        channelConfig.waitingForResponse = false;
+        break;
+        
+      case 'debate':
+        channelConfig.topic = channelData.topic || 'Unspecified topic';
+        channelConfig.position1 = channelData.position1 || 'For';
+        channelConfig.position2 = channelData.position2 || 'Against';
+        channelConfig.debateRound = 1;
+        channelConfig.maxRounds = channelData.maxRounds || 3;
+        channelConfig.currentPosition = 'position1';
+        channelConfig.position1Agent = null;
+        channelConfig.position2Agent = null;
+        channelConfig.moderatorId = null;
+        break;
+        
+      case 'p2p':
+        channelConfig.allowedPairs = channelData.allowedPairs || [];
+        break;
+    }
+    
+    // Add to memory
+    memory.messages.push(channelConfig);
+    
+    console.log(`Initialized communication channel: ${channelData.name || 'Default Channel'} (${channelMode} mode)`);
   }
   
   return memory;
@@ -697,10 +726,55 @@ export const createTeamAgent = async (teamNode, agents = [], tools = []) => {
     throw new Error("Invalid team data in node");
   }
   
-  // Create a system prompt for the team coordinator
-  const teamMemberDescriptions = agents.map(agent => 
-    `- ${agent.persona.name}: ${agent.persona.systemPrompt || 'No description'}`
-  ).join('\n');
+  // Analyze agent capabilities, expertise, and attributes for more sophisticated team coordination
+  const enhancedTeamMembers = agents.map(agent => {
+    // Extract key attributes for team coordination
+    const initiative = agent.persona.initiative || 5;
+    const creativity = agent.persona.creativity || 5;
+    const empathy = agent.persona.empathy || 5;
+    const confidence = agent.persona.confidence || 5;
+    
+    // Extract capabilities and expertise if available
+    const capabilities = agent.capabilities || [];
+    const expertise = agent.expertise || [];
+    
+    // Calculate strengths based on attributes
+    const strengths = [];
+    if (initiative > 7) strengths.push('Taking initiative');
+    if (creativity > 7) strengths.push('Creative thinking');
+    if (empathy > 7) strengths.push('Interpersonal communication');
+    if (confidence > 7) strengths.push('Decision making');
+    
+    // Determine suitable roles based on attributes
+    const suitableRoles = [];
+    if (initiative > 7 && confidence > 6) suitableRoles.push('Leader');
+    if (creativity > 7) suitableRoles.push('Innovator');
+    if (empathy > 7) suitableRoles.push('Mediator');
+    if ((initiative + creativity + confidence) / 3 > 6) suitableRoles.push('Problem Solver');
+    
+    return {
+      name: agent.persona.name,
+      description: agent.persona.systemPrompt || 'No description',
+      strengths: strengths.length > 0 ? strengths.join(', ') : 'Balanced approach',
+      suitableRoles: suitableRoles.length > 0 ? suitableRoles.join(', ') : 'Support',
+      capabilities,
+      expertise,
+      attributes: {
+        initiative,
+        creativity,
+        empathy,
+        confidence
+      }
+    };
+  });
+  
+  // Create a detailed system prompt for the team coordinator
+  const teamMemberDescriptions = enhancedTeamMembers.map(member => 
+    `- ${member.name}: ${member.description.substring(0, 100)}${member.description.length > 100 ? '...' : ''}
+      * Strengths: ${member.strengths}
+      * Suitable roles: ${member.suitableRoles}
+      * Key attributes: Initiative: ${member.attributes.initiative}/10, Creativity: ${member.attributes.creativity}/10, Empathy: ${member.attributes.empathy}/10, Confidence: ${member.attributes.confidence}/10`
+  ).join('\n\n');
   
   // Format tools for prompt template
   const toolStrings = tools.map(tool => 
@@ -710,42 +784,125 @@ export const createTeamAgent = async (teamNode, agents = [], tools = []) => {
   const teamRole = teamData.teamRole || 'coordinator';
   let systemPrompt = '';
   
-  // Role-specific prompts
+  // Enhanced role-specific prompts with more sophisticated team reasoning
   switch(teamRole) {
     case 'coordinator':
-      systemPrompt = `You are a coordination agent for a team. Your role is to distribute tasks, 
-      manage communication, and ensure the team works effectively together.
-      You will coordinate the following team members:
-      ${teamMemberDescriptions}`;
+      systemPrompt = `You are a coordination agent for a team. Your primary responsibility is orchestrating 
+      collaboration between team members, allocating tasks based on their strengths, and ensuring the team 
+      achieves its collective goals efficiently.
+
+      TEAM COORDINATION RESPONSIBILITIES:
+      1. Analyze the problem and break it down into components that can be assigned to appropriate team members
+      2. Consider each member's strengths, expertise, and current workload when delegating tasks
+      3. Establish clear communication protocols and expectations
+      4. Monitor progress and provide direction when team members are stuck
+      5. Synthesize inputs from team members into a coherent final output
+      6. Resolve conflicts and align different perspectives towards a common goal
+
+      TEAM MEMBERS AND THEIR CAPABILITIES:
+      ${teamMemberDescriptions}
+
+      TEAM MANAGEMENT PRINCIPLES:
+      - Assign tasks based on members' strengths and expertise
+      - Balance workload across the team
+      - Ensure all members have clear understanding of their responsibilities
+      - Recognize and address signs of miscommunication or confusion
+      - Provide regular progress updates and clarify next steps`;
       break;
+      
     case 'debate':
-      systemPrompt = `You are a debate facilitator. Your role is to present different perspectives, 
-      encourage structured argumentation, and help the team arrive at a reasoned conclusion.
-      The debate participants are:
-      ${teamMemberDescriptions}`;
+      systemPrompt = `You are a debate facilitator. Your role is to structure a productive discussion between different 
+      perspectives, ensure fair representation of arguments, and guide the team toward reasoned conclusions.
+
+      DEBATE FACILITATION RESPONSIBILITIES:
+      1. Frame the debate topic clearly and establish evaluation criteria
+      2. Ensure each perspective gets fair representation and consideration
+      3. Identify logical fallacies and call for evidence when claims are unsubstantiated
+      4. Highlight strong arguments from all sides
+      5. Guide participants toward productive areas of discussion
+      6. Summarize key points and areas of agreement/disagreement
+      7. Facilitate reaching a conclusion based on the merit of arguments presented
+
+      DEBATE PARTICIPANTS:
+      ${teamMemberDescriptions}
+
+      EFFECTIVE DEBATE PRINCIPLES:
+      - Focus on arguments' logical structure and supporting evidence
+      - Maintain intellectual honesty - acknowledge strong counterarguments
+      - Separate factual disagreements from value-based differences
+      - Work toward clarity rather than "winning" the debate
+      - Identify crux issues - the key points that would change minds if resolved`;
       break;
+      
     case 'consensus':
-      systemPrompt = `You are a consensus-building agent. Your role is to identify common ground,
-      highlight areas of agreement, and help the team reach shared understanding and decisions.
-      The team members are:
-      ${teamMemberDescriptions}`;
+      systemPrompt = `You are a consensus-building agent. Your expertise lies in finding common ground between different 
+      positions, facilitating mutual understanding, and helping the team reach collective decisions that incorporate diverse perspectives.
+
+      CONSENSUS BUILDING RESPONSIBILITIES:
+      1. Create a safe environment for sharing diverse viewpoints
+      2. Help participants clearly articulate their positions and underlying interests
+      3. Identify shared values and areas of potential agreement
+      4. Frame differences constructively as opportunities for creating better solutions
+      5. Guide the synthesis of a unified approach that addresses key concerns
+      6. Ensure all participants feel their input has been valued and incorporated
+
+      TEAM MEMBERS:
+      ${teamMemberDescriptions}
+
+      CONSENSUS BUILDING PRINCIPLES:
+      - Separate positions (what people say they want) from interests (why they want it)
+      - Look for integrative solutions that address multiple interests simultaneously
+      - Build on areas of agreement before tackling contentious issues
+      - Document points of consensus to build momentum
+      - Use principles and objective criteria to resolve remaining differences
+      - Focus on creating value for all participants`;
       break;
+      
     case 'specialist':
-      systemPrompt = `You are a specialist team coordinator. Your role is to integrate specialized 
-      expertise from each team member to solve complex problems.
-      The specialists in your team are:
-      ${teamMemberDescriptions}`;
+      systemPrompt = `You are a specialist team coordinator. Your role is to integrate specialized expertise from 
+      team members with different domains of knowledge to solve complex multidisciplinary problems.
+
+      SPECIALIST TEAM COORDINATION RESPONSIBILITIES:
+      1. Break down the problem to identify where different domains of expertise are needed
+      2. Match specialized tasks to team members with relevant expertise
+      3. Facilitate knowledge sharing across disciplinary boundaries
+      4. Translate between different technical languages and frameworks
+      5. Ensure specialists understand how their component fits into the larger solution
+      6. Synthesize specialized inputs into a coherent integrated solution
+
+      SPECIALIST TEAM MEMBERS:
+      ${teamMemberDescriptions}
+
+      INTERDISCIPLINARY COORDINATION PRINCIPLES:
+      - Recognize the unique value each specialist brings
+      - Create shared understanding through analogies and visual models
+      - Identify integration points between different domains
+      - Respect domain expertise while encouraging cross-disciplinary thinking
+      - Maintain focus on the holistic solution while addressing specialized components`;
       break;
+      
     default:
-      systemPrompt = `You are a team agent named "${teamData.teamName || 'Team Agent'}". 
-      You coordinate the following team members:
-      ${teamMemberDescriptions}`;
+      systemPrompt = `You are a team agent named "${teamData.teamName || 'Team Agent'}". Your role is to coordinate 
+      the following team members, ensuring their collective intelligence is leveraged to produce better results than 
+      any individual member could achieve alone.
+
+      TEAM MEMBERS:
+      ${teamMemberDescriptions}
+
+      TEAM COORDINATION PRINCIPLES:
+      - Build on each member's unique strengths and expertise
+      - Ensure all voices are heard and perspectives considered
+      - Maintain focus on the team's overall objectives
+      - Facilitate communication and knowledge sharing
+      - Synthesize individual contributions into coherent outputs`;
   }
   
   // Add tools to the system prompt
   if (tools.length > 0) {
-    systemPrompt += `\n\nYou have access to the following tools:
-    ${toolStrings}`;
+    systemPrompt += `\n\nYou have access to the following tools to assist with team coordination:
+    ${toolStrings}
+    
+    Use these tools strategically to gather information, process data, or generate content the team needs to complete its task.`;
   }
   
   // Create LLM with team-appropriate settings
@@ -903,17 +1060,68 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                   channel.participants.push(nodeId);
                 }
                 
-                // Get the last 10 messages or fewer
-                const recentMessages = channel.messages.slice(-10);
-                
-                if (recentMessages.length > 0) {
-                  const messageContent = recentMessages.map(msg => 
-                    `${msg.sender} (${new Date(msg.timestamp).toLocaleTimeString()}): ${msg.content}`
-                  ).join('\n');
+                // Format messages differently based on channel mode
+                if (channel.messages.length > 0) {
+                  let messageContent = '';
                   
-                  connectedFilesData.push(`Messages from ${channel.name}:\n\n${messageContent}`);
+                  switch (channel.mode) {
+                    case 'p2p':
+                      // For P2P, only show messages to or from this agent
+                      const p2pMessages = channel.messages.filter(msg => 
+                        msg.senderId === nodeId || msg.recipientId === nodeId
+                      );
+                      
+                      if (p2pMessages.length > 0) {
+                        messageContent = p2pMessages.map(msg => {
+                          if (msg.senderId === nodeId) {
+                            return `You to ${msg.recipient || 'Unknown'} (${new Date(msg.timestamp).toLocaleTimeString()}): ${msg.content}`;
+                          } else {
+                            return `${msg.sender} to You (${new Date(msg.timestamp).toLocaleTimeString()}): ${msg.content}`;
+                          }
+                        }).join('\n');
+                      } else {
+                        messageContent = "No direct messages in this channel.";
+                      }
+                      break;
+                      
+                    case 'debate':
+                      // Format debate messages with position and round
+                      messageContent = channel.messages.map(msg => 
+                        `Round ${msg.debateRound || '?'} - ${msg.sender} (${msg.position || 'Observer'}): ${msg.content}`
+                      ).join('\n\n');
+                      
+                      // Add debate context
+                      messageContent = `Debate Topic: ${channel.topic || 'Unspecified'}\n` +
+                        `Position 1 (${channel.position1 || 'For'}): ${memory.agents[channel.position1Agent]?.name || 'Unknown'}\n` +
+                        `Position 2 (${channel.position2 || 'Against'}): ${memory.agents[channel.position2Agent]?.name || 'Unknown'}\n` +
+                        (channel.debateComplete ? 'Status: Debate Concluded\n\n' : `Status: Round ${channel.debateRound || 1}, ${channel.currentPosition === 'position1' ? 'Position 1' : 'Position 2'} to speak\n\n`) +
+                        messageContent;
+                      break;
+                      
+                    case 'round-robin':
+                      // Format with speaking order
+                      messageContent = channel.messages.map(msg => 
+                        `${msg.sender} (${new Date(msg.timestamp).toLocaleTimeString()}): ${msg.content}`
+                      ).join('\n');
+                      
+                      // Add round-robin context
+                      if (channel.speakerOrder && channel.speakerOrder.length > 0) {
+                        const currentSpeakerName = memory.agents[channel.speakerOrder[channel.currentSpeakerIndex]]?.name || 'Unknown';
+                        messageContent = `Round-Robin Discussion\nCurrent speaker: ${currentSpeakerName}\n\n${messageContent}`;
+                      }
+                      break;
+                      
+                    default:
+                      // Default broadcast format - get the last 10 messages
+                      const recentMessages = channel.messages.slice(-10);
+                      messageContent = recentMessages.map(msg => 
+                        `${msg.sender} (${new Date(msg.timestamp).toLocaleTimeString()}): ${msg.content}`
+                      ).join('\n');
+                  }
+                  
+                  connectedFilesData.push(`Messages from ${channel.name} (${channel.mode} mode):\n\n${messageContent}`);
                 } else {
-                  connectedFilesData.push(`No messages in channel: ${channel.name}`);
+                  connectedFilesData.push(`No messages in channel: ${channel.name} (${channel.mode} mode)`);
                 }
               }
             } catch (error) {
@@ -1078,7 +1286,21 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                     const readData = memory.sharedMemory[memoryId].data;
                     
                     // Format based on memory type
-                    if (typeof readData === 'object') {
+                    if (targetNode.data.memoryType === 'vector' && readData && readData.texts) {
+                      // For vector memory, return all stored texts or a specific one if index provided
+                      if (data && !isNaN(parseInt(data))) {
+                        // Return specific index if provided
+                        const index = parseInt(data);
+                        if (index >= 0 && index < readData.texts.length) {
+                          return readData.texts[index];
+                        } else {
+                          return `Index ${index} out of range. Available indices: 0-${readData.texts.length - 1}`;
+                        }
+                      } else {
+                        // Return all memories
+                        return readData.texts.map((text, i) => `[${i}] ${text}`).join('\n\n');
+                      }
+                    } else if (typeof readData === 'object') {
                       return JSON.stringify(readData, null, 2);
                     } else {
                       return String(readData || "Memory is empty");
@@ -1095,6 +1317,66 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                       operation: 'write',
                       timestamp: Date.now()
                     });
+                    break;
+                    
+                  case 'search':
+                    if (targetNode.data.memoryType === 'vector') {
+                      // Ensure we have vector data to search
+                      if (!memory.sharedMemory[memoryId].data || 
+                          !memory.sharedMemory[memoryId].data.vectors || 
+                          !memory.sharedMemory[memoryId].data.texts ||
+                          memory.sharedMemory[memoryId].data.vectors.length === 0) {
+                        return "Vector memory is empty. Nothing to search.";
+                      }
+                      
+                      if (!data) {
+                        return "No search query provided. Please provide text to search for.";
+                      }
+                      
+                      // Record memory access
+                      memory.sharedMemory[memoryId].accessLog.push({
+                        nodeId,
+                        operation: 'search',
+                        timestamp: Date.now()
+                      });
+                      
+                      try {
+                        // In a real implementation, we would:
+                        // 1. Convert the search query to a vector embedding using the same model
+                        // 2. Calculate similarity scores with all vectors in memory
+                        // 3. Return the top matches
+                        
+                        // For our demo implementation, we'll do a simple keyword search
+                        const query = data.toLowerCase();
+                        const matches = [];
+                        
+                        memory.sharedMemory[memoryId].data.texts.forEach((text, index) => {
+                          if (text.toLowerCase().includes(query)) {
+                            matches.push({
+                              index,
+                              text,
+                              score: 0.5 + Math.random() * 0.5 // Mock score between 0.5-1.0
+                            });
+                          }
+                        });
+                        
+                        // Sort by "similarity" score
+                        matches.sort((a, b) => b.score - a.score);
+                        
+                        // Return top matches
+                        if (matches.length === 0) {
+                          return `No matches found for query: "${data}"`;
+                        }
+                        
+                        return `Found ${matches.length} matches for query: "${data}"\n\n` +
+                          matches.map(m => `[${m.index}] (Score: ${m.score.toFixed(2)}) ${m.text.substring(0, 100)}${m.text.length > 100 ? '...' : ''}`).join('\n\n');
+                      } catch (error) {
+                        console.error("Error searching vector memory:", error);
+                        return `Error searching: ${error.message}`;
+                      }
+                    } else {
+                      return "Search operation is only available for vector memory type.";
+                    }
                     
                     // Update memory data based on memory type
                     if (targetNode.data.memoryType === 'structured') {
@@ -1105,7 +1387,84 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                         // Fallback to string if not valid JSON
                         memory.sharedMemory[memoryId].data = data;
                       }
+                    } else if (targetNode.data.memoryType === 'vector') {
+                      try {
+                        // For vector memory, we store both the text and the vector representation
+                        // First, check if data is already structured with embedding
+                        let textData;
+                        let embedding = null;
+                        
+                        try {
+                          const parsed = JSON.parse(data);
+                          if (parsed && typeof parsed === 'object' && parsed.text) {
+                            textData = parsed.text;
+                            embedding = parsed.embedding || null;
+                          } else {
+                            textData = data;
+                          }
+                        } catch (e) {
+                          // Not JSON, just use as text
+                          textData = data;
+                        }
+                        
+                        // If no embedding provided, generate one
+                        if (!embedding) {
+                          try {
+                            // In a production implementation, this would call an embedding API
+                            // For now, we'll just create a simple mock embedding
+                            const mockEmbedding = new Array(5).fill(0).map(() => Math.random());
+                            embedding = mockEmbedding;
+                          } catch (embeddingError) {
+                            console.error("Error generating embedding:", embeddingError);
+                          }
+                        }
+                        
+                        // Initialize vector memory structure if needed
+                        if (!memory.sharedMemory[memoryId].data.vectors) {
+                          memory.sharedMemory[memoryId].data = {
+                            vectors: [],
+                            texts: []
+                          };
+                        }
+                        
+                        // Add new vector and text
+                        memory.sharedMemory[memoryId].data.vectors.push(embedding);
+                        memory.sharedMemory[memoryId].data.texts.push(textData);
+                        
+                        // Track this entry in the vector index
+                        const entryIndex = memory.sharedMemory[memoryId].data.texts.length - 1;
+                        memory.sharedMemory[memoryId].vectorIndices = 
+                          memory.sharedMemory[memoryId].vectorIndices || [];
+                        memory.sharedMemory[memoryId].vectorIndices.push(entryIndex);
+                        
+                      } catch (vectorError) {
+                        console.error("Error handling vector memory:", vectorError);
+                        memory.sharedMemory[memoryId].data = data;
+                      }
+                    } else if (targetNode.data.memoryType === 'persistent') {
+                      // For persistent memory, store in memory and also persist to database
+                      memory.sharedMemory[memoryId].data = data;
+                      
+                      // Mark for persistence
+                      memory.sharedMemory[memoryId].isPersistent = true;
+                      
+                      // Save to database in the background
+                      try {
+                        // This would be async and not block execution
+                        (async () => {
+                          const { workflowDB } = await import('../db');
+                          await workflowDB.savePersistentMemory({
+                            id: memoryId,
+                            name: memory.sharedMemory[memoryId].name,
+                            data: data
+                          });
+                          console.log(`Persistent memory saved: ${memory.sharedMemory[memoryId].name}`);
+                        })();
+                      } catch (persistError) {
+                        console.error("Error persisting memory:", persistError);
+                      }
                     } else {
+                      // Simple memory type - just store as is
                       memory.sharedMemory[memoryId].data = data;
                     }
                     
@@ -1190,7 +1549,7 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                 // Get agent name from registry
                 const agentName = memory.agents[nodeId]?.name || 'Unknown Agent';
                 
-                // Add message to the channel
+                // Create the message object
                 const message = {
                   id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                   sender: agentName,
@@ -1199,9 +1558,154 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                   timestamp: Date.now()
                 };
                 
-                channel.messages.push(message);
-                
-                return `Message sent to channel '${targetNode.data.name}'.`;
+                // Process based on channel mode
+                switch (channel.mode) {
+                  case 'broadcast':
+                    // Default mode - add message to channel for all participants
+                    channel.messages.push(message);
+                    return `Message broadcast to channel '${targetNode.data.name}' (${channel.participants.length} participants).`;
+                    
+                  case 'p2p':
+                    // For peer-to-peer, we need a recipient
+                    const recipientParts = messageContent.match(/^@([^:]+):(.*)/);
+                    
+                    if (recipientParts) {
+                      const recipientName = recipientParts[1].trim();
+                      const actualMessage = recipientParts[2].trim();
+                      
+                      // Find recipient in the participants list
+                      const recipientAgent = Object.values(memory.agents).find(
+                        agent => agent.name.toLowerCase() === recipientName.toLowerCase()
+                      );
+                      
+                      if (!recipientAgent) {
+                        return `Recipient '${recipientName}' not found. Format for P2P message: @RecipientName: your message`;
+                      }
+                      
+                      // Ensure this is an allowed communication pair
+                      if (channel.allowedPairs && channel.allowedPairs.length > 0) {
+                        const isPairAllowed = channel.allowedPairs.some(pair => 
+                          (pair[0] === nodeId && pair[1] === recipientAgent.id) || 
+                          (pair[0] === recipientAgent.id && pair[1] === nodeId)
+                        );
+                        
+                        if (!isPairAllowed) {
+                          return `Communication between ${agentName} and ${recipientName} is not allowed in this channel.`;
+                        }
+                      }
+                      
+                      // Update message with recipient and actual content
+                      message.recipient = recipientName;
+                      message.recipientId = recipientAgent.id;
+                      message.content = actualMessage;
+                      
+                      // Add to channel
+                      channel.messages.push(message);
+                      
+                      return `P2P message sent to ${recipientName}.`;
+                    } else {
+                      return `Invalid P2P message format. Use: @RecipientName: your message`;
+                    }
+                    
+                  case 'round-robin':
+                    // Check if this agent is the current speaker
+                    if (!channel.speakerOrder || channel.speakerOrder.length === 0) {
+                      // Initialize speaker order if not set
+                      channel.speakerOrder = channel.participants.slice();
+                      channel.currentSpeakerIndex = 0;
+                    }
+                    
+                    const currentSpeakerId = channel.speakerOrder[channel.currentSpeakerIndex];
+                    
+                    if (currentSpeakerId !== nodeId) {
+                      // Find who should be speaking
+                      const currentSpeakerName = memory.agents[currentSpeakerId]?.name || 'Unknown';
+                      return `It's not your turn to speak. Waiting for ${currentSpeakerName} to contribute.`;
+                    }
+                    
+                    // Add message to channel
+                    channel.messages.push(message);
+                    
+                    // Advance to next speaker
+                    channel.currentSpeakerIndex = (channel.currentSpeakerIndex + 1) % channel.speakerOrder.length;
+                    const nextSpeakerName = memory.agents[channel.speakerOrder[channel.currentSpeakerIndex]]?.name || 'Unknown';
+                    
+                    return `Message added to round-robin channel. Next speaker: ${nextSpeakerName}`;
+                    
+                  case 'debate':
+                    // Setup debate if not initialized
+                    if (!channel.debateRound) {
+                      channel.debateRound = 1;
+                      
+                      // Find participants for positions
+                      if (!channel.position1Agent || !channel.position2Agent) {
+                        // Need at least two participants
+                        if (channel.participants.length < 2) {
+                          return `Debate requires at least two participants. Current count: ${channel.participants.length}`;
+                        }
+                        
+                        // Assign positions if not already assigned
+                        channel.position1Agent = channel.participants[0];
+                        channel.position2Agent = channel.participants[1];
+                        
+                        // If there's a third participant, they're the moderator
+                        if (channel.participants.length > 2) {
+                          channel.moderatorId = channel.participants[2];
+                        }
+                      }
+                    }
+                    
+                    // Check if it's this agent's turn based on the current position and round
+                    const isPosition1 = nodeId === channel.position1Agent;
+                    const isPosition2 = nodeId === channel.position2Agent;
+                    const isModerator = nodeId === channel.moderatorId;
+                    
+                    if (channel.currentPosition === 'position1' && !isPosition1 && !isModerator) {
+                      const position1Name = memory.agents[channel.position1Agent]?.name || 'Position 1';
+                      return `It's not your turn to speak. Waiting for ${position1Name} to present their case.`;
+                    }
+                    
+                    if (channel.currentPosition === 'position2' && !isPosition2 && !isModerator) {
+                      const position2Name = memory.agents[channel.position2Agent]?.name || 'Position 2';
+                      return `It's not your turn to speak. Waiting for ${position2Name} to present their rebuttal.`;
+                    }
+                    
+                    // Add debate position to message
+                    if (isPosition1) {
+                      message.position = channel.position1 || 'For';
+                    } else if (isPosition2) {
+                      message.position = channel.position2 || 'Against';
+                    } else if (isModerator) {
+                      message.position = 'Moderator';
+                    }
+                    
+                    message.debateRound = channel.debateRound;
+                    channel.messages.push(message);
+                    
+                    // Advance debate state
+                    if (channel.currentPosition === 'position1') {
+                      channel.currentPosition = 'position2';
+                      const position2Name = memory.agents[channel.position2Agent]?.name || 'Position 2';
+                      return `Argument presented. Now waiting for ${position2Name} to respond.`;
+                    } else {
+                      channel.currentPosition = 'position1';
+                      channel.debateRound += 1;
+                      
+                      // Check if debate is complete
+                      if (channel.debateRound > channel.maxRounds) {
+                        channel.debateComplete = true;
+                        return `Rebuttal presented. Debate has concluded after ${channel.maxRounds} rounds.`;
+                      }
+                      
+                      const position1Name = memory.agents[channel.position1Agent]?.name || 'Position 1';
+                      return `Rebuttal presented. Round ${channel.debateRound} begins with ${position1Name}.`;
+                    }
+                    
+                  default:
+                    // Fallback to broadcast for unknown modes
+                    channel.messages.push(message);
+                    return `Message sent to channel '${targetNode.data.name}'.`;
+                }
               } catch (error) {
                 console.error("Error in communication tool:", error);
                 return `Error sending message: ${error.message}`;
