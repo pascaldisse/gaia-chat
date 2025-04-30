@@ -55,8 +55,8 @@ echo "Starting server with serve..."
 LOG_FILE="logs/serve-$(date +%Y%m%d-%H%M%S).log"
 
 # Start serve with nohup, redirect output, and use disown to detach from shell
-# Use 'setsid' to ensure process survives terminal close
-(setsid serve -s build -l 3000 > "$LOG_FILE" 2>&1 </dev/null & echo $! > .gaia-server.pid) &
+nohup serve -s build -l 3000 > "$LOG_FILE" 2>&1 & 
+echo $! > .gaia-server.pid
 
 # Give server time to start
 echo "Waiting for server to start..."
