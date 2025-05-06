@@ -361,10 +361,7 @@ function AppContent() {
         </button>
       </div>
       
-      {/* Overlay for mobile */}
-      {sidebarVisible && 
-        <div className="sidebar-overlay" onClick={() => setSidebarVisible(false)}></div>
-      }
+      {/* Overlay removed for unobstructed view */}
       
       <div className="view-toggle">
         <button 
