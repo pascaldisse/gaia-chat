@@ -270,38 +270,142 @@
   .persona-name {
     font-size: 0.85rem;
   }
+  
+  .message-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+  
+  /* Adjusted buttons for better touchability */
+  .message-button-base,
+  .regenerate-button,
+  .copy-button,
+  .format-button,
+  .voice-button,
+  .audio-debug-button {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-height: 34px;
+    min-width: auto;
+  }
+  
+  /* Tool usage adjustments */
+  .tool-usage {
+    margin: var(--spacing-xs) 0;
+  }
+  
+  .tool-header {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+  
+  .tool-details, .tool-summary {
+    padding: var(--spacing-sm);
+    font-size: 0.85rem;
+  }
 }
 
 @media (max-width: 480px) {
   .message {
-    max-width: 95%;
+    max-width: 96%;
     margin-bottom: var(--spacing-sm);
   }
   
   .message-content {
-    padding: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
     font-size: 0.9rem;
   }
   
   .persona-avatar {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
+    border-width: 1px;
+  }
+  
+  .persona-header {
+    margin-bottom: 2px;
+    gap: var(--spacing-xs);
+  }
+  
+  .persona-name {
+    font-size: 0.8rem;
   }
   
   .message-actions {
+    margin-top: 4px;
     gap: 4px;
+    justify-content: flex-start;
   }
   
-  .message-button,
+  /* Simplified buttons with icons only for very small screens */
+  .message-button-base,
   .regenerate-button,
   .copy-button,
   .format-button,
   .voice-button,
   .audio-debug-button {
     padding: 4px 8px;
+    font-size: 0.75rem;
+    min-height: 30px;
+    min-width: 30px;
+    border-radius: 4px;
+  }
+  
+  /* Add specific button labels if needed */
+  .regenerate-button span,
+  .copy-button span,
+  .format-button span,
+  .voice-button span,
+  .audio-debug-button span {
+    display: none;
+  }
+  
+  /* Show tooltips for buttons on hover */
+  .message-button-base::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    background-color: var(--discord-secondary);
+    color: var(--text-normal);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.7rem;
+    white-space: nowrap;
+    z-index: 10;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-short) ease;
+  }
+  
+  .message-button-base:hover::after {
+    opacity: 1;
+  }
+  
+  /* Optimize tool usage displays */
+  .tool-usage {
+    margin: 4px 0;
+    border-width: 1px;
+  }
+  
+  .tool-header {
+    padding: 4px 8px;
+  }
+  
+  .tool-name {
     font-size: 0.8rem;
-    min-width: 0;
-    min-height: 0;
+  }
+  
+  .tool-details, .tool-summary {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.8rem;
+  }
+  
+  .parsed-text {
+    padding: var(--spacing-sm);
+    max-height: 200px;
+    font-size: 0.8rem;
   }
 }
 

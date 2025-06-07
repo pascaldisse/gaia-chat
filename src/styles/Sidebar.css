@@ -4,11 +4,13 @@
   background-color: var(--discord-secondary);
   height: 100vh;
   padding: var(--spacing-md);
+  padding-bottom: 80px; /* Make room for cleanup button */
   border-right: 1px solid var(--discord-tertiary);
   overflow-y: auto;
   transition: transform var(--transition-medium) ease;
   scrollbar-width: thin;
   scrollbar-color: var(--interactive-muted) var(--discord-tertiary);
+  position: relative;
 }
 
 /* New Chat Button */

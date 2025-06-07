@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Gaia Chat Data</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        h1 {
+            color: #bb86fc;
+            text-align: center;
+        }
+        .warning {
+            background: #cf6679;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        button {
+            background: #bb86fc;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #9c64ff;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.success {
+            background: #03dac6;
+            color: #000;
+        }
+        .status.error {
+            background: #cf6679;
+            color: white;
+        }
+        .status.show {
+            display: block;
+        }
+        pre {
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Clear Gaia Chat Data</h1>
+    
+    <div class="warning">
+        <strong>⚠️ Warning:</strong> This will permanently delete ALL your Gaia Chat data including:
+        <ul>
+            <li>All chat history</li>
+            <li>All personas (except default samples)</li>
+            <li>All uploaded knowledge base files</li>
+            <li>All user preferences and settings</li>
+        </ul>
+        This action cannot be undone!
+    </div>
+    
+    <button id="clearBtn" onclick="clearAllData()">Clear All Data</button>
+    
+    <div id="status" class="status"></div>
+    
+    <script>
+        async function clearAllData() {
+            const button = document.getElementById('clearBtn');
+            const status = document.getElementById('status');
+            
+            // Confirm action
+            if (!confirm('Are you sure you want to delete ALL Gaia Chat data? This cannot be undone!')) {
+                return;
+            }
+            
+            button.disabled = true;
+            button.textContent = 'Clearing data...';
+            status.className = 'status';
+            status.innerHTML = '';
+            
+            try {
+                const logs = [];
+                
+                // List of all IndexedDB databases used by Gaia Chat
+                const databases = [
+                    'GaiaChatDB',
+                    'PersonaDB', 
+                    'KnowledgeDB',
+                    'UserDB'
+                ];
+                
+                // Try to list all databases (not supported in all browsers)
+                try {
+                    const allDbs = await indexedDB.databases();
+                    logs.push(`Found ${allDbs.length} databases: ${allDbs.map(db => db.name).join(', ')}`);
+                } catch (e) {
+                    logs.push('Browser does not support listing databases');
+                }
+                
+                // Delete each database
+                for (const dbName of databases) {
+                    try {
+                        await deleteDatabase(dbName);
+                        logs.push(`✓ Deleted database: ${dbName}`);
+                    } catch (error) {
+                        logs.push(`✗ Error deleting ${dbName}: ${error.message}`);
+                    }
+                }
+                
+                // Clear localStorage
+                const localStorageKeys = Object.keys(localStorage);
+                localStorage.clear();
+                logs.push(`✓ Cleared localStorage (${localStorageKeys.length} items)`);
+                
+                // Clear sessionStorage
+                const sessionStorageKeys = Object.keys(sessionStorage);
+                sessionStorage.clear();
+                logs.push(`✓ Cleared sessionStorage (${sessionStorageKeys.length} items)`);
+                
+                // Show success
+                status.className = 'status success show';
+                status.innerHTML = `
+                    <strong>✓ All data cleared successfully!</strong>
+                    <p>You can now close this page and refresh Gaia Chat to start fresh.</p>
+                    <pre>${logs.join('\\n')}</pre>
+                `;
+                
+                button.textContent = 'Data Cleared!';
+                
+            } catch (error) {
+                status.className = 'status error show';
+                status.innerHTML = `
+                    <strong>Error clearing data:</strong>
+                    <pre>${error.message}</pre>
+                `;
+                button.disabled = false;
+                button.textContent = 'Clear All Data';
+            }
+        }
+        
+        function deleteDatabase(dbName) {
+            return new Promise((resolve, reject) => {
+                const deleteReq = indexedDB.deleteDatabase(dbName);
+                
+                deleteReq.onsuccess = () => resolve();
+                deleteReq.onerror = () => reject(new Error(`Failed to delete ${dbName}`));
+                deleteReq.onblocked = () => {
+                    // Database is blocked, but will be deleted when connections close
+                    console.warn(`Delete blocked for ${dbName}, but will complete when connections close`);
+                    resolve();
+                };
+            });
+        }
+    </script>
+</body>
+</html>

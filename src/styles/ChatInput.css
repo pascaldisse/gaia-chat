@@ -1,74 +1,101 @@
 .chat-input-container {
   position: relative;
   width: 100%;
-  padding: 16px;
-  background-color: #40444b;
-  border-top: 1px solid #202225;
+  padding: var(--spacing-md);
+  background-color: var(--discord-secondary);
+  border-top: 1px solid var(--discord-tertiary);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-sm);
+  z-index: var(--z-index-sticky);
 }
 
 .chat-input-container textarea {
   width: 100%;
-  padding: 12px;
-  background-color: #40444b;
-  color: #dcddde;
-  border: 1px solid #202225;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: var(--spacing-md);
+  background-color: var(--discord-tertiary);
+  color: var(--text-normal);
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-base);
   resize: none;
+  min-height: 60px;
+  transition: border-color var(--transition-short) ease;
+  font-family: var(--font-primary);
+}
+
+.chat-input-container textarea:focus {
+  outline: none;
+  border-color: var(--input-focus-border);
+  box-shadow: var(--focus-ring);
 }
 
 .chat-input-container button {
-  padding: 8px 16px;
-  background-color: #5865f2;
-  color: white;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-color);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--border-radius-md);
   cursor: pointer;
-  margin-right: 8px;
-  transition: background-color 0.2s;
+  margin-right: var(--spacing-sm);
+  transition: background-color var(--transition-short) ease;
+  font-weight: var(--font-weight-medium);
+  min-height: var(--touch-target-size);
+  min-width: 80px;
 }
 
 /* Media queries for responsive chat input */
 @media (max-width: 768px) {
   .chat-input-container {
-    padding: 12px;
+    padding: var(--spacing-sm);
+    padding-bottom: calc(var(--spacing-sm) + var(--safe-area-inset-bottom, 0px));
   }
   
   .chat-input-container textarea {
-    padding: 10px;
+    padding: var(--spacing-sm);
     font-size: 16px; /* Larger font size for better touch input */
     min-height: 60px;
+    max-height: 120px;
   }
   
-  .buttons-container {
+  .chat-input-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--spacing-xs);
   }
   
   .chat-input-container button {
-    padding: 8px 12px;
-    font-size: 14px;
-    margin-right: 4px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    margin-right: var(--spacing-xs);
+    min-width: 70px;
     flex-grow: 1;
   }
 }
 
 @media (max-width: 480px) {
   .chat-input-container {
-    padding: 10px;
+    padding: var(--spacing-xs);
+    padding-bottom: calc(var(--spacing-xs) + var(--safe-area-inset-bottom, 0px));
   }
   
   .chat-input-container textarea {
-    padding: 8px;
+    padding: var(--spacing-xs);
+    font-size: var(--font-size-base);
+    min-height: 50px;
+    max-height: 100px;
   }
   
   .chat-input-container button {
-    padding: 8px 10px;
-    font-size: 12px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    min-width: 60px;
+    min-height: 36px; /* Smaller but still touchable */
+  }
+  
+  /* Optimize for thumb reach */
+  .chat-input-buttons {
+    justify-content: flex-end;
   }
 }
 
@@ -84,30 +111,63 @@
 .mention-suggestions {
   position: absolute;
   bottom: 100%;
-  left: 16px;
-  background-color: #2f3136;
-  border: 1px solid #202225;
-  border-radius: 6px;
-  width: 200px;
-  max-height: 200px;
+  left: var(--spacing-md);
+  background-color: var(--discord-secondary);
+  border: 1px solid var(--discord-tertiary);
+  border-radius: var(--border-radius-md);
+  width: 250px;
+  max-height: 250px;
   overflow-y: auto;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  z-index: 1000;
+  box-shadow: var(--elevation-high);
+  z-index: var(--z-index-dropdown);
   scroll-behavior: smooth;
+  margin-bottom: var(--spacing-xs);
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
 }
 
 .suggestion-item {
-  padding: 8px 12px;
+  padding: var(--spacing-sm);
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  scroll-margin: 8px;
+  align-items: center;
+  scroll-margin: var(--spacing-sm);
+  border-bottom: 1px solid rgba(79, 84, 92, 0.16);
+  position: relative;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
 }
 
 .suggestion-item:hover,
 .suggestion-item.selected {
-  background-color: #40444b;
-  color: #ffffff;
+  background-color: var(--discord-tertiary);
+  color: var(--interactive-active);
+}
+
+@media (max-width: 768px) {
+  .mention-suggestions {
+    left: var(--spacing-sm);
+    width: calc(100% - var(--spacing-md));
+    max-height: 220px;
+  }
+  
+  .suggestion-item {
+    padding: var(--spacing-sm) var(--spacing-xs);
+    min-height: var(--touch-target-size);
+  }
+}
+
+@media (max-width: 480px) {
+  .mention-suggestions {
+    left: var(--spacing-xs);
+    width: calc(100% - var(--spacing-sm));
+    max-height: 180px;
+  }
+  
+  .suggestion-item {
+    padding: 10px var(--spacing-xs);
+  }
 }
 
 .cancel-button {

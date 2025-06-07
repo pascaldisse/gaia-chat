@@ -62,7 +62,17 @@ const Sidebar = ({
               <div 
                 key={persona.id}
                 className={`persona-item ${selectedPersonaId === persona.id ? 'selected' : ''} ${persona.id === DEFAULT_PERSONA_ID ? 'gaia-persona' : ''}`}
-                onClick={() => onEditPersona(persona)}
+                onClick={() => {
+                  console.log('[Sidebar] Persona clicked:', persona.name);
+                  console.log('[Sidebar] Persona object:', persona);
+                  console.log('[Sidebar] Persona knowledgeFiles:', persona.knowledgeFiles);
+                  console.log('[Sidebar] onEditPersona type:', typeof onEditPersona);
+                  if (typeof onEditPersona === 'function') {
+                    onEditPersona(persona);
+                  } else {
+                    console.error('[Sidebar] onEditPersona is not a function');
+                  }
+                }}
               >
                 <img 
                   src={persona.image || '/default-avatar.png'} 

@@ -327,6 +327,35 @@
     font-size: 0.75rem;
     max-height: 200px;
   }
+  
+  /* Knowledge base mobile styling */
+  .knowledge-base {
+    padding: var(--spacing-xs);
+    border-top: 1px solid var(--discord-tertiary);
+    margin-bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+  }
+  
+  .knowledge-base h4 {
+    font-size: 0.9rem;
+    margin-bottom: var(--spacing-xs);
+  }
+  
+  .file-upload-button {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.85rem;
+  }
+  
+  .file-list {
+    max-height: 120px;
+  }
+  
+  .empty-file-list {
+    padding: var(--spacing-sm);
+    font-size: 0.8rem;
+  }
 }
   
 /* Active Participants Panel */

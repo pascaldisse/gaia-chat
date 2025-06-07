@@ -1,0 +1,20 @@
+===== GaiaScript Encoding Statistics =====
+Date: Wed May  7 17:52:10 CEST 2025
+
+File Sizes:
+Original source:     1556 bytes
+Encoded file:    19785 bytes
+Compiled output:      597 bytes
+
+Line Counts:
+Original source:       66 lines
+Encoded file:      664 lines
+Compiled output:       23 lines
+
+Symbol Usage in Encoded File:
+Chinese characters: ~    2591
+Emojis: ~    2070
+Special symbols: ~     233
+
+Encoding Efficiency:
+Encoded size is approximately 1271.52% of original source size

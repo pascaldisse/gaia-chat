@@ -1,0 +1,722 @@
+--- src/chat.js	2025-05-07 17:52:10
++++ build/chat.js	2025-05-07 21:37:34
+@@ -1,66 +1,672 @@
+-// Original source file (pre-encoded)
+-// This is a scaffold file generated to compare with the encoded version
++// Generated from GaiaScript using shell-based converter
++// Original file: chat.gaia
++// Converted on: Wed May  7 21:37:33 CEST 2025
++// This is a simulated conversion that demonstrates the GaiaScript to JavaScript/React transformation
+ 
+-/**
+- * Gaia Chat Application
+- * A multi-persona chat application with agent capabilities and AI-powered personas
+- */
++import React, { useState, useEffect, useRef } from 'react';
+ 
+-// App component
+-function App() {
+-  const [currentChat, setCurrentChat] = useState([]);
+-  const [model, setModel] = useState(MODELS.LLAMA3_70B);
+-  const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
+-  const [chatHistory, setChatHistory] = useState([]);
+-  const [personas, setPersonas] = useState([]);
+-  
+-  useEffect(() => {
+-    // Load chat history
+-    const loadChats = async () => {
++D⟨O⟨
++  title:"蓋 談 應用",
++  description:"一 多人格 談 應用 與 智能 功能 和 智-驅動 角色",
++  version:"1.0.0",
++  platform:"網",
++  framework:"應",
++  components:L⟨
++    O⟨
++      name:"應用",
++      type:"件",
++      format:"應元",
++      path:"應用.脚本",
++      code:l₀⟨
++import { 應, { state, effect } from '應' } from "react";
++import { 談 from './件/談' } from "react";
++import { 側欄 from './件/側欄' } from "react";
++import { 代理流 from './件/代理流/代理流' } from "react";
++import { 蓋巢示範 from './件/蓋巢/蓋巢示範' } from "react";
++import { { 談庫, 用戶庫 } from './務/庫' } from "react";
++import { './風格/主題.css' } from "react";
++import { './風格/側欄.css' } from "react";
++import { './應用.css' } from "react";
++import { './風格/談.css' } from "react";
++import { { 模型 } from './配置' } from "react";
++import { { 角色庫 } from './務/庫' } from "react";
++import { 角色 from './型/角色' } from "react";
++import { 角色管理器 from './件/角色/角色管理器' } from "react";
++import { 角色商店 from './件/角色/角色商店' } from "react";
++import { 管理面板 from './件/管理/管理面板' } from "react";
++import { { 蓋配置, 默認角色ID } from './配置/默認角色' } from "react";
++import { { 用戶提供器, 用戶使用 } from './境/用戶境' } from "react";
++
++F⟨應用內容⟩
++  const { 用戶: 當前用戶 } = 用戶使用();
++  S⟨
++    當前談: [], 
++    模型: 模型.LLAMA3_70B,
++    系統提示: '你 都 一 助手.',
++    談歷史: [],
++    選擇談ID: null,
++    角色們: [],
++    選擇角色ID: null,
++    顯示角色管理: false,
++    編輯角色: null,
++    活動角色: [],
++    活動用戶: [],
++    視圖模式: '談',
++    側欄可見: false
++  ⟩
++
++  // 載入談歷史from數據庫
++  effect(() => {
++    function 載入談( ) {
+       try {
+-        // Get chats
+-        let chats = await chatDB.getAllChats();
+-        // Process and store
+-        setChatHistory(chats);
++        // 取談基於用戶state
++        讓 談集;
++        if (當前用戶) {
++          控制台.記錄("載入談為用戶:", 當前用戶.標識);
++          談集 = await 談庫.取談按用戶(當前用戶.標識);
++        } else {
++          控制台.記錄("載入談為匿名用戶");
++          談集 = await 談庫.取全部談();
++          談集 = 談集.過濾(談 => !談.用戶標識);
++        }
++        
++        const 排序談 = 談集.排序((甲, 乙) => 乙.創建於 - 甲.創建於);
++        
++        if (選擇談ID) {
++          const 當前談from庫 = 談集.尋找(談 => 談.標識 === 選擇談ID);
++          if (當前談from庫) {
++            設置當前談(
++              陣列.是陣列(當前談from庫.消息) 
++                ? 當前談from庫.消息 
++                : []
++            );
++            
++            // Set active personas
++            const 活動角色們 = 角色們.過濾(角 => 
++              當前談from庫.活動角色?.包含(角.標識)
++            );
++            設置活動角色(活動角色們);
++            
++            // Load active users for this chat
++            if (陣列.是陣列(當前談from庫.參與者) && 當前談from庫.參與者.長度 > 0) {
++              // Fetch user data for all participants
++              const 載入談參與者 = async () => {
++                try {
++                  // Get all users
++                  const allUsers = await userDB.getAllUsers();
++                  
++                  // Filter to just the participants in this chat
++                  const chatParticipants = allUsers.filter(user => 
++                    currentChatFromDB.participants.includes(user.id) &&
++                    (currentUser && user.id !== currentUser.id) // Don't include current user in the UI list
++                  );
++                  
++                  // Update state with chat participants
++                  setActiveUsers(chatParticipants);
++                } catch (error) {
++                  console.error('Error loading chat participants:', error);
++                }
++              };
++              
++              loadChatParticipants();
++            } else {
++              // No participants in this chat
++              setActiveUsers([]);
++            }
++          }
++        }
++        
++        setChatHistory(sortedChats);
+       } catch (error) {
+         console.error('Error loading chats:', error);
+       }
+     };
+     loadChats();
+-  }, []);
+-  
++  }, [selectedChatId, personas, currentUser]);
++
++  // 核心談功能（保存，載入，角色管理）
++  // ...談功能實現...
++
+   return (
+-    <div className="app">
+-      <div className="sidebar">
+-        {/* Sidebar content */}
+-      </div>
+-      <div className="chat-container">
+-        {/* Chat messages */}
+-      </div>
+-    </div>
++    □{應用}⟦
++      <按鈕 
++        class名="漢堡菜單" 
++        點擊={() => 設置側欄可見(!側欄可見)}
++        標籤="切換側欄"
++      >
++        <svg 視圖框="0 0 24 24" 寬="24" 高="24" 填充="當前顏色">
++          <路徑 d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
++        </svg>
++      </按鈕>
++      
++      <區塊 class名={`側欄容器 ${側欄可見 ? '可見' : '隱藏'}`}>
++        <側欄 
++          設置當前談={設置當前談} 
++          談歷史={談歷史}
++          選擇談ID={選擇談ID}
++          設置選擇談ID={設置選擇談ID}
++          創建新談={創建新談}
++          角色們={角色們}
++          選擇角色ID={選擇角色ID}
++          設置選擇角色ID={設置選擇角色ID}
++          創建新角色={創建新角色}
++          編輯角色={設置編輯角色}
++        />
++        <按鈕 
++          class名="側欄關閉" 
++          點擊={() => 設置側欄可見(假)}
++        >
++          ✕
++        </按鈕>
++      </區塊>
++      
++      <區塊 class名="視圖切換">
++        <按鈕 
++          class名={視圖模式 === '談' ? '活動' : ''} 
++          點擊={() => 設置視圖模式('談')}
++        >
++          <svg 視圖框="0 0 24 24" 寬="16" 高="16" 填充="當前顏色">
++            <路徑 d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
++          </svg>
++          <跨度>談</跨度>
++        </按鈕>
++        <按鈕 
++          class名={視圖模式 === '代理流' ? '活動' : ''} 
++          點擊={() => 設置視圖模式('代理流')}
++        >
++          <svg 視圖框="0 0 24 24" 寬="16" 高="16" 填充="當前顏色">
++            <路徑 d="M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h2v3h7zM7 9H4V5h3v4zm10 6h3v4h-3v-4zm0-10h3v4h-3V5z" />
++          </svg>
++          <跨度>代理工作流</跨度>
++        </按鈕>
++        <按鈕 
++          class名={視圖模式 === '商店' ? '活動' : ''} 
++          點擊={() => 設置視圖模式('商店')}
++        >
++          <svg 視圖框="0 0 24 24" 寬="16" 高="16" 填充="當前顏色">
++            <路徑 d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z" />
++          </svg>
++          <跨度>角色商店</跨度>
++        </按鈕>
++        <按鈕 
++          class名={視圖模式 === '巢心' ? '活動' : ''} 
++          點擊={() => 設置視圖模式('巢心')}
++        >
++          <svg 視圖框="0 0 24 24" 寬="16" 高="16" 填充="當前顏色">
++            <路徑 d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
++          </svg>
++          <跨度>巢心</跨度>
++        </按鈕>
++        {當前用戶?.是管理 && (
++          <按鈕 
++            class名={視圖模式 === '管理' ? '活動' : ''} 
++            點擊={() => 設置視圖模式('管理')}
++          >
++            <svg 視圖框="0 0 24 24" 寬="16" 高="16" 填充="當前顏色">
++              <路徑 d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 9.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
++            </svg>
++            <跨度>管理</跨度>
++          </按鈕>
++        )}
++      </區塊>
++      
++      {視圖模式 === '談' ? (
++        <談 
++          當前談={當前談} 
++          設置當前談={設置當前談} 
++          模型={模型}
++          系統提示={系統提示}
++          角色們={角色們}
++          活動角色={活動角色}
++          設置活動角色={設置活動角色}
++          活動用戶={活動用戶}
++          設置活動用戶={設置活動用戶}
++          選擇談ID={選擇談ID}
++          談歷史={談歷史}
++          設置談歷史={設置談歷史}
++        />
++      ) : 視圖模式 === '代理流' ? (
++        <代理流 />
++      ) : 視圖模式 === '商店' ? (
++        <角色商店 />
++      ) : 視圖模式 === '管理' ? (
++        <管理面板 />
++      ) : 視圖模式 === '巢心' ? (
++        <蓋巢示範 />
++      ) : (
++        <角色商店 />
++      )}
++      
++      {編輯角色 && (
++        <角色管理器 
++          角色={編輯角色}
++          更新角色={處理編輯角色}
++          刪除={處理刪除角色}
++          關閉={() => 設置編輯角色(空)}
++        />
++      )}
++    ⟧
+   );
+ }
+ 
+-// Chat component
+-const Chat = ({ currentChat, setCurrentChat }) => {
++F⟨App⟩
+   return (
+-    <div className="chat-container">
+-      <div className="messages">
+-        {/* Messages content */}
+-      </div>
+-    </div>
++    □{root}⟦
++      <UserProvider>
++        <AppContent />
++      </UserProvider>
++    ⟧
+   );
++}
++
++export default App;
++      ⟩
++    ⟩,
++    O⟨
++      name:"配置",
++      type:"系",
++      path:"配置.脚本",
++      format:"脚本",
++      code:l₀⟨
++export const 接口密鑰 = 'u5q1opMM9uw9x84EJLtxqaQ6HcnXbUAq';
++export const 模型 = {
++  LLAMA3_70B: 'meta-llama/Meta-Llama-3-70B-Instruct',
++  MIXTRAL_8X22B: 'mistralai/Mixtral-8x22B-Instruct-v0.1',
++  DEEPSEEK_V3: 'deepseek-ai/DeepSeek-V3',
++  DEEPSEEK_R1: 'deepseek-ai/DeepSeek-R1',
++  DBRX: 'databricks/dbrx-instruct'
+ };
+ 
+-// Database service
+-const chatDB = {
+-  async getAllChats() {
+-    try {
+-      // Get all chats
++export const 圖像模型 = {
++  FLUX_SCHNELL: 'black-forest-labs/FLUX-1-schnell',
++  FLUX_DEV: 'black-forest-labs/FLUX-1-dev'
++};
++      ⟩
++    ⟩,
++    O⟨
++      name:"談",
++      type:"件",
++      path:"件/談.脚本",
++      format:"應元",
++      code:l₀⟨
++import { 應, { state, ref, effect } from '應' } from "react";
++import { 訊息 from './訊息' } from "react";
++import { { 接口密鑰, 模型, 圖像模型 } from '../配置' } from "react";
++import { '../風格/談.css' } from "react";
++import { 談輸入 from './談輸入' } from "react";
++import { { 角色扮演系統 } from '../工具/角色扮演系統' } from "react";
++import { { 角色 } from '../工具/角色' } from "react";
++import { { 默認角色ID } from '../配置/默認角色' } from "react";
++import { 文件預覽 from './文件預覽' } from "react";
++import { { 談庫, 知識庫, 用戶庫 } from '../務/庫' } from "react";
++import { { 解析文件內容 } from '../工具/文件解析器' } from "react";
++import { { 角色代理 } from "../務/代理服務" } from "react";
++import { { 創建角色工具 } from "../務/工具" } from "react";
++import { { 是骰子命令, 提取骰子參數, 格式化骰子表示法 } from "../工具/工具實用程序" } from "react";
++
++// 談 件 實現
++C⟨談, { 
++  當前談, 
++  設置當前談, 
++  模型, 
++  系統提示, 
++  角色們,
++  活動角色,
++  設置活動角色,
++  活動用戶,
++  設置活動用戶,
++  選擇談ID,
++  談歷史,
++  設置談歷史
++}⟩
++  // 談 件 state 和 方法
++  // ...實現詳情...
++  
++  return (
++    □{談容器}⟦
++      {/* 談 界面 件 */}
++      <區塊 class名="訊息">
++        {當前談.映射(訊息 => (
++          <訊息 
++            鍵={訊息.標識} 
++            訊息={訊息} 
++            重生成={處理重生成}
++            角色們={角色們}
++          />
++        ))}
++        <區塊 ref={訊息尾ref} />
++      </區塊>
++      
++      <談輸入
++        角色們={角色們}
++        發送訊息={(訊息) => {
++          if (訊息.開始於('/')) {
++            const [命令, ...參數] = 訊息.切片(1).分割(' ');
++            處理命令(命令, 參數.加入(' '));
++          } else {
++            處理提交(訊息);
++          }
++        }}
++        正在載入={正在載入}
++        取消={() => {
++          設置已取消(真);
++          if (控制器ref.當前) {
++            控制器ref.當前.中止();
++          }
++        }}
++        切換搜索={(啟用) => {
++          設置當前談(前 => [...前, {
++            標識: 日期.現在(),
++            內容: 啟用 
++              ? "🔍 網 搜索已啟用。你的訊息將 也搜索 網 使用DuckDuckGo。" 
++              : "🔍 網 搜索已禁用。",
++            是用戶: 假,
++            是命令: 真,
++            角色標識: 活動角色.尋找(角 => 角.是默認)?.標識 || 活動角色[0]?.標識
++          }]);
++        }}
++      />
++    ⟧
++  );
++};
++
++export 默認 談;
++      ⟩
++    ⟩,
++    O⟨
++      name:"角色",
++      type:"型",
++      path:"型/角色.脚本",
++      format:"脚本",
++      code:l₀⟨
++export 默認 class 角色 {
++    constructor({ 
++      標識 = 日期.現在(),
++      名稱,
++      系統提示,
++      模型,
++      對話示例 = [],
++      知識文件 = [],
++      圖像 = '',
++      語音標識 = 空,
++      initiative = 5,
++      talkativeness = 5,
++      confidence = 5,
++      curiosity = 5,
++      empathy = 5,
++      creativity = 5,
++      humor = 5,
++      adaptability = 5,
++      patience = 5,
++      skepticism = 5,
++      optimism = 5,
++      activeInChats = [],
++      isDefault = false,
++      isSystem = false,
++      userId = null,
++      agentSettings = null,
++      category = 'general',
++      isNsfw = false,
++      description = '',
++      creator = '',
++      tags = [],
++      downloads = 0,
++      rating = 0,
++      published = false,
++      partnerCreated = false,
++      formatSettings = { 
++        useRoleplayMarkdown: false,
++        customFormatting: false,
++        formatRules: []
++      }
++    }) {
++      this.id = id;
++      this.name = name;
++      this.systemPrompt = systemPrompt;
++      this.model = model;
++      this.exampleDialogue = exampleDialogue;
++      this.knowledgeFiles = knowledgeFiles;
++      this.image = image;
++      this.voiceId = voiceId;     // Voice ID for TTS
++      this.createdAt = Date.now();
++      this.updatedAt = Date.now();
++      this.initiative = initiative;
++      this.talkativeness = talkativeness;
++      this.confidence = confidence;
++      this.curiosity = curiosity;
++      this.empathy = empathy;
++      this.creativity = creativity;
++      this.humor = humor;
++      this.adaptability = adaptability;
++      this.patience = patience;
++      this.skepticism = skepticism;
++      this.optimism = optimism;
++      this.activeInChats = activeInChats;
++      this.isDefault = isDefault; // Marks as default persona like GAIA
++      this.isSystem = isSystem;   // Marks as system-wide, not tied to user
++      this.userId = userId;       // Links to user if user-created
++      
++      // Store attributes
++      this.category = category;   // Category in the store
++      this.isNsfw = isNsfw;       // Flag for NSFW content
++      this.description = description; // Longer description for store listing
++      this.creator = creator;     // Creator name or username
++      this.tags = tags;           // Array of tags for searching
++      this.downloads = downloads; // Number of downloads/uses
++      this.rating = rating;       // Average rating (0-5)
++      this.published = published; // Whether published to store
++      this.partnerCreated = partnerCreated; // Whether created by partner
++      this.formatSettings = formatSettings; // Format settings for message rendering
++
++      // Initialize agent settings if provided
++      if (agentSettings) {
++        this.agentSettings = agentSettings;
++      }
++    }
++  }
++      ⟩
++    ⟩,
++    O⟨
++      name:"數據庫",
++      type:"系",
++      path:"務/庫.脚本",
++      format:"脚本",
++      code:l₀⟨
++import { { 開啟數據庫 } from 'idb' } from "react";
++
++// 數據庫配置
++const 數據庫名 = '談應用';
++const 數據庫版本 = 6;
++const 談存儲 = '談集';
++const 角色存儲 = '角色集';
++const 知識存儲 = '知識文件';
++const 工作流存儲 = '工作流';
++const 模板存儲 = '工作流模板';
++const 用戶存儲 = '用戶集';
++
++// 數據庫初始化和升級
++讓 數據庫承諾 = 開啟數據庫(數據庫名, 數據庫版本, {
++  升級(庫, 舊版本, 新版本, 事務) {
++    // 創建或更新對象存儲
++    if (!庫.對象存儲名.包含(談存儲)) {
++      const 談存 = 庫.創建對象存儲(談存儲, { 鍵路徑: '標識' });
++      談存.創建索引('用戶標識', '用戶標識');
++    }
++    
++    if (!庫.對象存儲名.包含(角色存儲)) {
++      const 角色存 = 庫.創建對象存儲(角色存儲, { 
++        鍵路徑: '標識',
++        自動增量: 真 
++      });
++      角色存.創建索引('用戶標識', '用戶標識');
++    }
++    
++    // 其他存儲創建邏輯...
++  }
++});
++
++// 數據庫服務export
++export const 談庫 = {
++  function 取全部談( ) {
++    try {
++      const 庫 = await 數據庫承諾;
++      return 庫.取全部(談存儲);
++    } catch (錯誤) {
++      控制台.錯誤('錯誤獲取所有談:', 錯誤);
+       return [];
+-    } catch (error) {
+-      console.error('Error getting chats:', error);
++    }
++  },
++  
++  // 其他談數據庫方法...
++};
++
++export const 角色庫 = {
++  function 取全部角色( ) {
++    try {
++      const 庫 = await 數據庫承諾;
++      return 庫.取全部(角色存儲);
++    } catch (錯誤) {
++      控制台.錯誤('錯誤獲取所有角色:', 錯誤);
+       return [];
+     }
+-  }
++  },
++  
++  // 其他角色數據庫方法...
+ };
++
++export const 知識庫 = {
++  // 知識數據庫方法...
++};
++
++export const 用戶庫 = {
++  // 用戶數據庫方法...
++};
++      ⟩
++    ⟩
++  ⟩,
++  styles:L⟨
++    O⟨
++      name:"App",
++      path:"App.css",
++      content:□{css}⟦
++.app {
++  display: flex;
++  flex-direction: column;
++  height: 100vh;
++}
++
++.hamburger-menu {
++  position: fixed;
++  top: 10px;
++  left: 10px;
++  z-index: 100;
++  background: #3f51b5;
++  color: white;
++  border: none;
++  border-radius: 4px;
++  padding: 8px;
++  cursor: pointer;
++}
++
++.sidebar-container {
++  position: fixed;
++  top: 0;
++  left: 0;
++  height: 100vh;
++  width: 280px;
++  background-color: #f5f5f5;
++  transition: transform 0.3s ease;
++  z-index: 90;
++}
++
++.sidebar-container.hidden {
++  transform: translateX(-100%);
++}
++
++.sidebar-container.visible {
++  transform: translateX(0);
++}
++
++.sidebar-close {
++  position: absolute;
++  top: 10px;
++  right: 10px;
++  background: transparent;
++  border: none;
++  font-size: 18px;
++  cursor: pointer;
++}
++
++.view-toggle {
++  display: flex;
++  justify-content: center;
++  padding: 10px;
++  background-color: #f5f5f5;
++  border-bottom: 1px solid #ddd;
++}
++
++.view-toggle button {
++  display: flex;
++  align-items: center;
++  margin: 0 5px;
++  padding: 8px 12px;
++  border: none;
++  border-radius: 4px;
++  background-color: transparent;
++  cursor: pointer;
++}
++
++.view-toggle button.active {
++  background-color: #3f51b5;
++  color: white;
++}
++
++.view-toggle button span {
++  margin-left: 5px;
++}
++
++@media (max-width: 768px) {
++  .sidebar-container {
++    width: 100%;
++  }
++  
++  .view-toggle button span {
++    display: none;
++  }
++}
++      ⟧
++    ⟩,
++  ui:return (
++    theme:O⟨
++      colors:O⟨
++        primary:"#3f51b5",
++        secondary:"#f50057",
++        background:"#f5f5f5",
++        text:"#333333",
++        accent:"#00bcd4"
++      ⟩,
++      fonts:O⟨
++        main:"Arial, sans-serif",
++        headings:"'Roboto', sans-serif",
++        monospace:"'Courier New', monospace"
++      ⟩
++    ⟩,
++    layout:O⟨
++      sidebar:O⟨
++        width:"280px",
++        collapsedWidth:"60px"
++      ⟩,
++      chat:O⟨
++        maxWidth:"1200px",
++        messageSpacing:"16px"
++      ⟩
++    ⟩
++  );,
++  dependencies:O⟨
++    應:"^18.3.1",
++    應Dom:"^18.3.1",
++    idb:"^8.0.2",
++    鏈:"^0.3.19",
++    深基:"^2.0.2"
++  ⟩
++⟩⟩
+\ No newline at end of file

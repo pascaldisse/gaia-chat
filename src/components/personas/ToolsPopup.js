@@ -3,7 +3,8 @@ import '../../styles/personas/ToolsPopup.css';
 
 const availableTools = [
   { name: 'diceRoll', label: 'Dice Roll', description: 'Roll polyhedral dice' },
-  { name: 'imageGeneration', label: 'Image Generation', description: 'Generate images from text' }
+  { name: 'imageGeneration', label: 'Image Generation', description: 'Generate images from text' },
+  { name: 'vectorSearch', label: 'Vector Search', description: 'Search knowledge base and archives' }
 ];
 
 export default function ToolsPopup({ tools, onUpdate, onClose }) {

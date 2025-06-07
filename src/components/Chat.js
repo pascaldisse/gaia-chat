@@ -1590,15 +1590,26 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
 
       <div className="knowledge-base">
         <h4>Chat Knowledge Base</h4>
-        <input 
-          type="file"
-          onChange={handleFileUpload}
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png"
-        />
+        <label className="file-upload-container">
+          <input 
+            type="file"
+            onChange={handleFileUpload}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png"
+            id="file-upload"
+            className="file-input"
+          />
+          <div className="file-upload-button">
+            <span role="img" aria-label="Upload file">📎</span> Upload File
+          </div>
+        </label>
         <div className="file-list">
-          {chatKnowledgeFiles.map(file => (
-            <FilePreview key={file.id} fileId={file.id} onDelete={handleFileDelete} />
-          ))}
+          {chatKnowledgeFiles && chatKnowledgeFiles.length > 0 ? (
+            chatKnowledgeFiles.map(file => (
+              <FilePreview key={file.id} fileId={file.id} onDelete={handleFileDelete} />
+            ))
+          ) : (
+            <div className="empty-file-list">No files uploaded yet</div>
+          )}
         </div>
       </div>
     </div>

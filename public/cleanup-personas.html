@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete All Personas Except GAIA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            background-color: #2d2d2d;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #bb86fc;
+            text-align: center;
+        }
+        .info {
+            background-color: #3d3d3d;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        button {
+            background-color: #cf6679;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #e08090;
+        }
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .result {
+            background-color: #3d3d3d;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+        }
+        .success {
+            color: #4caf50;
+        }
+        .error {
+            color: #f44336;
+        }
+        .deleted-list {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+        .instructions {
+            background-color: #4a148c;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Delete All Personas Except GAIA</h1>
+        
+        <div class="instructions">
+            <h3>Two Ways to Delete Personas:</h3>
+            <ol>
+                <li><strong>Using Developer Overlay (Recommended):</strong>
+                    <ul>
+                        <li>Go to your Gaia Chat app</li>
+                        <li>Press the backtick key (`) to open Developer Overlay</li>
+                        <li>Click "Delete All Personas Except GAIA" button</li>
+                    </ul>
+                </li>
+                <li><strong>Using This Page:</strong>
+                    <ul>
+                        <li>Click the button below to run the cleanup</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+        
+        <div class="info">
+            <p><strong>What this will do:</strong></p>
+            <ul>
+                <li>Delete all personas except GAIA (the default persona)</li>
+                <li>This includes: oldraj, Succubus, ProfessorEinstein, ChefMario, CodeWizard, DDNarrator, and any others</li>
+                <li>GAIA will remain as the only persona</li>
+            </ul>
+        </div>
+        
+        <div class="button-container">
+            <button id="cleanupButton" onclick="runCleanup()">
+                Delete All Personas Except GAIA
+            </button>
+        </div>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        async function runCleanup() {
+            const button = document.getElementById('cleanupButton');
+            const resultDiv = document.getElementById('result');
+            
+            button.disabled = true;
+            button.textContent = 'Running cleanup...';
+            resultDiv.style.display = 'none';
+            
+            try {
+                // Import the cleanup function
+                const module = await import('/src/utils/cleanupPersonas.js');
+                const cleanupPersonas = module.cleanupPersonas;
+                
+                // Run the cleanup
+                const result = await cleanupPersonas();
+                
+                // Display results
+                resultDiv.innerHTML = `
+                    <h3 class="success">Cleanup Complete!</h3>
+                    <p>Total personas found: ${result.total}</p>
+                    <p>Deleted: ${result.deleted}</p>
+                    <p>Kept: ${result.kept} (GAIA)</p>
+                    ${result.deletedPersonas.length > 0 ? `
+                        <h4>Deleted Personas:</h4>
+                        <ul class="deleted-list">
+                            ${result.deletedPersonas.map(p => `<li>${p.name} (ID: ${p.id})</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                `;
+                resultDiv.className = 'result success';
+                resultDiv.style.display = 'block';
+                
+                button.textContent = 'Cleanup Complete!';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3 class="error">Error!</h3>
+                    <p>${error.message}</p>
+                    <p>Please use the Developer Overlay method instead (press ` in the app)</p>
+                `;
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                
+                button.textContent = 'Error - Try Again';
+                button.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

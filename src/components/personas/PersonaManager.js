@@ -9,10 +9,12 @@ import { GAIA_CONFIG } from '../../config/defaultPersona';
 import FilePreview from '../FilePreview';
 import { knowledgeDB } from '../../services/db';
 import ToolsPopup from './ToolsPopup';
+import TestDeleteButton from './TestDeleteButton';
 
 const availableTools = [
   { name: 'diceRoll', label: 'Dice Roll', description: 'Roll polyhedral dice' },
-  { name: 'imageGeneration', label: 'Image Generation', description: 'Generate images from text' }
+  { name: 'imageGeneration', label: 'Image Generation', description: 'Generate images from text' },
+  { name: 'vectorSearch', label: 'Vector Search', description: 'Search knowledge base and archives' }
 ];
 
 const defaultToolConfig = {
@@ -41,6 +43,8 @@ const defaultAgentSettings = {
 };
 
 const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
+  console.log('[PersonaManager] Component mounting with props:', { persona, onPersonaUpdate: typeof onPersonaUpdate, onDelete: typeof onDelete, onClose: typeof onClose });
+  
   const [currentPersona, setCurrentPersona] = useState(() => {
     const initialPersona = persona || new Persona({ 
       name: '', 
@@ -51,6 +55,7 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
     // Ensure agentSettings and toolConfig exist
     return {
       ...initialPersona,
+      knowledgeFiles: initialPersona.knowledgeFiles || [], // Ensure knowledgeFiles is always an array
       agentSettings: {
         ...defaultAgentSettings,
         ...(initialPersona.agentSettings || {}),
@@ -69,16 +74,62 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
   const [showPublishOptions, setShowPublishOptions] = useState(false);
 
   useEffect(() => {
+    console.log('[PersonaManager] Component mounted/updated');
+    console.log('[PersonaManager] Modal should be visible');
+    console.log('[PersonaManager] Current persona state:', currentPersona);
+    console.log('[PersonaManager] onDelete prop type:', typeof onDelete);
+    
+    // Check if modal is in DOM
+    setTimeout(() => {
+      const modal = document.querySelector('.persona-manager-modal');
+      const deleteBtn = document.querySelector('.delete-button');
+      console.log('[PersonaManager] Modal found in DOM:', !!modal);
+      console.log('[PersonaManager] Delete button found in DOM:', !!deleteBtn);
+      if (deleteBtn) {
+        console.log('[PersonaManager] Delete button element:', deleteBtn);
+        console.log('[PersonaManager] Delete button onclick:', deleteBtn.onclick);
+      }
+    }, 100);
+  }, []);
+
+  useEffect(() => {
     if (persona) {
-      setCurrentPersona(persona);
-      loadFiles(persona.knowledgeFiles);
+      console.log('[PersonaManager] Loading persona:', persona.name);
+      console.log('[PersonaManager] Persona object:', persona);
+      console.log('[PersonaManager] Persona knowledgeFiles:', persona.knowledgeFiles);
+      
+      // Ensure knowledgeFiles exists
+      const personaWithKnowledgeFiles = {
+        ...persona,
+        knowledgeFiles: persona.knowledgeFiles || []
+      };
+      
+      setCurrentPersona(personaWithKnowledgeFiles);
+      loadFiles(personaWithKnowledgeFiles.knowledgeFiles);
     }
   }, [persona]);
 
   const loadFiles = async (fileIds) => {
+    console.log('[PersonaManager] loadFiles called with:', fileIds);
+    console.log('[PersonaManager] fileIds type:', typeof fileIds);
+    console.log('[PersonaManager] fileIds is array:', Array.isArray(fileIds));
+    console.log('[PersonaManager] fileIds length:', fileIds?.length);
+    
     if (fileIds?.length > 0) {
-      const files = await knowledgeDB.getFiles(fileIds);
-      setFiles(files);
+      try {
+        const files = await knowledgeDB.getFiles(fileIds);
+        console.log('[PersonaManager] Loaded files:', files);
+        console.log('[PersonaManager] Files length:', files?.length);
+        console.log('[PersonaManager] Files details:', files?.map(f => ({ id: f?.id, name: f?.name, type: f?.type })));
+        setFiles(files);
+      } catch (error) {
+        console.error('[PersonaManager] Error loading files:', error);
+        setFiles([]);
+      }
+    } else {
+      // Reset files when there are no knowledge files
+      console.log('[PersonaManager] No knowledge files, resetting files array');
+      setFiles([]);
     }
   };
 
@@ -117,6 +168,8 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
 
   const handleSave = async () => {
     console.log('PersonaManager: Saving persona with data:', currentPersona);
+    console.log('PersonaManager: Current knowledgeFiles:', currentPersona.knowledgeFiles);
+    console.log('PersonaManager: Current files state:', files);
     
     // For GAIA, ensure we preserve the name, image, and system prompt
     let personaToSave = {...currentPersona};
@@ -138,7 +191,11 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
     // Add the agentSettings manually since they're not part of the Persona constructor
     updatedPersona.agentSettings = currentPersona.agentSettings;
     
+    // Explicitly ensure knowledgeFiles is preserved
+    updatedPersona.knowledgeFiles = currentPersona.knowledgeFiles || [];
+    
     console.log('PersonaManager: Final persona to be saved:', updatedPersona);
+    console.log('PersonaManager: Final knowledgeFiles to be saved:', updatedPersona.knowledgeFiles);
     
     await onPersonaUpdate(updatedPersona);
     onClose();
@@ -190,6 +247,8 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    console.log('[PersonaManager] Uploading file:', file.name, file.type, file.size);
+
     const newFile = {
       name: file.name,
       type: file.type,
@@ -197,26 +256,42 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
       uploadedAt: Date.now()
     };
 
+    console.log('[PersonaManager] Creating file in database...');
     const id = await knowledgeDB.addFile(newFile);
-    setCurrentPersona(prev => ({
-      ...prev,
-      knowledgeFiles: [...prev.knowledgeFiles, id]
-    }));
-    setFiles(prev => [...prev, { ...newFile, id }]);
+    console.log('[PersonaManager] File created with ID:', id);
+    
+    const updatedKnowledgeFiles = [...(currentPersona.knowledgeFiles || []), id];
+    console.log('[PersonaManager] Updated knowledgeFiles array:', updatedKnowledgeFiles);
+    
+    setCurrentPersona(prev => {
+      const updated = {
+        ...prev,
+        knowledgeFiles: updatedKnowledgeFiles
+      };
+      console.log('[PersonaManager] Updated persona state:', updated);
+      return updated;
+    });
+    
+    setFiles(prev => {
+      const updated = [...prev, { ...newFile, id }];
+      console.log('[PersonaManager] Updated files state:', updated);
+      return updated;
+    });
   };
 
   const handleFileDelete = async (fileId) => {
     await knowledgeDB.deleteFile(fileId);
     setCurrentPersona(prev => ({
       ...prev,
-      knowledgeFiles: prev.knowledgeFiles.filter(id => id !== fileId)
+      knowledgeFiles: (prev.knowledgeFiles || []).filter(id => id !== fileId)
     }));
     setFiles(prev => prev.filter(file => file.id !== fileId));
   };
 
   return (
     <>
-      <div className="persona-manager-modal">
+      <TestDeleteButton onDelete={onDelete} persona={currentPersona} />
+      <div className="persona-manager-modal" style={{ zIndex: 9999 }}>
         <div className="modal-content">
           <button className="close-button" onClick={onClose}>×</button>
           <h2>{persona ? 'Edit Persona' : 'New Persona'}</h2>
@@ -224,9 +299,15 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
             <input
               type="text"
               value={currentPersona.name}
-              onChange={(e) => setCurrentPersona(prev => ({...prev, name: e.target.value}))}
+              onChange={(e) => {
+                // Only allow letters and numbers
+                const sanitizedValue = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                setCurrentPersona(prev => ({...prev, name: sanitizedValue}));
+              }}
               disabled={currentPersona.id === DEFAULT_PERSONA_ID}
-              placeholder="Persona Name"
+              placeholder="Persona Name (letters and numbers only)"
+              pattern="[a-zA-Z0-9]+"
+              title="Only letters and numbers are allowed"
             />
             
             <div className="image-upload-section">
@@ -338,13 +419,68 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
               onChange={handleFileUpload}
               accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png"
             />
+            {console.log('[PersonaManager] Rendering file list. Files state:', files)}
+            {console.log('[PersonaManager] Files length in render:', files?.length)}
+            {console.log('[PersonaManager] Files array:', JSON.stringify(files?.map(f => ({ id: f?.id, name: f?.name }))))}
             <div className="file-list">
-              {files.map(file => (
-                <FilePreview key={file.id} fileId={file.id} onDelete={handleFileDelete} />
-              ))}
+              {files && files.length > 0 ? (
+                files.map(file => {
+                  console.log('[PersonaManager] Rendering FilePreview for file:', file?.id, file?.name);
+                  return <FilePreview key={file.id} fileId={file.id} onDelete={handleFileDelete} />
+                })
+              ) : (
+                console.log('[PersonaManager] No files to render') || null
+              )}
             </div>
           </div>
           <div className="modal-footer">
+            <button 
+              type="button"
+              onClick={() => {
+                console.log('TEST button clicked');
+                alert('Test button works!');
+              }}
+              style={{ 
+                background: 'green', 
+                color: 'white', 
+                padding: '5px 10px',
+                pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 10000,
+                cursor: 'pointer',
+                border: 'none',
+                borderRadius: '4px'
+              }}
+            >
+              TEST
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                console.log('[PersonaManager] DIRECT DELETE TEST');
+                console.log('[PersonaManager] Current showDeleteConfirm:', showDeleteConfirm);
+                console.log('[PersonaManager] Bypassing UI - calling onDelete directly');
+                if (currentPersona.id !== DEFAULT_PERSONA_ID && typeof onDelete === 'function') {
+                  onDelete(currentPersona);
+                } else {
+                  console.log('[PersonaManager] Cannot delete - either default persona or onDelete not a function');
+                }
+              }}
+              style={{ 
+                background: 'red', 
+                color: 'white', 
+                padding: '5px 10px',
+                pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 10000,
+                cursor: 'pointer',
+                border: 'none',
+                borderRadius: '4px',
+                marginLeft: '5px'
+              }}
+            >
+              DIRECT DELETE
+            </button>
             {currentPersona.id === DEFAULT_PERSONA_ID && (
               <button 
                 className="restore-default-button"
@@ -353,11 +489,45 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
                 Restore Default
               </button>
             )}
+            {console.log('[PersonaManager] Rendering delete button?', currentPersona.id !== DEFAULT_PERSONA_ID, 'currentPersona.id:', currentPersona.id, 'DEFAULT_PERSONA_ID:', DEFAULT_PERSONA_ID)}
             {currentPersona.id !== DEFAULT_PERSONA_ID && (
               <>
                 <button 
+                  type="button"
                   className="delete-button"
-                  onClick={() => setShowDeleteConfirm(true)}
+                  style={{ 
+                    pointerEvents: 'auto',
+                    position: 'relative',
+                    zIndex: 10000,
+                    opacity: 1,
+                    visibility: 'visible',
+                    cursor: 'pointer'
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[PersonaManager] Delete button clicked - SIMPLE');
+                    console.log('[PersonaManager] Current persona:', currentPersona.name, currentPersona.id);
+                    console.log('[PersonaManager] showDeleteConfirm before:', showDeleteConfirm);
+                    setShowDeleteConfirm(true);
+                    console.log('[PersonaManager] Called setShowDeleteConfirm(true)');
+                    // Force a re-render check
+                    setTimeout(() => {
+                      console.log('[PersonaManager] showDeleteConfirm after timeout:', showDeleteConfirm);
+                    }, 100);
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    console.log('[PersonaManager] Delete button mousedown');
+                  }}
+                  onMouseUp={(e) => {
+                    e.stopPropagation();
+                    console.log('[PersonaManager] Delete button mouseup');
+                  }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    console.log('[PersonaManager] Delete button pointerdown');
+                  }}
                 >
                   Delete
                 </button>
@@ -423,17 +593,59 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
       )}
 
       {showDeleteConfirm && (
-        <div className="confirm-delete-modal">
-          <div className="confirm-content">
+        <div className="confirm-delete-modal" style={{ 
+          zIndex: 20000,
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div className="confirm-content" style={{
+            backgroundColor: '#36393f',
+            padding: '24px',
+            borderRadius: '8px',
+            border: '1px solid #202225',
+            color: '#dcddde',
+            position: 'relative',
+            zIndex: 20001
+          }}>
+            {console.log('[PersonaManager] Delete confirm modal is showing')}
             <h3>Delete Persona?</h3>
             <p>Are you sure you want to delete {currentPersona.name}? This action cannot be undone.</p>
             <div className="modal-footer">
-              <button className="cancel-button" onClick={() => setShowDeleteConfirm(false)}>
+              <button className="cancel-button" onClick={() => {
+                console.log('[PersonaManager] Cancel button clicked');
+                setShowDeleteConfirm(false);
+              }}>
                 Cancel
               </button>
               <button 
                 className="delete-button"
-                onClick={() => onDelete(currentPersona)}
+                onClick={() => {
+                  console.log('[PersonaManager] Confirm Delete button clicked');
+                  console.log('[PersonaManager] Current persona to delete:', currentPersona);
+                  console.log('[PersonaManager] onDelete function exists:', typeof onDelete);
+                  
+                  if (typeof onDelete === 'function') {
+                    console.log('[PersonaManager] Calling onDelete with persona:', currentPersona);
+                    try {
+                      onDelete(currentPersona);
+                      console.log('[PersonaManager] onDelete called successfully');
+                    } catch (error) {
+                      console.error('[PersonaManager] Error calling onDelete:', error);
+                    }
+                  } else {
+                    console.error('[PersonaManager] onDelete is not a function:', onDelete);
+                  }
+                  
+                  setShowDeleteConfirm(false);
+                  onClose(); // Close the entire modal after delete
+                }}
               >
                 Confirm Delete
               </button>

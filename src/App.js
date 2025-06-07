@@ -14,8 +14,17 @@ import Persona from './models/Persona';
 import PersonaManager from './components/personas/PersonaManager';
 import PersonaStore from './components/personas/PersonaStore';
 import AdminDashboard from './components/admin/AdminDashboard';
+import DeveloperOverlay from './components/DeveloperOverlay';
 import { GAIA_CONFIG, DEFAULT_PERSONA_ID } from './config/defaultPersona';
 import { UserProvider, useUser } from './contexts/UserContext';
+import { cleanupPersonas } from './utils/cleanupPersonas';
+import PersonaCleanup from './components/personas/PersonaCleanup';
+
+// Make cleanup function available globally
+if (typeof window !== 'undefined') {
+  window.cleanupPersonas = cleanupPersonas;
+  console.log('Persona cleanup function loaded! Run window.cleanupPersonas() to remove all personas except GAIA');
+}
 
 function AppContent() {
   const { user: currentUser } = useUser();
@@ -28,10 +37,29 @@ function AppContent() {
   const [selectedPersonaId, setSelectedPersonaId] = useState(null);
   const [showPersonaManager, setShowPersonaManager] = useState(false);
   const [editingPersona, setEditingPersona] = useState(null);
+  
+  // Override setEditingPersona to add logging
+  const originalSetEditingPersona = setEditingPersona;
+  const setEditingPersonaWithLog = (persona) => {
+    console.log('[App] setEditingPersona called with:', persona);
+    originalSetEditingPersona(persona);
+  };
   const [activePersonas, setActivePersonas] = useState([]);
   const [activeUsers, setActiveUsers] = useState([]);
   const [viewMode, setViewMode] = useState('chat'); // 'chat', 'agentflow', 'store', 'admin', 'hivemind'
   const [sidebarVisible, setSidebarVisible] = useState(false); // Control sidebar visibility
+  const [showDevOverlay, setShowDevOverlay] = useState(false);
+
+  // Add keyboard listener for dev overlay
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === '`') {
+        setShowDevOverlay(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Load chat history from database
   useEffect(() => {
@@ -181,6 +209,10 @@ function AppContent() {
         setPersonas([defaultGaia, ...loaded]);
       } else {
         // Use the database version of GAIA
+        console.log('[App] Loaded personas:', loaded.length, 'personas');
+        loaded.forEach(p => {
+          console.log(`[App] Persona: ${p.name}, knowledgeFiles:`, p.knowledgeFiles);
+        });
         setPersonas(loaded);
       }
     };
@@ -234,7 +266,7 @@ function AppContent() {
 
   const createNewPersona = async () => {
     const newPersona = new Persona({
-      name: 'New Persona',
+      name: 'NewPersona',
       systemPrompt: 'You are a helpful assistant',
       model: MODELS.LLAMA3_70B,
       userId: currentUser ? currentUser.id : undefined // Associate with user if logged in
@@ -259,7 +291,7 @@ function AppContent() {
       
       setPersonas(updatedPersonas);
       setSelectedPersonaId(newPersona.id);
-      setEditingPersona(newPersona);
+      setEditingPersonaWithLog(newPersona);
     } catch (error) {
       console.error('Error creating persona:', error);
     }
@@ -285,43 +317,48 @@ function AppContent() {
       }
       
       setPersonas(updatedPersonas);
-      setEditingPersona(null);
+      setEditingPersonaWithLog(null);
     } catch (error) {
       console.error('Error updating persona:', error);
     }
   };
 
   const handleDeletePersona = async (personaToDelete) => {
+    console.log('[App] handleDeletePersona called with:', personaToDelete);
     try {
       // Don't allow deleting system personas for regular users
       if (personaToDelete.id === DEFAULT_PERSONA_ID) {
-        console.error('Cannot delete the default GAIA persona');
+        console.error('[App] Cannot delete the default GAIA persona');
         return;
       }
       
+      console.log('[App] Attempting to delete persona with ID:', personaToDelete.id);
       await personaDB.deletePersona(personaToDelete.id);
+      console.log('[App] Persona deleted successfully from database');
       
       // Get updated personas based on user status
       let updatedPersonas;
       if (currentUser) {
-        console.log("Getting updated personas after delete for user:", currentUser.id);
+        console.log("[App] Getting updated personas after delete for user:", currentUser.id);
         const userPersonas = await personaDB.getPersonasByUser(currentUser.id);
         const systemPersonas = await personaDB.getAllPersonas();
         const systemPersonasWithoutUser = systemPersonas.filter(p => !p.userId);
         updatedPersonas = [...userPersonas, ...systemPersonasWithoutUser];
       } else {
-        console.log("Getting updated personas after delete for anonymous user");
+        console.log("[App] Getting updated personas after delete for anonymous user");
         const allPersonas = await personaDB.getAllPersonas();
         updatedPersonas = allPersonas.filter(p => !p.userId);
       }
       
+      console.log('[App] Updated personas list:', updatedPersonas.length, 'personas');
       setPersonas(updatedPersonas);
       if(selectedPersonaId === personaToDelete.id) {
         setSelectedPersonaId(null);
       }
-      setEditingPersona(null);
+      setEditingPersonaWithLog(null);
     } catch (error) {
-      console.error('Error deleting persona:', error);
+      console.error('[App] Error deleting persona:', error);
+      console.error('[App] Error details:', error.stack);
     }
   };
 
@@ -350,7 +387,7 @@ function AppContent() {
           selectedPersonaId={selectedPersonaId}
           setSelectedPersonaId={setSelectedPersonaId}
           createNewPersona={createNewPersona}
-          onEditPersona={setEditingPersona}
+          onEditPersona={setEditingPersonaWithLog}
         />
         {/* Close button for mobile */}
         <button 
@@ -440,12 +477,21 @@ function AppContent() {
         <PersonaStore />
       )}
       
+      {console.log('[App] editingPersona state:', editingPersona)}
+      {console.log('[App] editingPersona knowledgeFiles:', editingPersona?.knowledgeFiles)}
       {editingPersona && (
         <PersonaManager 
           persona={editingPersona}
           onPersonaUpdate={handleEditPersona}
           onDelete={handleDeletePersona}
-          onClose={() => setEditingPersona(null)}
+          onClose={() => setEditingPersonaWithLog(null)}
+        />
+      )}
+
+      {showDevOverlay && (
+        <DeveloperOverlay 
+          onClose={() => setShowDevOverlay(false)}
+          user={currentUser}
         />
       )}
     </div>

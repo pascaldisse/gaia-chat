@@ -394,11 +394,27 @@ export const personaDB = {
   },
   
   async deletePersona(id) {
+    console.log('[DB] deletePersona called with ID:', id);
     try {
       const db = await dbPromise;
+      
+      // Check if persona exists first
+      const existingPersona = await db.get(PERSONA_STORE, id);
+      console.log('[DB] Existing persona found:', existingPersona ? 'Yes' : 'No');
+      if (existingPersona) {
+        console.log('[DB] Persona to delete:', existingPersona.name, '(ID:', existingPersona.id, ')');
+      }
+      
+      console.log('[DB] Attempting to delete from IndexedDB...');
       await db.delete(PERSONA_STORE, id);
+      console.log('[DB] Delete operation completed successfully');
+      
+      // Verify deletion
+      const checkDeleted = await db.get(PERSONA_STORE, id);
+      console.log('[DB] Verification - persona still exists:', checkDeleted ? 'Yes' : 'No');
     } catch (error) {
-      console.error('Error deleting persona:', error);
+      console.error('[DB] Error deleting persona:', error);
+      console.error('[DB] Error details:', error.stack);
       throw error;
     }
   },
