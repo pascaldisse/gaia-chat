@@ -3,11 +3,15 @@
  * Scans project dependencies for known vulnerabilities
  */
 
+import OSVDatabase from './databases/OSVDatabase.js';
+import NodeJSParser from './parsers/NodeJSParser.js';
+import PythonParser from './parsers/PythonParser.js';
+import FlutterParser from './parsers/FlutterParser.js';
+
 class CVEScanner {
   constructor() {
     this.databases = {
-      osv: new OSVDatabase(),
-      nvd: new NVDDatabase()
+      osv: new OSVDatabase()
     };
     this.parsers = {
       nodejs: new NodeJSParser(),
@@ -86,11 +90,7 @@ class CVEScanner {
     const osvResults = await this.databases.osv.query(dependency);
     vulnerabilities.push(...osvResults);
     
-    // Optionally check NVD for additional coverage
-    if (this.useNVD) {
-      const nvdResults = await this.databases.nvd.query(dependency);
-      vulnerabilities.push(...nvdResults);
-    }
+    // Future: Add NVD database support for additional coverage
     
     // Deduplicate by CVE ID
     return this.deduplicateVulnerabilities(vulnerabilities);
@@ -147,10 +147,11 @@ class CVEScanner {
     return 'low';
   }
 
-  async fileExists(path) {
+  async fileExists(filePath) {
     try {
-      // Implementation depends on environment
-      return true; // Placeholder
+      const fs = await import('fs/promises');
+      await fs.access(filePath);
+      return true;
     } catch {
       return false;
     }
