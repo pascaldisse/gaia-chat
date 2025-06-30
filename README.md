@@ -6,6 +6,7 @@ Gaia is an innovative AI chat application that implements a unique RPG-style per
 
 ## Latest Updates
 
+- 🛡️ **CVE Security Scanner**: New vulnerability audit tool for Node.js, Python, and Flutter projects
 - 🌐 **External API**: New API server for applications to access LLM capabilities
 - 🔊 **Improved Audio System**: Fixed audio playback issues and added new debugging tools
 - 🚀 **Server Persistence**: Enhanced restart script for continuous server operation
@@ -21,6 +22,7 @@ Gaia is an innovative AI chat application that implements a unique RPG-style per
 - 🔊 **Enhanced Voice System**: Voice responses with multiple TTS engines and improved audio playback sequencing
 - 🎭 **Message Formatting**: Custom formatting rules for roleplay and character actions
 - ⚡ **Real-time Streaming**: Instant response streaming for better UX
+- 🛡️ **CVE Security Scanner**: Automated vulnerability scanning for dependencies
 
 ## Quick Start
 
@@ -65,6 +67,8 @@ Gaia is an innovative AI chat application that implements a unique RPG-style per
 - `npm run server`: Run the API server only
 - `npm run dev`: Run both the frontend and API server simultaneously
 - `npm run eject`: Eject from Create React App
+- `node test/test-cve-scanner.js`: Test CVE scanner functionality
+- `node server/cve-api/index.js`: Start CVE scanner API server
 
 ## Documentation
 
@@ -225,6 +229,75 @@ console.log(data.message);
 ```
 
 See the [API documentation](server/README.md) for more details.
+
+## CVE Security Scanner
+
+Gaia includes a powerful CVE (Common Vulnerabilities and Exposures) scanner designed specifically for startups and small teams. Unlike enterprise security tools, our scanner offers transparent, affordable pricing without minimum seat requirements.
+
+### Features
+
+- **Multi-Language Support**: Scans Node.js, Python, and Flutter/Dart projects
+- **Intelligent Remediation**: Provides specific version recommendations with breaking change warnings
+- **Multiple Report Formats**: JSON, HTML, Markdown, CSV, and SARIF (GitHub/VS Code compatible)
+- **CI/CD Integration**: GitHub Actions workflow with configurable severity thresholds
+- **RESTful API**: Remote scanning capabilities for automation
+
+### Quick Start
+
+1. **Run a scan on your project**:
+   ```bash
+   node test/test-cve-scanner.js
+   ```
+
+2. **Start the CVE API server**:
+   ```bash
+   node server/cve-api/index.js
+   ```
+
+3. **Scan via API**:
+   ```bash
+   curl -X POST http://localhost:3001/scan \
+     -H "Content-Type: application/json" \
+     -d '{"projectPath": "./my-project"}'
+   ```
+
+### Pricing
+
+- **Free**: 10 scans/month - Perfect for personal projects
+- **Startup**: $9/month for 100 scans - Ideal for small teams
+- **Growth**: $29/month for 500 scans - For growing companies
+- **Enterprise**: $99/month unlimited - Full API access and support
+
+### Example Output
+
+```
+📊 Scan Results:
+================
+Critical: 0
+High: 2
+Medium: 3
+Low: 1
+
+📦 lodash @ 4.17.11 (npm)
+  - CVE-2019-10744: Prototype Pollution in lodash
+    Severity: HIGH (CVSS: 7.5)
+    Fixed in: 4.17.19
+  💡 Remediation:
+     ➡️ npm install lodash@4.17.21
+```
+
+### Integration with CI/CD
+
+Add to your GitHub Actions workflow:
+
+```yaml
+- name: CVE Security Scan
+  run: |
+    npm install
+    node test/test-cve-scanner.js
+```
+
+The scanner will fail the build if critical or high severity vulnerabilities are found.
 
 ## Contributing
 
