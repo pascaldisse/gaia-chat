@@ -1,0 +1,104 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run Security Audit
+      run: |
+        node -e "
+        const CVEScanner = require('./src/services/cve/scanner.js').default;
+        const scanner = new CVEScanner();
+        
+        (async () => {
+          try {
+            const results = await scanner.scanProject('.');
+            const summary = results.summary;
+            
+            console.log('Security Audit Results:');
+            console.log(\`Critical: \${summary.critical}\`);
+            console.log(\`High: \${summary.high}\`);
+            console.log(\`Medium: \${summary.medium}\`);
+            console.log(\`Low: \${summary.low}\`);
+            
+            // Fail if critical or high vulnerabilities found
+            if (summary.critical > 0 || summary.high > 0) {
+              console.error('\\nFound critical or high severity vulnerabilities!');
+              process.exit(1);
+            }
+            
+            // Warn about medium vulnerabilities
+            if (summary.medium > 0) {
+              console.warn('\\nWarning: Found medium severity vulnerabilities');
+            }
+            
+            console.log('\\nSecurity audit passed!');
+          } catch (error) {
+            console.error('Security audit failed:', error);
+            process.exit(1);
+          }
+        })();
+        "
+    
+    - name: Upload Audit Report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-audit-report
+        path: security-audit-results.json
+        retention-days: 30
+    
+    - name: Comment PR with Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          try {
+            const results = JSON.parse(fs.readFileSync('security-audit-results.json', 'utf8'));
+            const summary = results.summary;
+            
+            const comment = `## 🔒 Security Audit Results
+            
+            | Severity | Count |
+            |----------|-------|
+            | Critical | ${summary.critical} |
+            | High | ${summary.high} |
+            | Medium | ${summary.medium} |
+            | Low | ${summary.low} |
+            
+            ${summary.critical > 0 || summary.high > 0 ? 
+              '❌ **Action Required**: Critical or high severity vulnerabilities found!' : 
+              '✅ No critical vulnerabilities found'}
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          } catch (error) {
+            console.log('Could not post comment:', error);
+          }

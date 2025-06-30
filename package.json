@@ -1,6 +1,7 @@
 {
   "name": "gaia",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "dependencies": {
     "@langchain/community": "^0.3.32",
