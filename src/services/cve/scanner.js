@@ -7,6 +7,8 @@ import OSVDatabase from './databases/OSVDatabase.js';
 import NodeJSParser from './parsers/NodeJSParser.js';
 import PythonParser from './parsers/PythonParser.js';
 import FlutterParser from './parsers/FlutterParser.js';
+import RemediationEngine from './remediation/RemediationEngine.js';
+import ReportGenerator from './reporters/ReportGenerator.js';
 
 class CVEScanner {
   constructor() {
@@ -18,6 +20,8 @@ class CVEScanner {
       python: new PythonParser(),
       flutter: new FlutterParser()
     };
+    this.remediationEngine = new RemediationEngine();
+    this.reportGenerator = new ReportGenerator();
   }
 
   async scanProject(projectPath, options = {}) {
@@ -97,47 +101,8 @@ class CVEScanner {
   }
 
   async generateRemediation(dependency, vulnerabilities) {
-    const remediation = {
-      actions: [],
-      safeVersion: null,
-      breakingChanges: false
-    };
-
-    // Find the minimum safe version
-    const safeVersion = await this.findSafeVersion(dependency, vulnerabilities);
-    if (safeVersion) {
-      remediation.safeVersion = safeVersion;
-      
-      // Generate update commands
-      switch (dependency.ecosystem) {
-        case 'npm':
-          remediation.actions.push({
-            command: `npm install ${dependency.name}@${safeVersion}`,
-            description: 'Update to safe version'
-          });
-          break;
-        case 'pip':
-          remediation.actions.push({
-            command: `pip install ${dependency.name}==${safeVersion}`,
-            description: 'Update to safe version'
-          });
-          break;
-        case 'pub':
-          remediation.actions.push({
-            command: `flutter pub upgrade ${dependency.name}`,
-            description: 'Update to latest compatible version'
-          });
-          break;
-      }
-      
-      // Check for breaking changes
-      remediation.breakingChanges = await this.checkBreakingChanges(
-        dependency.version, 
-        safeVersion
-      );
-    }
-
-    return remediation;
+    // Use the dedicated remediation engine for intelligent recommendations
+    return await this.remediationEngine.generateRemediation(dependency, vulnerabilities);
   }
 
   getSeverityLevel(cvssScore) {
@@ -189,6 +154,14 @@ class CVEScanner {
       minor: parseInt(parts[1]) || 0,
       patch: parseInt(parts[2]) || 0
     };
+  }
+
+  async generateReport(scanResults, format = 'json', options = {}) {
+    return await this.reportGenerator.generateReport(scanResults, format, options);
+  }
+
+  async generateMultipleReports(scanResults, formats = ['json', 'html']) {
+    return await this.reportGenerator.generateMultipleFormats(scanResults, formats);
   }
 }
 
