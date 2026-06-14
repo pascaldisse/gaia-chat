@@ -91,9 +91,10 @@ export function createPersonaTools(chatComponent, persona) {
   
   console.log(`Creating tools for persona: ${persona.name}`, persona.agentSettings?.toolConfig);
   
-  // Helper function to add a tool usage message to chat
+  // Helper function to add a tool usage message to chat (returns the message id)
   const addToolUsageMessage = (toolName, input, result) => {
     if (chatComponent.setCurrentChat) {
+      const messageId = Date.now();
       const timestamp = new Date().toISOString();
       
       // Log detailed info about the tool usage
@@ -106,7 +107,7 @@ export function createPersonaTools(chatComponent, persona) {
       });
       
       chatComponent.setCurrentChat(prev => [...prev, {
-        id: Date.now(),
+        id: messageId,
         content: `**Tool Used**: ${toolName}\n**Input**: ${input}\n**Result**: ${result}`,
         isUser: false,
         isCommand: true,
@@ -120,7 +121,9 @@ export function createPersonaTools(chatComponent, persona) {
           persona: persona.name
         }
       }]);
+      return messageId;
     }
+    return null;
   };
   
   // Always include file search
@@ -226,13 +229,15 @@ export function createPersonaTools(chatComponent, persona) {
       func: async (prompt) => {
         console.log(`Tool used: generate_image with prompt: "${prompt}"`);
         
-        // Add message to chat before generating
-        addToolUsageMessage("Image Generation", prompt, "Generating image...");
+        // Create tool card and get its id for in-place image update
+        const toolMsgId = addToolUsageMessage("Image Generation", prompt, "Generating image...");
         
         // Let imageService resolve the model from the active image provider config
         const result = await chatComponent.generateImage({
           prompt,
-          style: chatComponent.selectedStyle
+          style: chatComponent.selectedStyle,
+          model: chatComponent.imageModel,
+          toolMessageId: toolMsgId
         });
         
         return result;

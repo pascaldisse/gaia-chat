@@ -148,10 +148,12 @@ describe('Persona Tools', () => {
     // Test the tool
     await imageGenTool.func('a beautiful landscape');
     
-    // Check if generateImage was called with prompt + style (no model — imageService resolves it)
+    // Check if generateImage was called with prompt, style, model, and toolMessageId
     expect(mockComponentRef.generateImage).toHaveBeenCalledWith({
       prompt: 'a beautiful landscape',
-      style: 'test-style'
+      style: 'test-style',
+      model: 'test-model',
+      toolMessageId: expect.any(Number)
     });
   });
 });

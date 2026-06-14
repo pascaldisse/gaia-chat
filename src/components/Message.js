@@ -6,7 +6,7 @@ import { generateSpeech, getTTSEngine, splitTextIntoSentences, generateSpeechChu
 
 const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
-  const [showToolDetails, setShowToolDetails] = useState(false);
+  const [showToolDetails, setShowToolDetails] = useState(message.toolName === 'Image Generation');
   const [audioUrls, setAudioUrls] = useState([]);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -797,6 +797,11 @@ const Message = ({ message, onRegenerate, personas }) => {
     }
   };
 
+  // Strip raw <function>...</function> tags from streaming/final text
+  const stripFunctionTags = (text) => typeof text === 'string'
+    ? text.replace(/<function>[\s\S]*?<\/function>/gi, '').replace(/<function>[\s\S]*$/i, '').trim()
+    : text;
+
   const renderContent = () => {
     // If formatted view is active, show formatted content
     if (formatted && formattedContent) {
@@ -815,22 +820,7 @@ const Message = ({ message, onRegenerate, personas }) => {
       );
     }
     
-    // Handle generated image content
-    if (message.imageSrc || message.imageData) {
-      const src = message.imageSrc || `data:image/png;base64,${message.imageData}`;
-      return (
-        <div className="generated-image-message">
-          {message.content && <div className="generated-image-prompt">{message.content}</div>}
-          <img
-            src={src}
-            alt={message.imageAlt || message.content || 'Generated image'}
-            className="generated-image"
-          />
-        </div>
-      );
-    }
-    
-    // Handle tool usage display
+    // Handle tool usage display (must come before imageSrc check so image tool cards show the image inside the card)
     if (message.isToolUsage) {
       
       // Parse the content for detailed display
@@ -911,6 +901,9 @@ const Message = ({ message, onRegenerate, personas }) => {
         );
       }
       
+      // Image generation tool: show image inside the card
+      const hasImage = message.imageSrc || message.imageData;
+
       // Default tool display
       return (
         <div className="tool-usage">
@@ -932,12 +925,34 @@ const Message = ({ message, onRegenerate, personas }) => {
               <strong>Input:</strong> {toolInput}
               <br/>
               <strong>Result:</strong> {toolResult}
+              {hasImage && (
+                <img
+                  src={message.imageSrc || `data:image/png;base64,${message.imageData}`}
+                  alt={message.imageAlt || 'Generated image'}
+                  className="generated-image"
+                  style={{maxWidth:'100%', borderRadius:8, marginTop:8}}
+                />
+              )}
             </div>
           ) : (
             <div className="tool-summary">
               {toolSummary || 'Tool used'}
             </div>
           )}
+        </div>
+      );
+    }
+    // Handle standalone generated image (manual ImageModal path, no isToolUsage)
+    if (message.imageSrc || message.imageData) {
+      const src = message.imageSrc || `data:image/png;base64,${message.imageData}`;
+      return (
+        <div className="generated-image-message">
+          {message.content && <div className="generated-image-prompt">{message.content}</div>}
+          <img
+            src={src}
+            alt={message.imageAlt || message.content || 'Generated image'}
+            className="generated-image"
+          />
         </div>
       );
     }
@@ -948,8 +963,8 @@ const Message = ({ message, onRegenerate, personas }) => {
       return <ReactMarkdown>{`*${thinkContent}*`}</ReactMarkdown>;
     }
     
-    // Default markdown rendering
-    return <ReactMarkdown>{message.content}</ReactMarkdown>;
+    // Default markdown rendering — strip raw <function> tags from streaming text
+    return <ReactMarkdown>{stripFunctionTags(message.content)}</ReactMarkdown>;
   };
 
   // Show which tools are available for this persona (for debugging)

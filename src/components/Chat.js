@@ -871,38 +871,45 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
   };
 
   const generateImage = async (options) => {
-    const messageId = Date.now();
+    const messageId = options.toolMessageId || Date.now();
+    // Resolve model: explicit > component state > image provider config default
+    const resolvedModel = options.model || imageModel || getImageProviderConfig().model;
 
     try {
       const prompt = options.enhancement
         ? `8k resolution, professional composition, ${options.style} style, ${options.prompt}`
         : options.prompt;
 
-      setCurrentChat(prev => [...prev, {
-        id: messageId,
-        content: `Generating ${options.style} image with ${options.model}: "${options.prompt}"...`,
-        isUser: false,
-        isCommand: true,
-        imageData: null,
-        // Use the default persona for system messages if available
-        personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
-      }]);
+      // Only create a NEW standalone message for the manual ImageModal path (no toolMessageId)
+      if (!options.toolMessageId) {
+        setCurrentChat(prev => [...prev, {
+          id: messageId,
+          content: `Generating ${options.style} image with ${resolvedModel}: "${options.prompt}"...`,
+          isUser: false,
+          isCommand: true,
+          imageData: null,
+          // Use the default persona for system messages if available
+          personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
+        }]);
+      }
 
       const result = await generateImageService({
         prompt,
         negativePrompt: options.style === 'realistic' ? 'anime, cartoon, drawing' : '',
         width: 1024,
         height: 1024,
-        steps: (options.model && options.model.includes('FLUX')) ? 30 : 50,
+        steps: (resolvedModel && resolvedModel.includes('FLUX')) ? 30 : 50,
         guidanceScale: 7.5,
-        model: options.model
+        model: resolvedModel
       });
 
       setCurrentChat(prev => prev.map(msg =>
         msg.id === messageId
           ? {
               ...msg,
-              content: options.prompt,
+              content: options.toolMessageId
+                ? msg.content.replace(/\*\*Result\*\*:.*$/m, `**Result**: Image generated`) // update tool card Result
+                : options.prompt,
               imageData: result.base64,
               imageSrc: result.dataUri,
               imageAlt: options.prompt
