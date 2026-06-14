@@ -1,6 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useProvider } from '../context/ProviderContext';
 import { maskApiKey } from '../services/providerService';
+import {
+  IMAGE_PROVIDER_DEFINITIONS,
+  getImageProviderDefinition
+} from '../config/providers';
+import {
+  getImageLocalBaseURL,
+  getProviderApiKey,
+  setImageLocalBaseURL,
+  setProviderApiKey
+} from '../services/providerService';
 import '../styles/Settings.css';
 
 const capabilityLabels = [
@@ -20,7 +30,11 @@ const Settings = ({ onClose }) => {
     setApiKey,
     clearApiKey,
     setBaseURL,
-    keyStatus
+    keyStatus,
+    imageProviderId,
+    imageModel,
+    changeImageProvider,
+    changeImageModel
   } = useProvider();
 
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -28,12 +42,26 @@ const Settings = ({ onClose }) => {
   const [baseURLInput, setBaseURLInput] = useState('');
   const [saveState, setSaveState] = useState('');
 
+  // Image provider local state
+  const [imageApiKeyInput, setImageApiKeyInput] = useState('');
+  const [imageBaseURLInput, setImageBaseURLInput] = useState('');
+  const [imageSaveState, setImageSaveState] = useState('');
+
+  const currentIP = getImageProviderDefinition(imageProviderId);
+  const imageModelEntries = Object.entries(currentIP.imageModels || {});
+
   useEffect(() => {
     setApiKeyInput('');
     setModelInput('');
     setBaseURLInput(provider.baseURL || '');
     setSaveState('');
   }, [providerId, provider.baseURL]);
+
+  useEffect(() => {
+    setImageApiKeyInput('');
+    setImageBaseURLInput(currentIP.needsBaseUrlInput ? getImageLocalBaseURL() : '');
+    setImageSaveState('');
+  }, [imageProviderId, currentIP.needsBaseUrlInput]);
 
   const handleSaveKey = () => {
     setApiKey(apiKeyInput);
@@ -248,6 +276,158 @@ const Settings = ({ onClose }) => {
                     </li>
                   ))}
                 </ul>
+              </>
+            )}
+          </section>
+
+          {/* ---- Image Provider Section ---- */}
+          <section className="settings-section">
+            <div className="settings-section-header">
+              <div>
+                <h3>Image Provider</h3>
+                <p>Select the provider used for image generation.</p>
+              </div>
+            </div>
+
+            <div className="settings-grid">
+              <label className="settings-field">
+                <span>Provider</span>
+                <select
+                  value={imageProviderId}
+                  onChange={(e) => changeImageProvider(e.target.value)}
+                >
+                  {Object.values(IMAGE_PROVIDER_DEFINITIONS).map((ip) => (
+                    <option key={ip.id} value={ip.id}>
+                      {ip.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="settings-field">
+                <span>Model</span>
+                <select
+                  value={imageModel}
+                  onChange={(e) => changeImageModel(e.target.value)}
+                >
+                  {imageModelEntries.map(([label, id]) => (
+                    <option key={id} value={id}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {/* DeepInfra note */}
+            {imageProviderId === 'deepinfra' && (
+              <p className="settings-note">
+                Uses your DeepInfra API key configured in the LLM provider section above.
+              </p>
+            )}
+
+            {/* OpenAI: shared key */}
+            {imageProviderId === 'openai' && (
+              <>
+                {!getProviderApiKey('openai') && (
+                  <p className="settings-note" style={{ color: '#e6a817' }}>
+                    ⚠ Your OpenAI API key must be set in the LLM provider section above.
+                  </p>
+                )}
+                <p className="settings-note">
+                  Uses your OpenAI API key configured above. No separate key needed.
+                </p>
+              </>
+            )}
+
+            {/* Flux (BFL): own API key */}
+            {imageProviderId === 'flux' && (
+              <>
+                <div className="apikey-row">
+                  <input
+                    type="password"
+                    value={imageApiKeyInput}
+                    onChange={(e) => {
+                      setImageApiKeyInput(e.target.value);
+                      setImageSaveState('');
+                    }}
+                    placeholder="Paste BFL API key"
+                    autoComplete="off"
+                  />
+                  <button
+                    className="settings-btn primary"
+                    onClick={() => {
+                      setProviderApiKey('flux', imageApiKeyInput);
+                      setImageApiKeyInput('');
+                      setImageSaveState('Saved');
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+                <p className="settings-note">
+                  Get a key at{' '}
+                  <a href="https://bfl.ai" target="_blank" rel="noreferrer">
+                    bfl.ai
+                  </a>
+                  {imageSaveState && (
+                    <span className="save-state"> {imageSaveState}</span>
+                  )}
+                </p>
+              </>
+            )}
+
+            {/* Local: base URL + optional key */}
+            {imageProviderId === 'local' && (
+              <>
+                <div className="single-input-row">
+                  <input
+                    type="url"
+                    value={imageBaseURLInput}
+                    onChange={(e) => {
+                      setImageBaseURLInput(e.target.value);
+                      setImageSaveState('');
+                    }}
+                    placeholder="http://localhost:8080"
+                  />
+                  <button
+                    className="settings-btn primary"
+                    onClick={() => {
+                      setImageLocalBaseURL(imageBaseURLInput);
+                      setImageSaveState('Base URL saved');
+                    }}
+                  >
+                    Save URL
+                  </button>
+                </div>
+                <div className="apikey-row">
+                  <input
+                    type="password"
+                    value={imageApiKeyInput}
+                    onChange={(e) => {
+                      setImageApiKeyInput(e.target.value);
+                      setImageSaveState('');
+                    }}
+                    placeholder="API key (optional)"
+                    autoComplete="off"
+                  />
+                  <button
+                    className="settings-btn primary"
+                    onClick={() => {
+                      setProviderApiKey('local', imageApiKeyInput);
+                      setImageApiKeyInput('');
+                      setImageSaveState('Saved');
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+                <p className="settings-note">
+                  Expects a BFL-compatible API (POST /v1/{'{model}'} then poll /v1/get_result).
+                  {imageSaveState && (
+                    <span className="save-state"> {imageSaveState}</span>
+                  )}
+                </p>
               </>
             )}
           </section>

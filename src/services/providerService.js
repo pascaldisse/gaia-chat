@@ -1,5 +1,10 @@
 import {
+  DEFAULT_IMAGE_PROVIDER,
   DEFAULT_PROVIDER,
+  IMAGE_LOCAL_BASE_URL_KEY,
+  IMAGE_PROVIDER_DEFINITIONS,
+  IMAGE_PROVIDER_MODEL_PREFIX,
+  IMAGE_PROVIDER_STORAGE_KEY,
   PROVIDER_API_KEY_PREFIX,
   PROVIDER_BASE_URL_PREFIX,
   PROVIDER_DEFINITIONS,
@@ -7,6 +12,7 @@ import {
   PROVIDER_STORAGE_KEY,
   getDefaultImageModel,
   getDefaultModel,
+  getImageProviderDefinition,
   getProviderDefinition
 } from '../config/providers';
 
@@ -148,15 +154,73 @@ export function getCurrentProviderConfig() {
   };
 }
 
+/* ---- Image provider helpers ---- */
+
+export function getImageProviderId() {
+  const stored = readStorage(IMAGE_PROVIDER_STORAGE_KEY);
+  return IMAGE_PROVIDER_DEFINITIONS[stored] ? stored : DEFAULT_IMAGE_PROVIDER;
+}
+
+export function setImageProviderId(id) {
+  if (!IMAGE_PROVIDER_DEFINITIONS[id]) {
+    throw new Error(`Unknown image provider: ${id}`);
+  }
+  writeStorage(IMAGE_PROVIDER_STORAGE_KEY, id);
+  return id;
+}
+
+export function getSelectedImageModel(imageProviderId = getImageProviderId()) {
+  const ip = getImageProviderDefinition(imageProviderId);
+  const stored = readStorage(IMAGE_PROVIDER_MODEL_PREFIX + imageProviderId);
+  const supported = new Set(Object.values(ip.imageModels || {}));
+  if (supported.has(stored)) return stored;
+  return ip.defaultModel;
+}
+
+export function setSelectedImageModel(imageProviderId, model) {
+  const ip = getImageProviderDefinition(imageProviderId);
+  const supported = new Set(Object.values(ip.imageModels || {}));
+  if (!supported.has(model)) {
+    throw new Error(`Model ${model} is not available for ${ip.name}`);
+  }
+  writeStorage(IMAGE_PROVIDER_MODEL_PREFIX + imageProviderId, model);
+  return model;
+}
+
+export function getImageLocalBaseURL() {
+  return readStorage(IMAGE_LOCAL_BASE_URL_KEY) || 'http://localhost:8080';
+}
+
+export function setImageLocalBaseURL(url) {
+  if (url && url.trim()) {
+    writeStorage(IMAGE_LOCAL_BASE_URL_KEY, url.trim().replace(/\/+$/, ''));
+  } else {
+    removeStorage(IMAGE_LOCAL_BASE_URL_KEY);
+  }
+}
+
 export function getImageProviderConfig() {
-  const deepinfra = resolveProvider('deepinfra');
+  const imageProviderId = getImageProviderId();
+  const ip = getImageProviderDefinition(imageProviderId);
+  const model = getSelectedImageModel(imageProviderId);
+
+  // Resolve API key from the provider's apiKeyStorageKey
+  const apiKey = readStorage(ip.apiKeyStorageKey) || '';
+
+  let baseURL = ip.baseURL;
+  if (ip.needsBaseUrlInput) {
+    baseURL = getImageLocalBaseURL();
+  }
+
   return {
-    providerId: deepinfra.id,
-    providerName: deepinfra.name,
-    apiKey: deepinfra.apiKey,
-    inferenceBaseURL: deepinfra.inferenceBaseURL,
-    imageModel: deepinfra.defaultImageModel,
-    supportsImages: deepinfra.supportsImages
+    providerId: ip.id,
+    providerName: ip.name,
+    apiType: ip.apiType,
+    baseURL,
+    apiKey,
+    model,
+    needsBaseUrlInput: Boolean(ip.needsBaseUrlInput),
+    imageModels: ip.imageModels
   };
 }
 

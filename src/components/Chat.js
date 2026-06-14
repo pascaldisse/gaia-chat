@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Message from './Message';
-import { MODELS, IMAGE_MODELS } from '../config';
+import { MODELS, IMAGE_MODELS, getImageProviderModelOptions } from '../config';
 import '../styles/Chat.css';
 import ChatInput from './ChatInput';
 import { RPGSystem } from '../utils/RPGSystem';
@@ -13,6 +13,7 @@ import { createPersonaTools } from "../services/tools";
 import { isDiceRollCommand, extractDiceParams, formatDiceNotation } from "../utils/ToolUtilities";
 import { getImageProviderConfig, resolveModelForProvider } from '../services/providerService';
 import { streamChatCompletion } from '../services/llmService';
+import { generateImage as generateImageService } from '../services/imageService';
 
 const Chat = ({ 
   currentChat, 
@@ -48,7 +49,7 @@ const Chat = ({
   const [selectedModel, setSelectedModel] = useState('flux_schnell');
   const [selectedStyle, setSelectedStyle] = useState('realistic');
   const [useEnhancement, setUseEnhancement] = useState(true);
-  const [imageModel, setImageModel] = useState(getImageProviderConfig().imageModel || IMAGE_MODELS.FLUX_SCHNELL);
+  const [imageModel, setImageModel] = useState(getImageProviderConfig().model || IMAGE_MODELS.FLUX_SCHNELL);
   const [chatKnowledgeFiles, setChatKnowledgeFiles] = useState([]);
   const [filesUpdated, setFilesUpdated] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
@@ -799,6 +800,10 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     const messageId = Date.now();
 
     try {
+      const prompt = options.enhancement
+        ? `8k resolution, professional composition, ${options.style} style, ${options.prompt}`
+        : options.prompt;
+
       setCurrentChat(prev => [...prev, {
         id: messageId,
         content: `Generating ${options.style} image with ${options.model}: "${options.prompt}"...`,
@@ -809,66 +814,33 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
       }]);
 
-      const requestBody = {
-        prompt: options.enhancement 
-          ? `8k resolution, professional composition, ${options.style} style, ${options.prompt}`
-          : options.prompt,
-        negative_prompt: options.style === 'realistic' ? 'anime, cartoon, drawing' : '',
+      const result = await generateImageService({
+        prompt,
+        negativePrompt: options.style === 'realistic' ? 'anime, cartoon, drawing' : '',
         width: 1024,
         height: 1024,
-        num_inference_steps: options.model.includes('FLUX') ? 30 : 50,
-        guidance_scale: 7.5
-      };
-
-      const imageProvider = getImageProviderConfig();
-      if (!imageProvider.apiKey) {
-        throw new Error('Missing DeepInfra API key. Image generation currently requires a DeepInfra key in Settings.');
-      }
-
-      const response = await fetch(`${imageProvider.inferenceBaseURL}/${options.model}`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${imageProvider.apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
+        steps: (options.model && options.model.includes('FLUX')) ? 30 : 50,
+        guidanceScale: 7.5,
+        model: options.model
       });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`API Error (${response.status}): ${errorData}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.images?.[0]) {
-        throw new Error('No image data received from API');
-      }
-
-      const imageBase64 = data.images[0];
-      
-      // Check if the base64 string already includes the data URI prefix
-      const imageSource = imageBase64.startsWith('data:image/') 
-        ? imageBase64 
-        : `data:image/png;base64,${imageBase64}`;
-      
-	      setCurrentChat(prev => prev.map(msg => 
-	        msg.id === messageId 
-	          ? { 
-	              ...msg, 
-	              content: options.prompt,
-	              imageData: imageBase64,
-	              imageSrc: imageSource,
-	              imageAlt: options.prompt
-	            }
-	          : msg
-	      ));
+      setCurrentChat(prev => prev.map(msg =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              content: options.prompt,
+              imageData: result.base64,
+              imageSrc: result.dataUri,
+              imageAlt: options.prompt
+            }
+          : msg
+      ));
 
     } catch (error) {
       console.error("Image generation failed:", error);
       const errorMessage = error.message || 'Network request failed';
-      setCurrentChat(prev => prev.map(msg => 
-        msg.id === messageId 
+      setCurrentChat(prev => prev.map(msg =>
+        msg.id === messageId
           ? { ...msg, content: `Failed to generate image: ${errorMessage}. Please check your API key and network connection.` }
           : msg
       ));
@@ -1408,10 +1380,12 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
 };
 
 const ImageModal = ({ onClose, onGenerate, initialPrompt }) => {
+  const imageModelOptions = getImageProviderModelOptions();
+  const defaultImgModel = imageModelOptions[0]?.id || '';
   const [prompt, setPrompt] = useState(initialPrompt);
   const [style, setStyle] = useState('realistic');
   const [enhancement, setEnhancement] = useState(true);
-  const [selectedModel, setSelectedModel] = useState(IMAGE_MODELS.FLUX_SCHNELL);
+  const [selectedModel, setSelectedModel] = useState(defaultImgModel);
 
   const handleGenerate = () => {
     onGenerate({
@@ -1446,8 +1420,9 @@ const ImageModal = ({ onClose, onGenerate, initialPrompt }) => {
             value={selectedModel} 
             onChange={(e) => setSelectedModel(e.target.value)}
           >
-            <option value={IMAGE_MODELS.FLUX_SCHNELL}>Flux Schnell (Fast)</option>
-            <option value={IMAGE_MODELS.FLUX_DEV}>Flux Dev</option>
+            {imageModelOptions.map(opt => (
+              <option key={opt.id} value={opt.id}>{opt.label}</option>
+            ))}
           </select>
         </label>
         <label>

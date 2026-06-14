@@ -153,6 +153,71 @@ export const PROVIDER_DEFINITIONS = {
   }
 };
 
+export const IMAGE_PROVIDER_DEFINITIONS = {
+  deepinfra: {
+    id: 'deepinfra',
+    name: 'DeepInfra',
+    apiType: 'deepinfra-inference',
+    baseURL: 'https://api.deepinfra.com/v1/inference',
+    needsBaseUrlInput: false,
+    apiKeyStorageKey: 'gaia_provider_apikey_deepinfra',
+    imageModels: {
+      FLUX_SCHNELL: 'black-forest-labs/FLUX-1-schnell',
+      FLUX_DEV: 'black-forest-labs/FLUX-1-dev'
+    },
+    defaultModel: 'black-forest-labs/FLUX-1-schnell'
+  },
+  openai: {
+    id: 'openai',
+    name: 'OpenAI',
+    apiType: 'openai-images',
+    baseURL: 'https://api.openai.com/v1',
+    needsBaseUrlInput: false,
+    apiKeyStorageKey: 'gaia_provider_apikey_openai',
+    imageModels: {
+      'GPT Image 1': 'gpt-image-1',
+      'DALL·E 3': 'dall-e-3'
+    },
+    defaultModel: 'gpt-image-1'
+  },
+  flux: {
+    id: 'flux',
+    name: 'Flux (BFL)',
+    apiType: 'bfl',
+    baseURL: 'https://api.bfl.ai',
+    needsBaseUrlInput: false,
+    apiKeyStorageKey: 'gaia_provider_apikey_flux',
+    imageModels: {
+      'FLUX Pro 1.1': 'flux-pro-1.1',
+      'FLUX Dev': 'flux-dev',
+      'FLUX.2 Pro': 'flux-2-pro',
+      'FLUX.2 Flex': 'flux-2-flex',
+      'FLUX.2 Klein 9B': 'flux-2-klein-9b',
+      'FLUX.2 Klein 4B': 'flux-2-klein-4b'
+    },
+    defaultModel: 'flux-pro-1.1'
+  },
+  local: {
+    id: 'local',
+    name: 'Local (BFL-Compatible)',
+    apiType: 'bfl',
+    baseURL: 'http://localhost:8080',
+    needsBaseUrlInput: true,
+    apiKeyStorageKey: 'gaia_image_apikey_local',
+    imageModels: {
+      'FLUX.2 Klein 4B': 'flux-2-klein-4b',
+      'FLUX.2 Klein 9B': 'flux-2-klein-9b',
+      'FLUX.2 Klein 9B (preview)': 'flux-2-klein-9b-preview'
+    },
+    defaultModel: 'flux-2-klein-4b'
+  }
+};
+
+export const DEFAULT_IMAGE_PROVIDER = 'deepinfra';
+export const IMAGE_PROVIDER_STORAGE_KEY = 'gaia_image_provider';
+export const IMAGE_PROVIDER_MODEL_PREFIX = 'gaia_image_model_';
+export const IMAGE_LOCAL_BASE_URL_KEY = 'gaia_image_local_base_url';
+
 export const DEFAULT_PROVIDER = 'deepinfra';
 export const PROVIDER_STORAGE_KEY = 'gaia_selected_provider';
 export const PROVIDER_API_KEY_PREFIX = 'gaia_provider_apikey_';
@@ -171,6 +236,18 @@ export function getDefaultModel(providerId = DEFAULT_PROVIDER) {
 export function getDefaultImageModel(providerId = DEFAULT_PROVIDER) {
   const provider = getProviderDefinition(providerId);
   return Object.values(provider.imageModels || {})[0] || '';
+}
+
+export function getImageProviderDefinition(imageProviderId = DEFAULT_IMAGE_PROVIDER) {
+  return IMAGE_PROVIDER_DEFINITIONS[imageProviderId] || IMAGE_PROVIDER_DEFINITIONS[DEFAULT_IMAGE_PROVIDER];
+}
+
+export function getImageProviderModelOptions(imageProviderId = DEFAULT_IMAGE_PROVIDER) {
+  const ip = getImageProviderDefinition(imageProviderId);
+  return Object.entries(ip.imageModels || {}).map(([label, id]) => ({
+    label,
+    id
+  }));
 }
 
 export function getProviderModelOptions(providerId = DEFAULT_PROVIDER) {
