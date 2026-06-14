@@ -35,6 +35,11 @@ const Chat = ({
   const [isLoading, setIsLoading] = useState(false);
   const [debugLog, setDebugLog] = useState([]);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  // Whether the view should stick to the bottom. Stays true while the user is
+  // near the bottom; flips to false as soon as they scroll up so streaming
+  // updates don't yank them back down.
+  const isPinnedToBottomRef = useRef(true);
   const [isCancelled, setIsCancelled] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [rpgOutcomes, setRpgOutcomes] = useState({});
@@ -62,11 +67,33 @@ const Chat = ({
     ]);
   };
 
+  // Only scroll the messages list itself — never via scrollIntoView, which
+  // would also scroll the page/ancestors and yank the whole viewport.
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (container && isPinnedToBottomRef.current) {
+      container.scrollTop = container.scrollHeight;
+    }
+  };
+
+  // Track whether the user is near the bottom; once they scroll up, stop
+  // auto-following so streaming updates don't drag them back down.
+  const handleMessagesScroll = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    isPinnedToBottomRef.current = distanceFromBottom < 150;
   };
 
   useEffect(scrollToBottom, [currentChat]);
+
+  // When switching to a different chat, re-pin and jump to the latest message
+  // (the messages load asynchronously, so the [currentChat] effect handles the
+  // actual scroll once they arrive).
+  useEffect(() => {
+    isPinnedToBottomRef.current = true;
+  }, [selectedChatId]);
 
   const getMentionedPersonas = (message) => {
     const matches = message.match(/@(\w+)/g) || [];
@@ -1260,7 +1287,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           )}
         </div>
       </div>
-      <div className="messages">
+      <div className="messages" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
         {currentChat.map(message => (
           <Message 
             key={message.id} 
