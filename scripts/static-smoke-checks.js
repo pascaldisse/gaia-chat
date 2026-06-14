@@ -112,6 +112,17 @@ const checks = [
         !hiveMind.includes('ChatOpenAI') &&
         !hiveMind.includes('ChatPromptTemplate');
     }
+  },
+  {
+    name: 'Legacy LangChain and AgentFlow code is removed',
+    run() {
+      const packageJson = read('package.json');
+      return !packageJson.includes('langchain') &&
+        !packageJson.includes('reactflow') &&
+        !exists('src/services/agentService.js') &&
+        !exists('src/services/agentFlow') &&
+        !exists('src/components/AgentFlow');
+    }
   }
 ];
 

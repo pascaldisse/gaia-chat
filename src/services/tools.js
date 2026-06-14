@@ -1,7 +1,6 @@
-import { DynamicTool } from "@langchain/core/tools";
-// Import these in a real implementation
-// import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
-// import { DuckDuckGoSearchResults } from "@langchain/community/tools/ddg_search";
+function createTool({ name, description, func }) {
+  return { name, description, func };
+}
 
 // Format search results for readability
 function formatSearchResults(results) {
@@ -125,7 +124,7 @@ export function createPersonaTools(chatComponent, persona) {
   };
   
   // Always include file search
-  tools.push(new DynamicTool({
+  tools.push(createTool({
     name: "file_search",
     description: "Search through uploaded knowledge files",
     func: async (query) => {
@@ -144,7 +143,7 @@ export function createPersonaTools(chatComponent, persona) {
   // Tavily Search Tool
   if (persona.agentSettings?.toolConfig?.tavilySearch) {
     console.log(`Adding Tavily search tool for ${persona.name}`);
-    tools.push(new DynamicTool({
+    tools.push(createTool({
       name: "tavily_search",
       description: "Search the web using Tavily for current information about a topic or question. Use this for comprehensive, AI-optimized search results when you need up-to-date facts or information not in your knowledge base.",
       func: async (query) => {
@@ -185,7 +184,7 @@ export function createPersonaTools(chatComponent, persona) {
   // DuckDuckGo Search Tool
   if (persona.agentSettings?.toolConfig?.duckDuckGoSearch) {
     console.log(`Adding DuckDuckGo search tool for ${persona.name}`);
-    tools.push(new DynamicTool({
+    tools.push(createTool({
       name: "duckduckgo_search",
       description: "Search the web using DuckDuckGo for information about a topic or question. This is a privacy-focused search that doesn't track your queries. Use when you need basic web search results without requiring an API key.",
       func: async (query) => {
@@ -221,7 +220,7 @@ export function createPersonaTools(chatComponent, persona) {
   
   if (persona.agentSettings?.toolConfig?.imageGeneration) {
     console.log(`Adding image generation tool for ${persona.name}`);
-    tools.push(new DynamicTool({
+    tools.push(createTool({
       name: "generate_image",
       description: "Generate an image from text description",
       func: async (prompt) => {
@@ -243,7 +242,7 @@ export function createPersonaTools(chatComponent, persona) {
   
   if (persona.agentSettings?.toolConfig?.diceRoll) {
     console.log(`Adding dice roll tool for ${persona.name}`);
-    tools.push(new DynamicTool({
+    tools.push(createTool({
       name: "dice_roll",
       description: "Roll polyhedral dice. Input can be in 'd' notation (e.g. '2d6' for two 6-sided dice) or as 'typeOfDice,numberOfDice'.",
       func: async (input) => {

@@ -9,7 +9,6 @@ import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 import FilePreview from './FilePreview';
 import { chatDB, knowledgeDB, userDB } from '../services/db';
 import { parseFileContent } from '../utils/FileParser';
-import { PersonaAgent } from "../services/agentService";
 import { createPersonaTools } from "../services/tools";
 import { isDiceRollCommand, extractDiceParams, formatDiceNotation } from "../utils/ToolUtilities";
 import { getImageProviderConfig, resolveModelForProvider } from '../services/providerService';
@@ -220,164 +219,7 @@ const Chat = ({
         isUser: false,
         personaId: persona.id
       }]);
-      
-      // Create a component reference for tool creation
-      const componentRef = {
-        knowledgeDB,
-        generateImage,
-        imageModel,
-        selectedStyle,
-        setCurrentChat  // Pass this so tools can add messages to chat
-      };
-      
-      // Check if persona has tools configured and create them
-      let useAgent = false;
-      let tools = [];
-      
-      if (persona.agentSettings?.toolConfig) {
-        console.log(`Persona ${persona.name} has tool configuration:`, persona.agentSettings.toolConfig);
-        
-        // Check if any tools are enabled
-        const hasEnabledTools = Object.values(persona.agentSettings.toolConfig).some(enabled => enabled);
-        
-        if (hasEnabledTools) {
-          console.log(`Creating tools for persona ${persona.name}`);
-          tools = createPersonaTools(componentRef, persona);
-          useAgent = false;
-          console.log(`Created ${tools.length} tools for ${persona.name}; legacy LangChain agent path is disabled`);
-          
-          // Add debug log for tools
-          addDebugLog('TOOLS', {
-            persona: persona.name,
-            tools: tools.map(t => t.name),
-            toolConfig: persona.agentSettings.toolConfig
-          });
-          
-          // This dice roll handling is now moved to the useAgent condition for more reliable execution
-          console.log("Direct dice roll handling moved to the useAgent section");
-        }
-      }
-      
-      // If we have tools, use the agent approach
-      if (useAgent) {
-        console.log(`Using agent with tools for persona ${persona.name}`);
-        
-        // First, check if this is a direct dice roll command that we can handle immediately
-        if (personaHasTool(persona, 'diceRoll') && 
-            isDiceRollCommand(triggerMessage.content)) {
-          try {
-            console.log(`Direct tool execution: Dice roll command detected for ${persona.name}`);
-            
-            // Find the dice roll tool
-            const diceRollTool = tools.find(tool => tool.name === "dice_roll");
-            if (diceRollTool) {
-              // Extract dice parameters
-              const { sides, count } = extractDiceParams(triggerMessage.content);
-              const diceNotation = formatDiceNotation(sides, count);
-              
-              console.log(`Executing dice roll directly: ${diceNotation}`);
-              
-              // First update message with "thinking" state
-              setCurrentChat(prev => 
-                prev.map(msg => 
-                  msg.id === messageId 
-                    ? { ...msg, content: `*Rolling ${diceNotation}...*` }
-                    : msg
-                )
-              );
-              
-              // Execute the dice roll
-              const result = await diceRollTool.func(diceNotation);
-              console.log("Dice roll result:", result);
-              
-              // Update message with the result
-              setCurrentChat(prev => 
-                prev.map(msg => 
-                  msg.id === messageId 
-                    ? { 
-                        ...msg, 
-                        content: `I rolled ${diceNotation} for you: ${result.replace('🎲 ', '')}`
-                      }
-                    : msg
-                )
-              );
-              
-              // Skip the rest of the agent processing
-              if (typeof persona.markActive === 'function') {
-                persona.markActive();
-              }
-              return;
-            }
-          } catch (error) {
-            console.error("Error executing dice roll directly:", error);
-            // Continue with normal processing if direct execution fails
-          }
-        }
-        
-        // Create token handler for streaming
-        let assistantMessage = '';
-        const handleNewToken = (token) => {
-          assistantMessage += token;
-          setCurrentChat(prev => 
-            prev.map(msg => 
-              msg.id === messageId 
-                ? { ...msg, content: assistantMessage }
-                : msg
-            )
-          );
-        };
-        
-        // Create the agent
-        const agent = await PersonaAgent.create(
-          persona,
-          tools,
-          {
-            handleNewToken,
-            handleToolStart: (tool) => {
-              console.log(`Tool execution started: ${tool.name}`);
-              addDebugLog('TOOL_START', { 
-                name: tool.name,
-                persona: persona.name, 
-                input: tool.input
-              });
-            },
-            handleToolEnd: (output) => {
-              console.log(`Tool execution completed with output:`, output);
-              addDebugLog('TOOL_END', { 
-                result: output, 
-                persona: persona.name
-              });
-            },
-            handleChainStart: (chain) => {
-              console.log(`Chain execution started for ${persona.name}`);
-            },
-            handleChainEnd: (output) => {
-              console.log(`Chain execution completed for ${persona.name}:`, output);
-            },
-            handleAgentAction: (action) => {
-              console.log(`Agent ${persona.name} is taking action:`, action);
-              addDebugLog('AGENT_ACTION', { 
-                action: action.tool,
-                input: action.toolInput,
-                persona: persona.name
-              });
-            }
-          }
-        );
-        
-        // Invoke the agent
-        const result = await agent.invoke({
-          message: triggerMessage.content,
-          history: recentMessages,
-          outcome
-        });
-        
-        console.log("Agent result:", result);
-      } else {
-        // Use the standard approach if no tools are enabled
-        console.log(`Using standard chat for persona ${persona.name} (no tools)`);
-        
-        const modulatedPrompt = `${persona.systemPrompt}
+      const modulatedPrompt = `${persona.systemPrompt}
 ${generateRpgInstructions(outcome)}
 
 Recent conversation:
@@ -387,25 +229,24 @@ ${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
-        await streamChatCompletion({
-          model: resolveModelForProvider(persona.model),
-          messages: [
-            { role: "system", content: modulatedPrompt },
-            { role: "user", content: triggerMessage.content }
-          ],
-          maxTokens: 1000,
-          signal: controllerRef.current.signal,
-          onToken: (_token, fullText) => {
-            setCurrentChat(prev => 
-              prev.map(msg => 
-                msg.id === messageId 
-                  ? { ...msg, content: fullText }
-                  : msg
-              )
-            );
-          }
-        });
-      }
+      await streamChatCompletion({
+        model: resolveModelForProvider(persona.model),
+        messages: [
+          { role: "system", content: modulatedPrompt },
+          { role: "user", content: triggerMessage.content }
+        ],
+        maxTokens: 1000,
+        signal: controllerRef.current.signal,
+        onToken: (_token, fullText) => {
+          setCurrentChat(prev => 
+            prev.map(msg => 
+              msg.id === messageId 
+                ? { ...msg, content: fullText }
+                : msg
+            )
+          );
+        }
+      });
 
       // Check if markActive method exists before calling it
       if (typeof persona.markActive === 'function') {

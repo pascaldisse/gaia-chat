@@ -14,7 +14,7 @@ export const isDiceRollCommand = (message) => {
   const dicePatterns = [
     /roll\s+(?:a|an)?\s*(\d+)?d(\d+)/i,      // "roll a d20" or "roll 3d6"
     /roll\s+(?:a|an)?\s*(\d+)\s*sided\s*dice/i, // "roll a 20 sided dice"
-    /roll\s+dice/i,                           // "roll dice"
+    /roll\s+(?:some\s+|the\s+)?dice/i,        // "roll dice", "roll some dice", "roll the dice"
     /\b(\d+)?d(\d+)\b/i                       // Just "d20" or "3d6"
   ];
   

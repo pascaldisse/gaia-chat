@@ -280,9 +280,9 @@ const GaiaHiveDemo = () => {
       paddingTop: '70px' // Add space for the fixed nav bar
     }}>
       <div className="demo-header">
-        <h1>🌿 Gaia Hive Mind</h1>
+        <h1>Gaia Hive Mind</h1>
         <p>
-          This multi-agent system lets different attributes compete and collaborate, 
+          This attribute system lets different perspectives compete and collaborate, 
           with dice rolls determining which aspects have the strongest influence on the final response.
         </p>
       </div>

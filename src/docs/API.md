@@ -171,23 +171,13 @@ Available Tools:
 
 ## Services
 
-### Agent Service (`PersonaAgent`)
+### LLM Service
 
-Manages the execution and behavior of AI personas:
-- Persona initialization
-- RPG-based behavior generation
-- Tool management
-- Response generation
-
-#### Usage Example
-```javascript
-const agent = new PersonaAgent(persona, tools, {
-  onResponse: handleResponse,
-  onError: handleError
-});
-
-await agent.respond(message, context);
-```
+Direct provider client used by Chat and Hive Mind:
+- OpenAI-compatible chat completions
+- Anthropic Messages API
+- Streaming response updates
+- Provider/model/base URL settings from the runtime settings modal
 
 ### Database Service
 
