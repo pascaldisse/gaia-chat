@@ -201,9 +201,10 @@ async function bflGenerate({ config, resolvedModel, prompt, width, height, apiKe
     throw new Error('BFL: no task id returned from submit');
   }
 
-  // 2. Poll
-  const MAX_ATTEMPTS = 40;
+  // 2. Poll — local models (e.g. FLUX.2 on Apple Silicon) can take a while, so
+  // allow up to ~3 min. Fast hosted providers return early; this only raises the ceiling.
   const POLL_INTERVAL = 1500;
+  const MAX_ATTEMPTS = 120; // 120 * 1.5s = 180s
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     await new Promise(r => setTimeout(r, POLL_INTERVAL));
@@ -267,5 +268,5 @@ async function bflGenerate({ config, resolvedModel, prompt, width, height, apiKe
     }
   }
 
-  throw new Error('Image generation timed out after 60 seconds');
+  throw new Error(`Image generation timed out after ${(MAX_ATTEMPTS * POLL_INTERVAL) / 1000} seconds`);
 }
