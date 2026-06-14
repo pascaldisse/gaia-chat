@@ -35,7 +35,7 @@ export const PROVIDER_DEFINITIONS = {
     id: 'deepseek',
     name: 'DeepSeek',
     apiType: 'openai-compatible',
-    baseURL: 'https://api.deepseek.com/v1',
+    baseURL: 'https://api.deepseek.com',
     inferenceBaseURL: '',
     apiKeyLabel: 'DeepSeek API key',
     docsURL: 'https://platform.deepseek.com/api_keys',
@@ -43,6 +43,8 @@ export const PROVIDER_DEFINITIONS = {
     supportsImages: false,
     supportsTTS: false,
     models: {
+      DEEPSEEK_V4_FLASH: 'deepseek-v4-flash',
+      DEEPSEEK_V4_PRO: 'deepseek-v4-pro',
       DEEPSEEK_CHAT: 'deepseek-chat',
       DEEPSEEK_REASONER: 'deepseek-reasoner'
     },
