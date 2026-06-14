@@ -1,226 +1,115 @@
-# Gaia - AI Persona Chat System
+# Gaia — AI Persona Chat System
 
-Gaia is an innovative AI chat application that implements a unique RPG-style personality system for AI agents. The system enables dynamic, personality-driven interactions between users and AI personas, each with distinct traits, capabilities, and behavior patterns.
-
-![Gaia Project Banner](src/assets/banner.png)
-
-## Latest Updates
-
-- 🔊 **Improved Audio System**: Fixed audio playback issues and added new debugging tools
-- 🚀 **Server Persistence**: Enhanced restart script for continuous server operation
-- 🎭 **Expanded Persona Customization**: Updated persona attribute editors with new features
+Gaia is an AI chat application with an RPG-style personality system. Each AI persona has distinct traits (initiative, empathy, talkativeness, curiosity, etc.) that shape its behavior and response style. Personas can use tools, generate images, and deliberate via a multi-attribute Hive Mind.
 
 ## Features
 
-- 🤖 **Multi-Persona Chat System**: Interact with multiple AI personas simultaneously
-- 🎲 **RPG-Based Personality System**: Dynamic behavior generation using D20-based mechanics
-- 📚 **Knowledge Integration**: Upload and manage knowledge files for personas
-- 🎨 **Image Generation**: Create images using state-of-the-art AI models
-- 🛠️ **Customizable Tools**: Configure agent capabilities and behaviors
-- 🔊 **Enhanced Voice System**: Voice responses with multiple TTS engines and improved audio playback sequencing
-- 🎭 **Message Formatting**: Custom formatting rules for roleplay and character actions
-- ⚡ **Real-time Streaming**: Instant response streaming for better UX
+- **Multi-persona chat** — create and manage AI personas with custom system prompts, agent settings, and tool configurations.
+- **RPG personality system** — 11 D20-style attributes (initiative, talkativeness, confidence, curiosity, empathy, etc.) with modifiers that influence response style.
+- **Multi-provider LLM** — switch between chat providers and models in Settings. Supported providers: DeepInfra, DeepSeek, OpenAI, Anthropic, local OpenAI-compatible, and custom OpenAI-compatible endpoints.
+- **Independent image generation** — image provider and model are selected separately from the chat LLM. Supported backends: DeepInfra (FLUX), OpenAI (GPT Image / DALL·E), Flux BFL, and local BFL-compatible.
+- **Voice / TTS** — text-to-speech via DeepInfra (Zonos, Kokoro engines) with persona-specific voice settings.
+- **Custom message formatting** — `<speech>`, `<action>`, and `<function>` tags for roleplay and structured output.
+- **Tools (agent-callable)** — file search against uploaded knowledge files, web search (Tavily, DuckDuckGo), image generation, and dice roll. Tools are enabled per persona in agent settings.
+- **Hive Mind** — multi-attribute deliberation where each attribute agent evaluates a query from its own perspective.
+- **Persistence** — conversations and personas are stored client-side via IndexedDB (idb).
+- **Knowledge files** — upload and search PDFs (pdfjs-dist) and text files for persona knowledge.
 
-## Quick Start
+## Tech Stack
 
-1. **Installation**
-   ```bash
-   # Clone the repository
-   git clone https://github.com/yourusername/gaia.git
-   cd gaia
+- **React 18** (functional components + hooks)
+- **Vite 6** (build tool and dev server)
+- **Vitest** (test runner)
+- **IndexedDB** via idb (client-side persistence)
+- **pdfjs-dist** (PDF parsing)
 
-   # Install dependencies
-   npm install
-   ```
+## Getting Started
 
-2. **Configuration**
-   - Copy `.env.example` to `.env`
-   - Add your API keys and configuration
-   ```bash
-   cp .env.example .env
-   ```
+### Prerequisites
 
-3. **Run Development Server**
-   ```bash
-   npm start
-   ```
-   Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Node.js 18+ (Vite 6 requirement)
+- npm
 
-## Available Scripts
+### Install
 
-- `npm start`: Run development server
-- `npm test`: Launch test runner
-- `npm run build`: Build for production
-- `npm run eject`: Eject from Create React App
+```bash
+npm install
+```
 
-## Documentation
+### Run (development)
 
-- [API Documentation](src/docs/API.md): Comprehensive API and system documentation
-- [Design System](src/docs/DESIGN.md): UI design principles and guidelines
-- [Component Guide](src/docs/API.md#ui-components): UI component documentation
-- [Best Practices](src/docs/API.md#best-practices): Development guidelines
-- [Examples](src/docs/API.md#examples): Code examples and usage patterns
+```bash
+npm run dev       # or: npm start
+```
 
-## Architecture
+Opens on [http://localhost:3000](http://localhost:3000).
 
-Gaia is built with a modular architecture:
+### Build (production)
+
+```bash
+npm run build     # output → build/
+npm run preview   # preview production build locally
+```
+
+### Test
+
+```bash
+npm test          # runs Vitest
+```
+
+## Configuration
+
+Gaia stores all configuration in the browser (localStorage). No `.env` file is required.
+
+### Chat LLM provider
+
+1. Open **Settings** in the app.
+2. Under **Provider**, select one of: **DeepInfra**, **DeepSeek**, **OpenAI**, **Anthropic**, **Local OpenAI-Compatible**, or **Custom OpenAI-Compatible**.
+3. Enter your API key for the selected provider.
+4. Choose a model from the provider’s supported list (or enter a custom model ID where allowed).
+5. For Local and Custom providers you can also set a custom base URL.
+
+Provider and model selections, API keys, and base URLs are persisted in `localStorage`.
+
+### Image provider
+
+The image provider is configured independently from the chat LLM:
+
+1. In Settings, under **Image Provider**, select: **DeepInfra**, **OpenAI**, **Flux (BFL)**, or **Local (BFL-Compatible)**.
+2. Enter the API key for the chosen image provider.
+3. Choose a model (e.g., FLUX-1-schnell, DALL·E 3, FLUX Pro 1.1, etc.).
+
+### Voice (TTS)
+
+TTS is available when using the **DeepInfra** chat provider. Personas can be assigned a voice ID and TTS engine (Zonos or Kokoro) via the persona editor.
+
+## Project Structure
 
 ```
 src/
-├── components/     # React UI components
-├── services/      # Core services and APIs
-├── utils/         # Utility functions
-├── models/        # Data models
-├── config/        # Configuration
-├── styles/        # CSS styles
-└── docs/          # Documentation
+├── components/       # React UI components
+│   ├── admin/        # Admin/settings panels
+│   ├── auth/         # Auth-related components
+│   ├── GaiaHive/     # Hive Mind UI
+│   └── personas/     # Persona creation and editing
+├── config/           # Provider definitions, constants
+├── context/          # React context providers (ProviderContext, etc.)
+├── contexts/         # Additional contexts
+├── docs/             # Documentation (API.md, DESIGN.md)
+├── models/           # Data models (Persona)
+├── services/         # Core services
+│   ├── db.js         # IndexedDB persistence layer
+│   ├── llmService.js # LLM chat completion (streaming)
+│   ├── providerService.js  # Provider state management
+│   ├── imageService.js     # Image generation
+│   ├── voiceService.js     # TTS
+│   ├── hiveMindService.js  # Hive Mind deliberation
+│   └── tools.js      # Agent tools (search, dice, image gen)
+├── styles/           # CSS
+├── tests/            # Test files
+└── utils/            # Utility functions
 ```
-
-## Core Components
-
-### Persona System
-The heart of Gaia is its persona system, allowing creation and management of AI personalities with customizable traits:
-
-```javascript
-const persona = new Persona({
-  name: "Assistant",
-  systemPrompt: "You are a helpful AI assistant",
-  model: MODELS.LLAMA3_70B,
-  initiative: 7,
-  empathy: 8,
-  voiceId: "american_female",
-  formatSettings: {
-    useRoleplayMarkdown: true,
-    customFormatting: true,
-    formatRules: [
-      {
-        name: "Speech",
-        startTag: "<speech>",
-        endTag: "</speech>",
-        markdownFormat: "**{{content}}**",
-        enabled: true
-      }
-    ]
-  }
-});
-```
-
-### RPG Mechanics
-Unique D20-based system for generating dynamic behaviors:
-- 11 distinct attributes (initiative, talkativeness, confidence, curiosity, empathy, etc.)
-- Attribute modifiers affecting response style
-- Context-aware responses
-- Personality-driven interactions
-
-### Voice System
-Enhanced text-to-speech capabilities for more immersive experiences:
-- Multiple voice engines: Zonos (high quality) and Kokoro (fast)
-- Diverse voice options with different accents and genders
-- Persona-specific voice settings
-- Fixed audio playback sequence bugs to ensure smooth playback
-- Enhanced debug UI for voice settings and audio troubleshooting
-- Reliable audio chunk processing with improved error handling
-
-### Message Formatting
-Custom message formatting system for roleplay and structured outputs:
-- Roleplay markdown for actions and speech
-- Custom tag-based formatting
-- Templated formatting rules for different content types
-
-## Models
-
-Gaia supports multiple AI models:
-
-### Chat Models
-- LLAMA3 70B
-- Mixtral 8x22B
-- DeepSeek V3/R1
-- DBRX
-
-### Image Models
-- FLUX Schnell
-- FLUX Dev
-
-## Development
-
-### Prerequisites
-- Node.js 16+
-- npm or yarn
-- Modern web browser
-
-### Setup Development Environment
-1. Install dependencies
-   ```bash
-   npm install
-   ```
-
-2. Start development server
-   ```bash
-   npm start
-   ```
-
-3. Run tests
-   ```bash
-   npm test
-   ```
-
-4. For production deployment with auto-restart
-   ```bash
-   # Start the server with persistence
-   ./restart.sh
-   
-   # The server will automatically restart if it crashes
-   ```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. Commit your changes
-   ```bash
-   git commit -m 'Add amazing feature'
-   ```
-4. Push to the branch
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-5. Open a Pull Request
 
 ## License
 
-Gaia is open source software [licensed under the MIT license](LICENSE). The MIT License is a permissive license that is short and to the point. It lets people do anything they want with your code as long as they provide attribution back to you and don't hold you liable.
-
-### What you can do with this code:
-- ✅ Commercial use
-- ✅ Modify
-- ✅ Distribute
-- ✅ Private use
-
-### Requirements:
-- ℹ️ License and copyright notice
-
-### Limitations:
-- ⚠️ No liability
-- ⚠️ No warranty
-
-See the [LICENSE](LICENSE) file for the full license text.
-
-## Acknowledgments
-
-- Create React App for the initial project setup
-- All the amazing open-source libraries used in this project
-- The AI/ML community for their continuous innovations
-
-## Support
-
-For support, please:
-1. Check the [documentation](src/docs/API.md)
-2. Open an issue
-3. Join our community Discord
-
----
-
-Built with ❤️ using React and AI
+Gaia is open source under the [MIT License](LICENSE).
