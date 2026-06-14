@@ -1,14 +1,5 @@
-import { ChatOpenAI } from "@langchain/openai";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { getCurrentProviderConfig } from "./providerService";
-
-function getLLMConfig() {
-  const provider = getCurrentProviderConfig();
-  if (!provider.apiKey) {
-    throw new Error(`Missing API key for ${provider.providerName}. Add it in Settings.`);
-  }
-  return provider;
-}
+import { resolveModelForProvider } from "./providerService";
+import { streamChatCompletion } from "./llmService";
 
 // Service for Gaia Hive Mind attribute agents
 export class AttributeAgent {
@@ -25,20 +16,8 @@ export class AttributeAgent {
   // Generate a response based on the attribute's perspective with streaming
   async generateResponse(query, conversationHistory = [], onUpdate = null) {
     try {
-      // Create the chat model with streaming enabled
-      const { apiKey, baseURL } = getLLMConfig();
-      const chat = new ChatOpenAI({
-        apiKey,
-        modelName: this.modelId,
-        temperature: 0.7,
-        maxTokens: 500,
-        streaming: true,
-        configuration: { baseURL }
-      });
-
-      // Build a prompt template for this attribute agent
-      const prompt = ChatPromptTemplate.fromMessages([
-        ["system", `You are an AI assistant that embodies the attribute of ${this.attribute.name.toUpperCase()}.
+      const messages = [
+        { role: "system", content: `You are an AI assistant that embodies the attribute of ${this.attribute.name.toUpperCase()}.
 
 Your attribute value is ${this.attribute.value}/5, which means you strongly prioritize: ${this.attribute.description}
 
@@ -47,10 +26,13 @@ Highlight how this attribute influences your thinking and approach to the situat
 Keep your response concise (2-4 sentences) and focused on your attribute's perspective.
 
 For example, if you represent "Compassion" and the query is about solving a technical problem,
-focus on how compassion might lead you to consider how the solution affects users emotionally.`],
-        ...conversationHistory.map(message => [message.role, message.content]),
-        ["human", query]
-      ]);
+focus on how compassion might lead you to consider how the solution affects users emotionally.` },
+        ...conversationHistory.map(message => ({
+          role: message.role === 'assistant' ? 'assistant' : 'user',
+          content: message.content
+        })),
+        { role: "user", content: query }
+      ];
 
       // Create a response object that will be updated during streaming
       const responseObj = {
@@ -69,21 +51,16 @@ focus on how compassion might lead you to consider how the solution affects user
       // Generate the streaming completion
       let fullResponse = "";
       
-      const events = await prompt.pipe(chat).stream();
-      
-      for await (const event of events) {
-        if (event.content) {
-          fullResponse += event.content;
-          
-          // Update the response object with the new content
+      await streamChatCompletion({
+        model: resolveModelForProvider(this.modelId),
+        messages,
+        maxTokens: 500,
+        onToken: (_token, fullText) => {
+          fullResponse = fullText;
           responseObj.message = fullResponse;
-          
-          // Call the callback if provided
-          if (onUpdate) {
-            onUpdate({...responseObj});
-          }
+          onUpdate?.({ ...responseObj });
         }
-      }
+      });
 
       // Add to this agent's history
       this.history.push({ role: "human", content: query });
@@ -125,25 +102,13 @@ export class HiveMindSummary {
   // Generate a summary based on individual attribute responses with streaming
   async generateSummary(query, attributeResponses, summaryModel, onUpdate = null) {
     try {
-      // Create the chat model for summary with streaming enabled
-      const { apiKey: sumApiKey, baseURL: sumBaseURL } = getLLMConfig();
-      const chat = new ChatOpenAI({
-        apiKey: sumApiKey,
-        modelName: summaryModel,
-        temperature: 0.7,
-        maxTokens: 800,
-        streaming: true,
-        configuration: { baseURL: sumBaseURL }
-      });
-
       // Format the attribute responses for the summary prompt
       const formattedResponses = attributeResponses
         .map(resp => `${resp.agentName} (Value: ${resp.value}/5): "${resp.message}"`)
         .join("\n\n");
 
-      // Build a prompt template for the summary
-      const prompt = ChatPromptTemplate.fromMessages([
-        ["system", `You are the Gaia Hive Mind, an AI system that integrates multiple attribute perspectives to provide balanced responses.
+      const messages = [
+        { role: "system", content: `You are the Gaia Hive Mind, an AI system that integrates multiple attribute perspectives to provide balanced responses.
 
 You have received input from several attribute agents, each representing a different value or ethical consideration.
 Your task is to synthesize these perspectives into a coherent response that addresses the query.
@@ -151,14 +116,14 @@ Your task is to synthesize these perspectives into a coherent response that addr
 Consider the value ratings of each attribute (1-5 scale) when weighing different perspectives.
 Higher-rated attributes should have more influence on your final response.
 
-Create a comprehensive response that shows how you've considered multiple perspectives.`],
-        ["human", `Query: ${query}
+Create a comprehensive response that shows how you've considered multiple perspectives.` },
+        { role: "user", content: `Query: ${query}
 
 Attribute Perspectives:
 ${formattedResponses}
 
-Please provide a balanced response that integrates these perspectives, giving appropriate weight to each attribute.`]
-      ]);
+Please provide a balanced response that integrates these perspectives, giving appropriate weight to each attribute.` }
+      ];
 
       // Generate the streaming summary
       let fullSummary = "";
@@ -168,18 +133,15 @@ Please provide a balanced response that integrates these perspectives, giving ap
         onUpdate(fullSummary);
       }
       
-      const events = await prompt.pipe(chat).stream();
-      
-      for await (const event of events) {
-        if (event.content) {
-          fullSummary += event.content;
-          
-          // Call the callback if provided
-          if (onUpdate) {
-            onUpdate(fullSummary);
-          }
+      await streamChatCompletion({
+        model: resolveModelForProvider(summaryModel),
+        messages,
+        maxTokens: 800,
+        onToken: (_token, fullText) => {
+          fullSummary = fullText;
+          onUpdate?.(fullSummary);
         }
-      }
+      });
 
       return fullSummary;
     } catch (error) {

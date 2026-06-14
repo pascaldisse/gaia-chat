@@ -5,6 +5,7 @@ import {
   getSelectedProviderId,
   maskApiKey,
   resolveProvider,
+  setProviderBaseURL,
   setProviderApiKey,
   setSelectedModel,
   setSelectedProviderId
@@ -43,6 +44,11 @@ export function ProviderProvider({ children }) {
     setRevision(value => value + 1);
   }, [providerId]);
 
+  const saveBaseURL = useCallback((baseURL) => {
+    setProviderBaseURL(providerId, baseURL);
+    setRevision(value => value + 1);
+  }, [providerId]);
+
   const value = useMemo(() => ({
     providerId,
     selectedModel,
@@ -52,6 +58,7 @@ export function ProviderProvider({ children }) {
     changeModel,
     setApiKey: saveApiKey,
     clearApiKey,
+    setBaseURL: saveBaseURL,
     keyStatus: maskApiKey(provider.apiKey),
     getDefaultModel: (id = providerId) => getSelectedModel(id)
   }), [
@@ -61,7 +68,8 @@ export function ProviderProvider({ children }) {
     changeProvider,
     changeModel,
     saveApiKey,
-    clearApiKey
+    clearApiKey,
+    saveBaseURL
   ]);
 
   return (

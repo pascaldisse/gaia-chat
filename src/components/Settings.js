@@ -19,16 +19,21 @@ const Settings = ({ onClose }) => {
     changeModel,
     setApiKey,
     clearApiKey,
+    setBaseURL,
     keyStatus
   } = useProvider();
 
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const [modelInput, setModelInput] = useState('');
+  const [baseURLInput, setBaseURLInput] = useState('');
   const [saveState, setSaveState] = useState('');
 
   useEffect(() => {
     setApiKeyInput('');
+    setModelInput('');
+    setBaseURLInput(provider.baseURL || '');
     setSaveState('');
-  }, [providerId]);
+  }, [providerId, provider.baseURL]);
 
   const handleSaveKey = () => {
     setApiKey(apiKeyInput);
@@ -42,8 +47,24 @@ const Settings = ({ onClose }) => {
     setSaveState('Cleared');
   };
 
+  const handleUseCustomModel = () => {
+    if (!modelInput.trim()) return;
+    changeModel(modelInput.trim());
+    setModelInput('');
+    setSaveState('Model saved');
+  };
+
+  const handleSaveBaseURL = () => {
+    setBaseURL(baseURLInput);
+    setSaveState('Base URL saved');
+  };
+
   const providerList = Object.values(allProviders);
   const modelEntries = Object.entries(provider.models || {});
+  const selectedInList = modelEntries.some(([, modelId]) => modelId === selectedModel);
+  const selectModelEntries = selectedInList || !selectedModel
+    ? modelEntries
+    : [['CUSTOM_SELECTED', selectedModel], ...modelEntries];
   const imageEntries = Object.entries(provider.imageModels || {});
 
   return (
@@ -79,7 +100,7 @@ const Settings = ({ onClose }) => {
             <label className="settings-field">
               <span>Default Chat Model</span>
               <select value={selectedModel} onChange={(event) => changeModel(event.target.value)}>
-                {modelEntries.map(([label, modelId]) => (
+                {selectModelEntries.map(([label, modelId]) => (
                   <option key={modelId} value={modelId}>
                     {label.replace(/_/g, ' ')}
                   </option>
@@ -88,11 +109,36 @@ const Settings = ({ onClose }) => {
             </label>
           </div>
 
+          {provider.allowCustomBaseURL && (
+            <section className="settings-section">
+              <div className="settings-section-header">
+                <div>
+                  <h3>Base URL</h3>
+                  <p>OpenAI-compatible endpoint for local or custom servers.</p>
+                </div>
+              </div>
+              <div className="single-input-row">
+                <input
+                  type="url"
+                  value={baseURLInput}
+                  onChange={(event) => {
+                    setBaseURLInput(event.target.value);
+                    setSaveState('');
+                  }}
+                  placeholder="http://localhost:11434/v1"
+                />
+                <button className="settings-btn primary" onClick={handleSaveBaseURL}>
+                  Save URL
+                </button>
+              </div>
+            </section>
+          )}
+
           <section className="settings-section">
             <div className="settings-section-header">
               <div>
-                <h3>API Key</h3>
-                <p>{provider.apiKeyLabel}</p>
+              <h3>API Key</h3>
+                <p>{provider.apiKeyLabel}{provider.requiresApiKey ? '' : ' (optional)'}</p>
               </div>
               <span className={`key-pill ${provider.apiKey ? 'ready' : 'missing'}`}>
                 {keyStatus}
@@ -166,13 +212,30 @@ const Settings = ({ onClose }) => {
               </div>
             </div>
             <ul className="model-list">
-              {modelEntries.map(([label, modelId]) => (
+              {selectModelEntries.map(([label, modelId]) => (
                 <li key={modelId} className={modelId === selectedModel ? 'selected' : ''}>
                   <span>{label.replace(/_/g, ' ')}</span>
                   <code>{modelId}</code>
                 </li>
               ))}
             </ul>
+
+            {provider.allowCustomModel && (
+              <div className="custom-model-row">
+                <input
+                  type="text"
+                  value={modelInput}
+                  onChange={(event) => {
+                    setModelInput(event.target.value);
+                    setSaveState('');
+                  }}
+                  placeholder="Enter exact model ID"
+                />
+                <button className="settings-btn primary" onClick={handleUseCustomModel}>
+                  Use Model
+                </button>
+              </div>
+            )}
 
             {imageEntries.length > 0 && (
               <>
@@ -199,6 +262,14 @@ const Settings = ({ onClose }) => {
               <div>
                 <dt>Base URL</dt>
                 <dd>{provider.baseURL}</dd>
+              </div>
+              <div>
+                <dt>API type</dt>
+                <dd>{provider.apiType}</dd>
+              </div>
+              <div>
+                <dt>Model</dt>
+                <dd>{selectedModel}</dd>
               </div>
               <div>
                 <dt>Key</dt>

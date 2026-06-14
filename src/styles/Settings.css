@@ -83,7 +83,9 @@
 }
 
 .settings-field select,
-.apikey-row input {
+.apikey-row input,
+.single-input-row input,
+.custom-model-row input {
   min-height: 40px;
   border: 1px solid #454b58;
   border-radius: 6px;
@@ -128,6 +130,17 @@
   grid-template-columns: 1fr auto auto;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.single-input-row,
+.custom-model-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.custom-model-row {
+  margin-top: 10px;
 }
 
 .settings-btn {

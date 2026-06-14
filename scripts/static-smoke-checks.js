@@ -92,6 +92,26 @@ const checks = [
     run() {
       return read('src/services/db.js').includes('sanitizeChatForStorage');
     }
+  },
+  {
+    name: 'Anthropic, local, and custom providers are configured',
+    run() {
+      const providers = read('src/config/providers.js');
+      return providers.includes('anthropic') &&
+        providers.includes('local') &&
+        providers.includes('custom') &&
+        providers.includes("apiType: 'anthropic'") &&
+        providers.includes("apiType: 'openai-compatible'");
+    }
+  },
+  {
+    name: 'Hive Mind uses direct provider client',
+    run() {
+      const hiveMind = read('src/services/hiveMindService.js');
+      return hiveMind.includes('streamChatCompletion') &&
+        !hiveMind.includes('ChatOpenAI') &&
+        !hiveMind.includes('ChatPromptTemplate');
+    }
   }
 ];
 

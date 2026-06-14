@@ -12,7 +12,8 @@ import { parseFileContent } from '../utils/FileParser';
 import { PersonaAgent } from "../services/agentService";
 import { createPersonaTools } from "../services/tools";
 import { isDiceRollCommand, extractDiceParams, formatDiceNotation } from "../utils/ToolUtilities";
-import { getCurrentProviderConfig, getImageProviderConfig } from '../services/providerService';
+import { getImageProviderConfig, resolveModelForProvider } from '../services/providerService';
+import { streamChatCompletion } from '../services/llmService';
 
 const Chat = ({ 
   currentChat, 
@@ -242,8 +243,8 @@ const Chat = ({
         if (hasEnabledTools) {
           console.log(`Creating tools for persona ${persona.name}`);
           tools = createPersonaTools(componentRef, persona);
-          useAgent = tools.length > 0;
-          console.log(`Created ${tools.length} tools for persona ${persona.name}`);
+          useAgent = false;
+          console.log(`Created ${tools.length} tools for ${persona.name}; legacy LangChain agent path is disabled`);
           
           // Add debug log for tools
           addDebugLog('TOOLS', {
@@ -386,66 +387,24 @@ ${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
-        const providerConfig = getCurrentProviderConfig();
-        if (!providerConfig.apiKey) {
-          throw new Error(`Missing API key for ${providerConfig.providerName}. Open Settings to add one.`);
-        }
-
-        const response = await fetch(`${providerConfig.baseURL}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${providerConfig.apiKey}`
-          },
-          body: JSON.stringify({
-            model: persona.model,
-            messages: [
-              { role: "system", content: modulatedPrompt },
-              { role: "user", content: triggerMessage.content }
-            ],
-            stream: true
-          }),
-          signal: controllerRef.current.signal // Add the abort signal
-        });
-
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let assistantMessage = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n').filter(line => line.trim());
-          
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                // Handle the special [DONE] marker that isn't valid JSON
-                if (line.slice(6).trim() === '[DONE]') {
-                  continue;
-                }
-                
-                const data = JSON.parse(line.slice(6));
-                if (data.choices?.[0]?.delta?.content) {
-                  assistantMessage += data.choices[0].delta.content;
-                  setCurrentChat(prev => 
-                    prev.map(msg => 
-                      msg.id === messageId 
-                        ? { ...msg, content: assistantMessage }
-                        : msg
-                    )
-                  );
-                }
-              } catch (error) {
-                console.error('Parse error:', error);
-              }
-            }
+        await streamChatCompletion({
+          model: resolveModelForProvider(persona.model),
+          messages: [
+            { role: "system", content: modulatedPrompt },
+            { role: "user", content: triggerMessage.content }
+          ],
+          maxTokens: 1000,
+          signal: controllerRef.current.signal,
+          onToken: (_token, fullText) => {
+            setCurrentChat(prev => 
+              prev.map(msg => 
+                msg.id === messageId 
+                  ? { ...msg, content: fullText }
+                  : msg
+              )
+            );
           }
-        }
+        });
       }
 
       // Check if markActive method exists before calling it
@@ -795,70 +754,24 @@ ${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
-          const providerConfig = getCurrentProviderConfig();
-          if (!providerConfig.apiKey) {
-            throw new Error(`Missing API key for ${providerConfig.providerName}. Open Settings to add one.`);
-          }
-
-          const response = await fetch(`${providerConfig.baseURL}/chat/completions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${providerConfig.apiKey}`
-            },
-            body: JSON.stringify({
-              model: persona.model,
-              messages: [
-                { role: "system", content: modulatedPrompt },
-                { role: "user", content: newMessage.content } // Use the original user message
-              ],
-              stream: true
-            }),
-            signal: controllerRef.current.signal // Add the abort signal
-          });
-
-          if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n').filter(line => line.trim());
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  // Check for the special [DONE] marker
-                  const dataText = line.slice(6).trim();
-                  if (dataText === '[DONE]') {
-                    console.log('Received [DONE] marker for streaming completion');
-                    continue;
-                  }
-                  
-                  const data = JSON.parse(dataText);
-                  if (data.choices?.[0]?.delta?.content) {
-                    // Update the chat content directly with each chunk
-                    setCurrentChat(prev => {
-                      const lastMessage = prev[prev.length - 1];
-                      if (lastMessage && lastMessage.id === messageId) {
-                        return [
-                          ...prev.slice(0, -1),
-                          { ...lastMessage, content: lastMessage.content + data.choices[0].delta.content }
-                        ];
-                      }
-                      return prev;
-                    });
-                  }
-                } catch (error) {
-                  console.error('Parse error:', error, 'on line:', line);
-                }
-              }
+          await streamChatCompletion({
+            model: resolveModelForProvider(persona.model),
+            messages: [
+              { role: "system", content: modulatedPrompt },
+              { role: "user", content: newMessage.content }
+            ],
+            maxTokens: 1000,
+            signal: controllerRef.current.signal,
+            onToken: (_token, fullText) => {
+              setCurrentChat(prev => 
+                prev.map(msg => 
+                  msg.id === messageId 
+                    ? { ...msg, content: fullText }
+                    : msg
+                )
+              );
             }
-          }
+          });
           // Check if markActive exists before calling it
           if (typeof persona.markActive === 'function') {
             try {
@@ -1687,4 +1600,3 @@ const ImageModal = ({ onClose, onGenerate, initialPrompt }) => {
 };
 
 export default Chat;
-
