@@ -74,6 +74,24 @@ const checks = [
     run() {
       return read('src/utils/RPGSystem.js').includes('static rollDice');
     }
+  },
+  {
+    name: 'Duplicate utility Persona model is removed',
+    run() {
+      return !exists('src/utils/Persona.js') && !source.includes("from '../utils/Persona'");
+    }
+  },
+  {
+    name: 'Voice service does not register global debug patch',
+    run() {
+      return !source.includes('debugGaiaAudio') && !source.includes('trackAllAudio');
+    }
+  },
+  {
+    name: 'Chat storage sanitizer is active',
+    run() {
+      return read('src/services/db.js').includes('sanitizeChatForStorage');
+    }
   }
 ];
 

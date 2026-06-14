@@ -10,6 +10,28 @@ const WORKFLOW_STORE = 'workflows';
 const TEMPLATE_STORE = 'workflow_templates';
 const USER_STORE = 'users'; // New store for users
 
+function sanitizeChatForStorage(chat) {
+  if (!chat || !Array.isArray(chat.messages)) {
+    return chat;
+  }
+
+  return {
+    ...chat,
+    messages: chat.messages.map(message => {
+      if (!message || typeof message !== 'object') {
+        return message;
+      }
+
+      const nextMessage = { ...message };
+      if (nextMessage.imageSrc && nextMessage.imageData) {
+        delete nextMessage.imageData;
+      }
+
+      return nextMessage;
+    })
+  };
+}
+
 // Function to create a fresh database, only if needed
 const resetDatabase = async () => {
   try {
@@ -18,7 +40,7 @@ const resetDatabase = async () => {
     console.log('Database reset successfully');
     
     // Recreate it by opening a connection
-    return openDB(DB_NAME, 6, {
+    return openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
         // Create all stores from scratch
         const chatStore = db.createObjectStore(CHAT_STORE, { keyPath: 'id' });
@@ -63,7 +85,7 @@ const resetDatabase = async () => {
 };
 
 // Create/open the database with a simple upgrade function
-let dbPromise = openDB(DB_NAME, 6, {
+let dbPromise = openDB(DB_NAME, DB_VERSION, {
   upgrade(db, oldVersion, newVersion, transaction) {
     // In the upgrade handler, just create missing stores
     if (!db.objectStoreNames.contains(CHAT_STORE)) {
@@ -197,7 +219,7 @@ export const chatDB = {
   async saveChat(chat) {
     try {
       const db = await dbPromise;
-      await db.put(CHAT_STORE, chat);
+      await db.put(CHAT_STORE, sanitizeChatForStorage(chat));
     } catch (error) {
       console.error('Error saving chat:', error);
       throw error;
@@ -219,7 +241,7 @@ export const chatDB = {
   async updateChat(chat) {
     try {
       const db = await dbPromise;
-      await db.put(CHAT_STORE, chat);
+      await db.put(CHAT_STORE, sanitizeChatForStorage(chat));
     } catch (error) {
       console.error('Error updating chat:', error);
       throw error;

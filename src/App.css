@@ -81,34 +81,48 @@
   transform: translateX(-100%);
 }
 
-/* Settings Gear Button */
-.settings-gear-btn {
+.provider-status {
   position: fixed;
   top: var(--spacing-md);
   right: var(--spacing-md);
   z-index: var(--z-index-fixed);
-  width: var(--touch-target-size);
-  height: var(--touch-target-size);
-  border-radius: 50%;
-  background-color: #5865f2;
-  color: #ffffff;
-  border: none;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-  transition: background-color var(--transition-short) ease, transform var(--transition-short) ease;
-  font-size: 20px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  max-width: 220px;
+  min-height: var(--touch-target-size);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--discord-tertiary);
+  border-radius: var(--border-radius-md);
+  background-color: rgba(47, 49, 54, 0.95);
+  color: var(--text-normal);
+  box-shadow: var(--elevation-medium);
 }
 
-.settings-gear-btn:hover {
-  background-color: #4752c4;
-  transform: scale(1.08);
+.provider-status span,
+.provider-status strong {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.settings-gear-btn:focus-visible {
-  box-shadow: var(--focus-ring), 0 2px 8px rgba(0,0,0,0.4);
+.provider-status span {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.provider-status strong {
+  font-size: var(--font-size-sm);
+}
+
+.provider-status.ready strong {
+  color: var(--success-color);
+}
+
+.provider-status.missing strong {
+  color: var(--warning-color);
 }
 
 /* Hamburger Menu Button */
@@ -419,6 +433,12 @@
     width: 36px;
     height: 36px;
   }
+
+  .provider-status {
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    max-width: 160px;
+  }
   
   .sidebar-container {
     width: 85%;
@@ -444,6 +464,18 @@
   .hamburger-menu {
     width: 32px;
     height: 32px;
+  }
+
+  .provider-status span {
+    display: none;
+  }
+
+  .provider-status {
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    min-height: 32px;
+    max-width: 120px;
+    justify-content: center;
   }
   
   .sidebar-container {
@@ -494,4 +526,3 @@
     padding-bottom: calc(var(--spacing-sm) + var(--safe-area-inset-bottom));
   }
 }
-

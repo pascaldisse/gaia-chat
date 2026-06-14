@@ -99,7 +99,7 @@ const Sidebar = ({
         className="sidebar-settings-btn"
         onClick={onOpenSettings}
       >
-        ⚙️ Settings
+        Settings
       </button>
     </div>
   );

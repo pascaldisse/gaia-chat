@@ -4,7 +4,7 @@ import { MODELS, IMAGE_MODELS } from '../config';
 import '../styles/Chat.css';
 import ChatInput from './ChatInput';
 import { RPGSystem } from '../utils/RPGSystem';
-import { Persona } from '../utils/Persona';
+import Persona from '../models/Persona';
 import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 import FilePreview from './FilePreview';
 import { chatDB, knowledgeDB, userDB } from '../services/db';
@@ -1687,5 +1687,4 @@ const ImageModal = ({ onClose, onGenerate, initialPrompt }) => {
 };
 
 export default Chat;
-
 
