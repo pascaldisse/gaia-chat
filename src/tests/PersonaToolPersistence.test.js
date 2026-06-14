@@ -2,17 +2,17 @@ import Persona from '../models/Persona';
 import { personaDB } from '../services/db';
 
 // Mock the database service
-jest.mock('../services/db', () => ({
+vi.mock('../services/db', () => ({
   personaDB: {
-    savePersona: jest.fn().mockImplementation(async (persona) => persona),
-    getPersonaById: jest.fn(),
+    savePersona: vi.fn().mockImplementation(async (persona) => persona),
+    getPersonaById: vi.fn(),
   }
 }));
 
 describe('Persona Tool Persistence Tests', () => {
   beforeEach(() => {
     // Clear all mocks before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('persona saves with agentSettings and toolConfig', async () => {

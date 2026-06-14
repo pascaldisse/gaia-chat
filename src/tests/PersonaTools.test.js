@@ -4,16 +4,16 @@ import Persona from '../models/Persona';
 
 // Mock the knowledgeDB
 const mockKnowledgeDB = {
-  searchFiles: jest.fn().mockResolvedValue([])
+  searchFiles: vi.fn().mockResolvedValue([])
 };
 
 // Mock component reference
 const mockComponentRef = {
   knowledgeDB: mockKnowledgeDB,
-  generateImage: jest.fn().mockResolvedValue('image-generated'),
+  generateImage: vi.fn().mockResolvedValue('image-generated'),
   imageModel: 'test-model',
   selectedStyle: 'test-style',
-  setCurrentChat: jest.fn()
+  setCurrentChat: vi.fn()
 };
 
 describe('Persona Tools', () => {
@@ -21,7 +21,7 @@ describe('Persona Tools', () => {
   
   beforeEach(() => {
     // Reset mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Create a test persona with tools enabled
     persona = new Persona({

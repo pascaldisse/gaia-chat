@@ -3,28 +3,19 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Message from '../components/Message.js';
 
-// Mock the CopyToClipboard component
-jest.mock('react-copy-to-clipboard', () => {
-  return {
-    CopyToClipboard: ({ text, children }) => (
-      <div data-testid="copy-to-clipboard" data-text={text}>
-        {children}
-      </div>
-    )
-  };
-});
-
 // Mock the ReactMarkdown component
-jest.mock('react-markdown', () => {
-  return function MockReactMarkdown(props) {
-    return <div data-testid="markdown-content">{props.children}</div>;
+vi.mock('react-markdown', () => {
+  return {
+    default: (props) => <div data-testid="markdown-content">{props.children}</div>
   };
 });
 
 // Mock the voice service
-jest.mock('../services/voiceService', () => ({
-  generateSpeech: jest.fn().mockResolvedValue('mock-audio-url'),
-  getTTSEngine: jest.fn().mockReturnValue('kokoro')
+vi.mock('../services/voiceService', () => ({
+  generateSpeech: vi.fn().mockResolvedValue('mock-audio-url'),
+  getTTSEngine: vi.fn().mockReturnValue('kokoro'),
+  splitTextIntoSentences: vi.fn((text) => [text]),
+  generateSpeechChunks: vi.fn().mockResolvedValue(['mock-audio-url'])
 }));
 
 // Helper function to simulate clicking the format button
@@ -268,9 +259,9 @@ describe('Message Component Formatting', () => {
     expect(markdownContent).toHaveTextContent('✨ This is custom formatted content ✨');
   });
 
-  // Test with persona that has formatting disabled
-  test('does not format content when formatting is disabled', async () => {
-    const content = `<speech as="Character">This should not be formatted</speech>`;
+  // Test with persona that has formatting disabled - component applies roleplay markdown as fallback
+  test('applies roleplay markdown as fallback when custom formatting is disabled', async () => {
+    const content = `<speech as="Character">This should be formatted as fallback</speech>`;
     
     const message = {
       content,
@@ -296,9 +287,9 @@ describe('Message Component Formatting', () => {
     // Click the format button
     await clickFormatButton(container);
     
-    // The content should remain unchanged
+    // The component applies roleplay markdown as fallback when custom formatting is disabled
     const markdownContent = container.querySelector('[data-testid="markdown-content"]');
-    expect(markdownContent).toHaveTextContent('<speech as="Character">This should not be formatted</speech>');
+    expect(markdownContent).toHaveTextContent('**Character:** This should be formatted as fallback');
   });
 
   // Test with deeply nested tags and complex content

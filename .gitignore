@@ -1,4 +1,7 @@
 .DS_STORE
+.gaia-server.pid
+nohup.out
+._*
 node_modules
 scripts/flow/*/.flowconfig
 .flowconfig
@@ -40,3 +43,7 @@ packages/react-devtools-timeline/dist
 
 **/.claude/settings.local.json
 npm-cache/*
+logs/
+
+# Pi orchestration scratch dir
+.pi/

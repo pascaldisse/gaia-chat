@@ -13,12 +13,12 @@ console.log = (...args) => {
 // Mock component reference
 const mockComponentRef = {
   knowledgeDB: {
-    searchFiles: jest.fn().mockResolvedValue([])
+    searchFiles: vi.fn().mockResolvedValue([])
   },
-  generateImage: jest.fn().mockResolvedValue('image-generated'),
+  generateImage: vi.fn().mockResolvedValue('image-generated'),
   imageModel: 'test-model',
   selectedStyle: 'test-style',
-  setCurrentChat: jest.fn()
+  setCurrentChat: vi.fn()
 };
 
 describe('Tool triggering in chat', () => {
@@ -28,7 +28,7 @@ describe('Tool triggering in chat', () => {
   beforeEach(() => {
     // Reset tracking variables
     consoleOutput = [];
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Create a persona with dice roll enabled
     persona = new Persona({

@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../styles/Message.css';
-import { CopyToClipboard } from 'react-copy-to-clipboard';
+
 import ReactMarkdown from 'react-markdown';
 import { generateSpeech, getTTSEngine, splitTextIntoSentences, generateSpeechChunks } from '../services/voiceService';
-
-// CRUCIAL UPDATE: Added debug info at top level - after imports to avoid eslint errors
-console.log('%c *** MESSAGE.JS LOADED WITH DEBUG VERSION ***', 'background: red; color: white; font-size: 24px; padding: 10px;');
-window.DEBUG_MESSAGE_LOADED = true;
 
 const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
@@ -1101,7 +1097,7 @@ const Message = ({ message, onRegenerate, personas }) => {
         <div className="persona-header">
           {persona.image && <img src={persona.image} alt={persona.name} className="persona-avatar" />}
           <span className="persona-name">{persona.name}</span>
-          {process.env.NODE_ENV === 'development' && renderToolInfo()}
+          {import.meta.env.DEV && renderToolInfo()}
         </div>
       )}
       <div className="message-content">
@@ -1109,11 +1105,13 @@ const Message = ({ message, onRegenerate, personas }) => {
         {renderAudio()}
       </div>
       <div className="message-actions">
-        <CopyToClipboard text={message.content}>
-          <button className="copy-button" title="Copy to clipboard">
-            <span role="img" aria-label="Copy">📋</span>
-          </button>
-        </CopyToClipboard>
+        <button
+          className="copy-button"
+          title="Copy to clipboard"
+          onClick={() => navigator.clipboard.writeText(message.content)}
+        >
+          <span role="img" aria-label="Copy">📋</span>
+        </button>
         {!message.isUser && !message.isCommand && !message.isToolUsage && (
           <>
             <button className="regenerate-button" onClick={() => onRegenerate(message)} title="Regenerate response">
