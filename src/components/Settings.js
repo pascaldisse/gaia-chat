@@ -3,11 +3,17 @@ import { useProvider } from '../context/ProviderContext';
 import { maskApiKey } from '../services/providerService';
 import {
   IMAGE_PROVIDER_DEFINITIONS,
-  getImageProviderDefinition
+  TTS_PROVIDER_DEFINITIONS,
+  getImageProviderDefinition,
+  getTTSProviderDefinition
 } from '../config/providers';
 import {
   getImageLocalBaseURL,
   getProviderApiKey,
+  getTTSLocalAdapter,
+  getTTSLocalBaseURL,
+  getTTSLocalLanguage,
+  getTTSLocalStyle,
   setImageLocalBaseURL,
   setProviderApiKey
 } from '../services/providerService';
@@ -34,7 +40,15 @@ const Settings = ({ onClose }) => {
     imageProviderId,
     imageModel,
     changeImageProvider,
-    changeImageModel
+    changeImageModel,
+    ttsProviderId,
+    ttsModel,
+    changeTTSProvider,
+    changeTTSModel,
+    setTTSBaseURL,
+    setTTSAdapter,
+    setTTSLanguage,
+    setTTSStyle
   } = useProvider();
 
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -46,9 +60,17 @@ const Settings = ({ onClose }) => {
   const [imageApiKeyInput, setImageApiKeyInput] = useState('');
   const [imageBaseURLInput, setImageBaseURLInput] = useState('');
   const [imageSaveState, setImageSaveState] = useState('');
+  const [ttsBaseURLInput, setTTSBaseURLInput] = useState('');
+  const [ttsAdapterInput, setTTSAdapterInput] = useState('');
+  const [ttsLanguageInput, setTTSLanguageInput] = useState('');
+  const [ttsStyleInput, setTTSStyleInput] = useState('');
+  const [ttsSaveState, setTTSSaveState] = useState('');
 
   const currentIP = getImageProviderDefinition(imageProviderId);
   const imageModelEntries = Object.entries(currentIP.imageModels || {});
+  const currentTP = getTTSProviderDefinition(ttsProviderId);
+  const ttsModelEntries = Object.entries(currentTP.ttsModels || {});
+  const ttsAdapterEntries = Object.entries(currentTP.adapters || {});
 
   useEffect(() => {
     setApiKeyInput('');
@@ -62,6 +84,14 @@ const Settings = ({ onClose }) => {
     setImageBaseURLInput(currentIP.needsBaseUrlInput ? getImageLocalBaseURL() : '');
     setImageSaveState('');
   }, [imageProviderId, currentIP.needsBaseUrlInput]);
+
+  useEffect(() => {
+    setTTSBaseURLInput(currentTP.needsBaseUrlInput ? getTTSLocalBaseURL() : '');
+    setTTSAdapterInput(currentTP.needsBaseUrlInput ? getTTSLocalAdapter() : '');
+    setTTSLanguageInput(getTTSLocalLanguage());
+    setTTSStyleInput(getTTSLocalStyle());
+    setTTSSaveState('');
+  }, [ttsProviderId, ttsModel, currentTP.needsBaseUrlInput]);
 
   const handleSaveKey = () => {
     setApiKey(apiKeyInput);
@@ -227,7 +257,7 @@ const Settings = ({ onClose }) => {
             )}
             {!provider.supportsTTS && (
               <p className="settings-note">
-                Voice playback currently uses DeepInfra voice endpoints when a DeepInfra key is configured.
+                Voice playback is configured separately in the TTS Provider section below.
               </p>
             )}
           </section>
@@ -432,6 +462,147 @@ const Settings = ({ onClose }) => {
             )}
           </section>
 
+          {/* ---- TTS Provider Section ---- */}
+          <section className="settings-section">
+            <div className="settings-section-header">
+              <div>
+                <h3>TTS Provider</h3>
+                <p>Select the provider used for voice playback.</p>
+              </div>
+            </div>
+
+            <div className="settings-grid">
+              <label className="settings-field">
+                <span>Provider</span>
+                <select
+                  value={ttsProviderId}
+                  onChange={(event) => changeTTSProvider(event.target.value)}
+                >
+                  {Object.values(TTS_PROVIDER_DEFINITIONS).map((tp) => (
+                    <option key={tp.id} value={tp.id}>
+                      {tp.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="settings-field">
+                <span>Model</span>
+                <select
+                  value={ttsModel}
+                  onChange={(event) => changeTTSModel(event.target.value)}
+                >
+                  {ttsModelEntries.map(([label, id]) => (
+                    <option key={id} value={id}>
+                      {label.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {ttsProviderId === 'deepinfra' && (
+              <>
+                {!getProviderApiKey('deepinfra') && (
+                  <p className="settings-note" style={{ color: '#e6a817' }}>
+                    DeepInfra API key is not set. Add it once in the AI Provider API Key section.
+                  </p>
+                )}
+                <p className="settings-note">
+                  Uses the same DeepInfra API key as chat/image providers. No separate key is needed.
+                </p>
+              </>
+            )}
+
+            {ttsProviderId === 'local' && (
+              <>
+                <div className="settings-grid">
+                  <label className="settings-field">
+                    <span>Adapter</span>
+                    <select
+                      value={ttsAdapterInput}
+                      onChange={(event) => {
+                        const adapter = event.target.value;
+                        setTTSAdapterInput(adapter);
+                        setTTSAdapter(adapter);
+                        setTTSSaveState('Adapter saved');
+                      }}
+                    >
+                      {ttsAdapterEntries.map(([label, id]) => (
+                        <option key={id} value={id}>
+                          {label.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="settings-field">
+                    <span>Language</span>
+                    <input
+                      type="text"
+                      value={ttsLanguageInput}
+                      onChange={(event) => {
+                        setTTSLanguageInput(event.target.value);
+                        setTTSSaveState('');
+                      }}
+                      placeholder="English"
+                    />
+                  </label>
+                </div>
+
+                <div className="single-input-row">
+                  <input
+                    type="url"
+                    value={ttsBaseURLInput}
+                    onChange={(event) => {
+                      setTTSBaseURLInput(event.target.value);
+                      setTTSSaveState('');
+                    }}
+                    placeholder="http://127.0.0.1:7860"
+                  />
+                  <button
+                    className="settings-btn primary"
+                    onClick={() => {
+                      setTTSBaseURL(ttsBaseURLInput);
+                      setTTSSaveState('Base URL saved');
+                    }}
+                  >
+                    Save URL
+                  </button>
+                </div>
+
+                <div className="single-input-row">
+                  <input
+                    type="text"
+                    value={ttsStyleInput}
+                    onChange={(event) => {
+                      setTTSStyleInput(event.target.value);
+                      setTTSSaveState('');
+                    }}
+                    placeholder="Optional style instruction, e.g. calm and warm"
+                  />
+                  <button
+                    className="settings-btn primary"
+                    onClick={() => {
+                      setTTSLanguage(ttsLanguageInput);
+                      setTTSStyle(ttsStyleInput);
+                      setTTSSaveState('Local TTS saved');
+                    }}
+                  >
+                    Save Local TTS
+                  </button>
+                </div>
+
+                <p className="settings-note">
+                  Local adapters expect a running HTTP service. Qwen3 Gradio usually runs at http://127.0.0.1:7860.
+                  Dots TTS MLX uses the OpenAI Audio adapter at http://localhost:8091.
+                  Other local models can use generic JSON or DeepInfra-compatible adapters.
+                  {ttsSaveState && <span className="save-state"> {ttsSaveState}</span>}
+                </p>
+              </>
+            )}
+          </section>
+
           <section className="settings-section compact-summary">
             <h3>Current Runtime</h3>
             <dl>
@@ -454,6 +625,10 @@ const Settings = ({ onClose }) => {
               <div>
                 <dt>Key</dt>
                 <dd>{maskApiKey(provider.apiKey)}</dd>
+              </div>
+              <div>
+                <dt>TTS</dt>
+                <dd>{currentTP.name} / {ttsModel}</dd>
               </div>
             </dl>
           </section>

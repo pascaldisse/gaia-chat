@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import '../styles/Message.css';
 
 import ReactMarkdown from 'react-markdown';
-import { generateSpeech, getTTSEngine, splitTextIntoSentences, generateSpeechChunks } from '../services/voiceService';
+import { getTTSEngine, splitTextIntoSentences, generateSpeechChunks } from '../services/voiceService';
 
 const Message = ({ message, onRegenerate, personas }) => {
   const persona = message.personaId ? personas.find(p => p.id === message.personaId) : null;
@@ -13,9 +13,20 @@ const Message = ({ message, onRegenerate, personas }) => {
   const [formatted, setFormatted] = useState(false);
   const [formattedContent, setFormattedContent] = useState('');
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
+  const [audioError, setAudioError] = useState('');
   const audioRef = useRef(null);
   const audioQueue = useRef([]);
   const audioContext = useRef(null);
+  const audioUrlsRef = useRef([]);
+  const currentAudioIndexRef = useRef(0);
+
+  useEffect(() => {
+    audioUrlsRef.current = audioUrls;
+  }, [audioUrls]);
+
+  useEffect(() => {
+    currentAudioIndexRef.current = currentAudioIndex;
+  }, [currentAudioIndex]);
   
   // Log every time audioUrls changes
   useEffect(() => {
@@ -30,29 +41,30 @@ const Message = ({ message, onRegenerate, personas }) => {
   }, [audioUrls]);
 
   // Function to play next audio in queue
-  const playNextAudio = async () => {
+  const playNextAudio = async (urlsOverride = null, indexOverride = null) => {
     // FIXED: Use indices consistently and accurately track completion
     window.debugAudioProgress = window.debugAudioProgress || [];
     window.debugAudioProgress.push({
       time: new Date().toISOString(),
       function: 'playNextAudio',
-      index: currentAudioIndex,
+      index: indexOverride ?? currentAudioIndexRef.current,
       isPlaying
     });
     
-    console.log(`🔊 [AUDIO-PLAY] playNextAudio called, current index: ${currentAudioIndex}`);
+    console.log(`🔊 [AUDIO-PLAY] playNextAudio called, current index: ${indexOverride ?? currentAudioIndexRef.current}`);
     
     // FIXED: Make sure we're working with stable, consistent state
-    const stableIndex = currentAudioIndex;
+    const stableIndex = indexOverride ?? currentAudioIndexRef.current;
     
     // Try to use window backup if state is empty (fallback mechanism)
-    let urlsToUse = audioUrls;
-    if (!audioUrls || audioUrls.length === 0) {
+    let urlsToUse = urlsOverride || audioUrlsRef.current;
+    if (!urlsToUse || urlsToUse.length === 0) {
       if (window._debugAudioUrls && window._debugAudioUrls.length > 0) {
         console.log('🔊 [AUDIO-PLAY] Using backup array from window._debugAudioUrls');
         urlsToUse = window._debugAudioUrls;
         // Update state with backup
         setAudioUrls(window._debugAudioUrls);
+        audioUrlsRef.current = window._debugAudioUrls;
       }
     }
     
@@ -72,7 +84,7 @@ const Message = ({ message, onRegenerate, personas }) => {
     // Check if audioUrls array exists and has items
     if (!urlsToUse || urlsToUse.length === 0) {
       console.error('🔊 [AUDIO-PLAY] ERROR: Audio array is empty or undefined!', {
-        stateArray: audioUrls,
+        stateArray: audioUrlsRef.current,
         backupArray: window._debugAudioUrls
       });
       setIsPlaying(false);
@@ -118,7 +130,8 @@ const Message = ({ message, onRegenerate, personas }) => {
       // Continue to next unplayed chunk
       console.log(`🔊 [AUDIO-PLAY] Found next unplayed chunk ${nextIndex + 1}, continuing playback`);
       setCurrentAudioIndex(nextIndex);
-      setTimeout(() => playNextAudio(), 10);
+      currentAudioIndexRef.current = nextIndex;
+      setTimeout(() => playNextAudio(urlsToUse, nextIndex), 10);
       return;
     }
     
@@ -212,7 +225,8 @@ const Message = ({ message, onRegenerate, personas }) => {
             console.error(`[AUDIO-PLAY] Error in play() call:`, playError);
             // Skip to next audio if this one fails
             setCurrentAudioIndex(stableIndex + 1);
-            setTimeout(() => playNextAudio(), 100);
+            currentAudioIndexRef.current = stableIndex + 1;
+            setTimeout(() => playNextAudio(urlsToUse, stableIndex + 1), 100);
           }
         }
       } catch (error) {
@@ -225,7 +239,8 @@ const Message = ({ message, onRegenerate, personas }) => {
         
         if (nextIndex < urlsToUse.length) {
           setCurrentAudioIndex(nextIndex);
-          setTimeout(playNextAudio, 100);
+          currentAudioIndexRef.current = nextIndex;
+          setTimeout(() => playNextAudio(urlsToUse, nextIndex), 100);
         } else {
           // We've reached the end
           console.log(`[AUDIO-PLAY] That was the last chunk, ending playback`);
@@ -247,6 +262,7 @@ const Message = ({ message, onRegenerate, personas }) => {
     window.audioEndEvents = [];
     window.debugAudioProgress = [];
     window.lastPlayedChunk = undefined;
+    setAudioError('');
     
     // Remove debug alert
     // alert('AUDIO PLAY TRIGGERED - CHECK CONSOLE');
@@ -287,7 +303,7 @@ const Message = ({ message, onRegenerate, personas }) => {
       console.log(`🔊 [AUDIO-RESUME] Resuming playback from chunk ${currentAudioIndex + 1}/${audioUrls.length}`);
       console.log(`🔊 [AUDIO-RESUME] Current URL: ${audioUrls[currentAudioIndex]?.substring(0, 50)}...`);
       console.time('[AUDIO-FLOW] Playback start time');
-      playNextAudio();
+      playNextAudio(audioUrlsRef.current, currentAudioIndexRef.current);
       console.timeEnd('[AUDIO-FLOW] Playback start time');
       return;
     }
@@ -513,6 +529,8 @@ const Message = ({ message, onRegenerate, personas }) => {
         // Set state ONCE
         setAudioUrls(audioUrlsToUse);
         setCurrentAudioIndex(0);
+        audioUrlsRef.current = audioUrlsToUse;
+        currentAudioIndexRef.current = 0;
         
         // Debug: Immediately check if state was updated
         console.log(`🔊 [AUDIO-URLS] State audioUrls:`, {
@@ -527,22 +545,23 @@ const Message = ({ message, onRegenerate, personas }) => {
         // Set the global backup immediately
         window._debugAudioUrls = audioUrlsToUse;
         
-        // Use a delay to ensure React has updated state before playing
+        // Start from the generated URLs directly instead of depending on a later React render.
         setTimeout(() => {
           console.timeEnd('🔊 [AUDIO-PLAY] Time to first audio');
           console.log('🔊 [AUDIO-PLAY] Timeout elapsed, starting playback');
           
-          // CRITICAL FIX: Only call playNextAudio, don't set state again
           console.log('🔊 [AUDIO-PLAY] Starting playback sequence - current index is 0');
-          playNextAudio();
+          playNextAudio(audioUrlsToUse, 0);
         }, 100);
       } else {
         console.warn("[AUDIO-FLOW] No audio URLs returned from speech generation");
+        setAudioError(window.lastTTSError || 'No audio was returned by the TTS provider.');
         console.timeEnd('[AUDIO-FLOW] Total audio process time');
         setIsLoadingAudio(false);
       }
     } catch (error) {
       console.error("[AUDIO-FLOW] Error in audio processing:", error);
+      setAudioError(error.message || 'Audio playback failed.');
       console.timeEnd('[AUDIO-FLOW] Total audio process time');
       setIsLoadingAudio(false);
     } finally {
@@ -630,7 +649,8 @@ const Message = ({ message, onRegenerate, personas }) => {
       
       console.log(`🔊 [AUDIO-PLAY] Playing next chunk (${playableIndex + 1}/${currentAudioUrls.length}) in 10ms`);
       setCurrentAudioIndex(playableIndex);
-      setTimeout(() => playNextAudio(), 10);
+      currentAudioIndexRef.current = playableIndex;
+      setTimeout(() => playNextAudio(currentAudioUrls, playableIndex), 10);
     };
     
     const handleTimeUpdate = () => {
@@ -1042,11 +1062,14 @@ const Message = ({ message, onRegenerate, personas }) => {
             // Try to move to the next chunk if this one fails
             if (currentAudioIndex < audioUrls.length - 1) {
               console.warn(`[AUDIO-PLAY] Skipping to next chunk due to error (${currentAudioIndex + 1} → ${currentAudioIndex + 2}/${audioUrls.length})`);
-              setCurrentAudioIndex(currentAudioIndex + 1);
-              setTimeout(playNextAudio, 100);
+              const nextIndex = currentAudioIndex + 1;
+              setCurrentAudioIndex(nextIndex);
+              currentAudioIndexRef.current = nextIndex;
+              setTimeout(() => playNextAudio(audioUrlsRef.current, nextIndex), 100);
             } else {
               // If this was the last chunk, reset playback state
               setIsPlaying(false);
+              setAudioError(window.lastTTSError || 'Audio playback failed.');
               console.warn("[AUDIO-PLAY] Failed to play last audio chunk - playback stopped");
               console.log('[AUDIO-FLOW] Audio playback complete');
             }
@@ -1177,6 +1200,11 @@ const Message = ({ message, onRegenerate, personas }) => {
               >
                 <span role="img" aria-label="Audio Debug">🎚️</span>
               </button>
+            )}
+            {audioError && (
+              <span className="audio-error" title={audioError}>
+                {audioError}
+              </span>
             )}
             
             <button className="format-button" onClick={applyFormatting} title="Format message (updated)">

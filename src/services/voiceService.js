@@ -1,631 +1,372 @@
-import { getProviderApiKey } from './providerService';
+import {
+  getSelectedTTSModel,
+  getTTSProviderConfig,
+  setSelectedTTSModel,
+  setTTSProviderId
+} from './providerService';
 
-// TTS API endpoints
-const TTS_ENDPOINTS = {
-  zonos: "https://api.deepinfra.com/v1/inference/Zyphra/Zonos-v0.1-hybrid",
-  kokoro: "https://api.deepinfra.com/v1/inference/hexgrad/Kokoro-82M"
-};
+const DEEPINFRA_KOKORO_MODEL = 'hexgrad/Kokoro-82M';
+const DEEPINFRA_ZONOS_MODEL = 'Zyphra/Zonos-v0.1-hybrid';
 
-function getDeepInfraApiKey() {
-  return getProviderApiKey('deepinfra');
+function joinUrl(baseURL, path) {
+  return `${String(baseURL || '').replace(/\/+$/, '')}/${String(path || '').replace(/^\/+/, '')}`;
 }
 
-// Get current TTS engine preference from localStorage, default to zonos
+function isKokoroVoice(voiceId) {
+  return /^(af|am|bf|bm)_/.test(voiceId || '');
+}
+
+function modelLooksLikeKokoro(model) {
+  return String(model || '').toLowerCase().includes('kokoro');
+}
+
+function getDefaultVoice(config) {
+  const modelVoices = (config.voices || []).filter((voice) => !voice.model || voice.model === config.model);
+  return modelVoices[0]?.id || config.voices?.[0]?.id || 'default';
+}
+
+function getVoicesForConfig(config = getTTSProviderConfig()) {
+  const voices = config.voices || [];
+  const matching = voices.filter((voice) => !voice.model || voice.model === config.model);
+  return matching.length > 0 ? matching : voices;
+}
+
+function createObjectURLFromBase64(base64Data, mimeType = 'audio/mpeg') {
+  const cleaned = base64Data.includes('base64,')
+    ? base64Data.split('base64,')[1]
+    : base64Data;
+  const byteCharacters = atob(cleaned);
+  const byteNumbers = new Array(byteCharacters.length);
+
+  for (let i = 0; i < byteCharacters.length; i += 1) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+
+  return URL.createObjectURL(new Blob([new Uint8Array(byteNumbers)], { type: mimeType }));
+}
+
+function normalizeAudioValue(value, baseURL = '') {
+  if (!value) return null;
+
+  if (value instanceof Blob) {
+    return URL.createObjectURL(value);
+  }
+
+  if (typeof value === 'string') {
+    if (value.startsWith('blob:') || value.startsWith('data:audio/')) return value;
+    if (/^https?:\/\//.test(value)) return value;
+    if (/^[A-Za-z0-9+/=]+$/.test(value) && value.length > 100) {
+      return createObjectURLFromBase64(value);
+    }
+    if (baseURL && (value.startsWith('/') || value.includes('/'))) {
+      const filePath = value.startsWith('/') ? value : `/${value}`;
+      return joinUrl(baseURL, `file=${filePath}`);
+    }
+  }
+
+  if (typeof value === 'object') {
+    return normalizeAudioValue(
+      value.url || value.audio_url || value.audio || value.path || value.name,
+      baseURL
+    );
+  }
+
+  return null;
+}
+
+async function responseToAudioURL(response, baseURL = '') {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.startsWith('audio/')) {
+    return URL.createObjectURL(await response.blob());
+  }
+
+  const data = await response.json();
+  const direct = normalizeAudioValue(
+    data.audio || data.audio_url || data.url || data.output || data.result,
+    baseURL
+  );
+  if (direct) return direct;
+
+  if (Array.isArray(data.data)) {
+    for (const item of data.data) {
+      const url = normalizeAudioValue(item, baseURL);
+      if (url) return url;
+    }
+  }
+
+  throw new Error('TTS response did not include playable audio.');
+}
+
+async function postJSON(url, body, headers = {}) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`TTS request failed (${response.status}): ${detail || response.statusText}`);
+  }
+
+  return response;
+}
+
+async function generateDeepInfraSpeech(text, voiceId, config) {
+  if (!config.apiKey) {
+    throw new Error('Missing DeepInfra API key. Add it once in Settings and it will be reused for TTS.');
+  }
+
+  const model = config.model || (isKokoroVoice(voiceId) ? DEEPINFRA_KOKORO_MODEL : DEEPINFRA_ZONOS_MODEL);
+  const useKokoro = modelLooksLikeKokoro(model) || isKokoroVoice(voiceId);
+  const resolvedVoice = voiceId || (useKokoro ? 'af_bella' : 'american_female');
+  const endpoint = joinUrl(config.baseURL, model);
+  const requestData = useKokoro
+    ? {
+        text,
+        preset_voice: [resolvedVoice],
+        output_format: 'mp3'
+      }
+    : {
+        text,
+        preset_voice: resolvedVoice,
+        language: 'en-us',
+        output_format: 'mp3'
+      };
+
+  const response = await postJSON(endpoint, requestData, {
+    Authorization: `Bearer ${config.apiKey}`
+  });
+  return responseToAudioURL(response, config.baseURL);
+}
+
+async function generateOpenAIAudioSpeech(text, voiceId, config) {
+  const response = await postJSON(joinUrl(config.baseURL, '/v1/audio/speech'), {
+    model: config.model || 'tts-1',
+    input: text,
+    voice: voiceId || 'alloy',
+    response_format: 'mp3'
+  }, config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {});
+
+  return responseToAudioURL(response, config.baseURL);
+}
+
+async function generateGenericJSONSpeech(text, voiceId, config) {
+  const response = await postJSON(joinUrl(config.baseURL, '/tts'), {
+    text,
+    input: text,
+    voice: voiceId,
+    voice_id: voiceId,
+    model: config.model
+  }, config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {});
+
+  return responseToAudioURL(response, config.baseURL);
+}
+
+function parseServerSentData(text) {
+  const events = text
+    .split('\n')
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice(5).trim())
+    .filter((line) => line && line !== '[DONE]');
+
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    try {
+      return JSON.parse(events[i]);
+    } catch (error) {
+      // Keep scanning earlier events.
+    }
+  }
+
+  throw new Error('Gradio TTS call completed without JSON output.');
+}
+
+async function generateGradioQwen3Speech(text, voiceId, config) {
+  const payload = {
+    data: [
+      text,
+      config.language || 'English',
+      voiceId || 'Ryan',
+      config.style || '',
+      config.model || '1.7B 8-bit'
+    ]
+  };
+
+  const modernEndpoints = [
+    joinUrl(config.baseURL, '/gradio_api/call/generate'),
+    joinUrl(config.baseURL, '/call/generate')
+  ];
+
+  for (const endpoint of modernEndpoints) {
+    try {
+      const response = await postJSON(endpoint, payload);
+      const data = await response.json();
+      if (!data.event_id) continue;
+
+      const eventResponse = await fetch(joinUrl(endpoint, data.event_id));
+      if (!eventResponse.ok) continue;
+      const eventData = parseServerSentData(await eventResponse.text());
+      const audioURL = normalizeAudioValue(eventData.data?.[0] || eventData.output, config.baseURL);
+      if (audioURL) return audioURL;
+    } catch (error) {
+      console.warn(`Qwen3 Gradio endpoint failed: ${endpoint}`, error);
+    }
+  }
+
+  const legacyResponse = await postJSON(joinUrl(config.baseURL, '/run/predict'), {
+    fn_index: 0,
+    ...payload
+  });
+  return responseToAudioURL(legacyResponse, config.baseURL);
+}
+
+async function generateLocalSpeech(text, voiceId, config) {
+  switch (config.adapter) {
+    case 'openai-audio':
+      return generateOpenAIAudioSpeech(text, voiceId, config);
+    case 'generic-json':
+      return generateGenericJSONSpeech(text, voiceId, config);
+    case 'deepinfra-compatible':
+      return generateDeepInfraSpeech(text, voiceId, {
+        ...config,
+        apiKey: config.apiKey || 'local'
+      });
+    case 'gradio-qwen3':
+    default:
+      return generateGradioQwen3Speech(text, voiceId, config);
+  }
+}
+
+/**
+ * Get current DeepInfra engine compatibility label.
+ * @returns {'zonos'|'kokoro'|'local'} Legacy engine string for older callers/tests.
+ */
 export const getTTSEngine = () => {
-  return localStorage.getItem('tts_engine') || 'zonos';
+  const config = getTTSProviderConfig();
+  if (config.providerId === 'local') return 'local';
+  return modelLooksLikeKokoro(config.model) ? 'kokoro' : 'zonos';
 };
 
-// Set TTS engine preference in localStorage
 export const setTTSEngine = (engine) => {
-  localStorage.setItem('tts_engine', engine);
-  return engine;
+  setTTSProviderId('deepinfra');
+  setSelectedTTSModel('deepinfra', engine === 'kokoro' ? DEEPINFRA_KOKORO_MODEL : DEEPINFRA_ZONOS_MODEL);
+  return engine === 'kokoro' ? 'kokoro' : 'zonos';
 };
 
 /**
- * Get available voices based on the selected TTS engine
- * @returns {Promise<Array>} Array of voice objects
+ * Get available voices based on the selected TTS provider/model.
+ * @returns {Promise<Array>} Array of voice objects.
  */
 export const getVoices = async () => {
-  const engine = getTTSEngine();
-  
-  // Select voices based on engine
-  if (engine === 'zonos') {
-    // Zonos TTS voices
-    const zonosVoices = [
-      { voice_id: "american_female", name: "American Female", engine: 'zonos' },
-      { voice_id: "american_male", name: "American Male", engine: 'zonos' },
-      { voice_id: "british_female", name: "British Female", engine: 'zonos' },
-      { voice_id: "british_male", name: "British Male", engine: 'zonos' },
-      { voice_id: "random", name: "Random Voice", engine: 'zonos' }
-    ];
-    
-    console.log("Using Zonos TTS voices");
-    return zonosVoices;
-  } else {
-    // Kokoro TTS voices
-    const kokoroVoices = [
-      { voice_id: "af_bella", name: "Bella (Female)", engine: 'kokoro' },
-      { voice_id: "af_nova", name: "Nova (Female)", engine: 'kokoro' },
-      { voice_id: "af_nicole", name: "Nicole (Female)", engine: 'kokoro' },
-      { voice_id: "am_adam", name: "Adam (Male)", engine: 'kokoro' },
-      { voice_id: "am_michael", name: "Michael (Male)", engine: 'kokoro' },
-      { voice_id: "bf_emma", name: "Emma (British Female)", engine: 'kokoro' },
-      { voice_id: "bm_daniel", name: "Daniel (British Male)", engine: 'kokoro' },
-      { voice_id: "bm_george", name: "George (British Male)", engine: 'kokoro' }
-    ];
-    
-    console.log("Using Kokoro TTS voices");
-    return kokoroVoices;
-  }
+  return getVoicesForConfig().map((voice) => ({
+    voice_id: voice.id,
+    name: voice.name,
+    provider: getTTSProviderConfig().providerId,
+    model: voice.model
+  }));
+};
+
+export const getVoiceOptions = () => {
+  return getVoicesForConfig().map((voice) => ({
+    id: voice.id,
+    name: voice.name,
+    model: voice.model
+  }));
 };
 
 /**
- * Split text into sentences for chunked TTS processing
+ * Split text into sentences for chunked TTS processing.
  * @param {string} text - Text to split into sentences
- * @returns {Array<string>} Array of sentences
+ * @returns {Array<string>} Array of text chunks
  */
 export const splitTextIntoSentences = (text) => {
-  console.log("Splitting text into sentences:", text.substring(0, 50) + "...");
-  
-  try {
-    // SIMPLIFIED APPROACH: Just split by common sentence ending punctuation
-    // This avoids regex issues with special characters
-    if (!text || typeof text !== 'string') {
-      console.warn("Invalid text input to splitTextIntoSentences:", text);
-      return ["Error processing text"];
-    }
-    
-    // Handle special markdown cases that cause problems
-    let cleanText = text;
-    
-    // If text starts with italic markers (like *character does action*), 
-    // just strip the markers for TTS
-    if (cleanText.startsWith('*') && cleanText.includes('*', 1)) {
-      cleanText = cleanText.replace(/^\*(.*?)\*/m, '$1');
-    }
-    
-    // Split text at sentence boundaries with simple string splitting
-    // Periods, question marks, exclamation points followed by space or newline
-    const chunks = [];
-    let currentChunk = "";
-    
-    // Pre-split to avoid processing too much text at once
-    const paragraphs = cleanText.split('\n');
-    
-    paragraphs.forEach(paragraph => {
-      // Skip empty paragraphs
-      if (!paragraph.trim()) return;
-      
-      // Simple split on common sentence-ending punctuation
-      const segments = paragraph.split(/(?<=[.!?])\s+/);
-      
-      segments.forEach(segment => {
-        const trimmed = segment.trim();
-        if (!trimmed) return;
-        
-        // Ensure each segment ends with punctuation
-        let processedSegment = trimmed;
-        if (!processedSegment.match(/[.!?]$/)) {
-          processedSegment += '.';
-        }
-        
-        // Check if adding this segment would make the chunk too long
-        if (currentChunk.length + processedSegment.length > 150 && currentChunk.length > 0) {
-          chunks.push(currentChunk);
-          currentChunk = processedSegment;
-        } else {
-          // Add to current chunk with space if needed
-          currentChunk += (currentChunk ? ' ' : '') + processedSegment;
-        }
-      });
-    });
-    
-    // Add the last chunk if not empty
-    if (currentChunk) {
-      chunks.push(currentChunk);
-    }
-    
-    // If we somehow ended up with no chunks, return the original text as one chunk
-    if (chunks.length === 0) {
-      return [cleanText];
-    }
-    
-    console.log(`Split text into ${chunks.length} chunks`);
-    return chunks;
-  } catch (error) {
-    console.error("Error splitting text into sentences:", error);
-    // Return a simplified version of the text as a fallback
-    return [text.substring(0, 200) + "..."];
+  if (!text || typeof text !== 'string') {
+    return [];
   }
+
+  const cleanText = text.replace(/\s+/g, ' ').trim();
+  if (!cleanText) return [];
+
+  const chunks = [];
+  let currentChunk = '';
+  const segments = cleanText.split(/(?<=[.!?])\s+/);
+
+  segments.forEach((segment) => {
+    const processedSegment = /[.!?]$/.test(segment) ? segment : `${segment}.`;
+    if (currentChunk && currentChunk.length + processedSegment.length > 180) {
+      chunks.push(currentChunk);
+      currentChunk = processedSegment;
+    } else {
+      currentChunk += `${currentChunk ? ' ' : ''}${processedSegment}`;
+    }
+  });
+
+  if (currentChunk) chunks.push(currentChunk);
+  return chunks;
 };
 
 /**
- * Generate TTS audio from text
+ * Generate TTS audio from text.
  * @param {string} text - Text to convert to speech
  * @param {string} voiceId - Voice ID to use for TTS
  * @returns {Promise<string>} Audio URL
  */
 export const generateSpeech = async (text, voiceId) => {
-  console.log('%c 🎙️ GENERATE SPEECH CALLED', 'background: #ff00ff; color: white; font-size: 20px; padding: 8px;');
-  console.log('%c Text:', 'background: #ff00ff; color: white;', text?.substring(0, 100) + '...');
-  console.log('%c Voice ID:', 'background: #ff00ff; color: white;', voiceId);
-  
-  // Store this for debugging
-  if (!window.audioGenerationCalls) window.audioGenerationCalls = [];
-  window.audioGenerationCalls.push({
-    timestamp: new Date().toISOString(),
-    text: text?.substring(0, 100) + '...',
-    voiceId
-  });
-  
-  try {
-    // Determine which engine to use
-    // Either from localStorage preference or derive from voiceId formatting
-    let engine = getTTSEngine();
-    
-    // Override engine based on voiceId if it clearly matches a specific engine's format
-    if (voiceId) {
-      if (["american_female", "american_male", "british_female", "british_male", "random"].includes(voiceId)) {
-        engine = 'zonos';
-      } else if (voiceId.startsWith('af_') || voiceId.startsWith('am_') || voiceId.startsWith('bf_') || voiceId.startsWith('bm_')) {
-        engine = 'kokoro';
-      }
-    }
-    
-    console.log(`Generating speech using ${engine} engine for voice ID: ${voiceId}`);
-    
-    // For API limits, limit text length 
-    const truncatedText = text.length > 300 ? text.substring(0, 300) + "..." : text;
-    
-    // Prepare request based on selected engine
-    let requestData, endpoint;
-    
-    if (engine === 'zonos') {
-      // If no voice ID is provided for Zonos, use a default one
-      if (!voiceId || !["american_female", "american_male", "british_female", "british_male", "random"].includes(voiceId)) {
-        console.warn("No valid Zonos voice ID provided, using default voice");
-        voiceId = "random"; // Default Zonos voice
-      }
-      
-      endpoint = TTS_ENDPOINTS.zonos;
-      requestData = {
-        text: truncatedText,
-        preset_voice: voiceId,
-        language: "en-us",
-        output_format: "mp3"
-      };
-      
-      console.log(`Making TTS API request to Zonos TTS endpoint`);
-    } else {
-      // If no voice ID is provided for Kokoro, use a default one
-      if (!voiceId || !(voiceId.startsWith('af_') || voiceId.startsWith('am_') || voiceId.startsWith('bf_') || voiceId.startsWith('bm_'))) {
-        console.warn("No valid Kokoro voice ID provided, using default voice");
-        voiceId = "af_bella"; // Default Kokoro voice
-      }
-      
-      endpoint = TTS_ENDPOINTS.kokoro;
-      requestData = {
-        text: truncatedText,
-        preset_voice: [voiceId], // Kokoro expects an array of voices
-        output_format: "mp3"
-      };
-      
-      console.log(`Making TTS API request to Kokoro TTS endpoint`);
-    }
-    
-    const apiKey = getDeepInfraApiKey();
-    if (!apiKey) {
-      throw new Error("Missing DeepInfra API key. Add it in Settings to use voice generation.");
-    }
+  const config = getTTSProviderConfig();
+  const resolvedVoiceId = voiceId || getDefaultVoice(config);
+  const clippedText = String(text || '').slice(0, 600);
 
-    // Make the request to the selected endpoint
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(requestData)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`TTS request failed (${response.status}): ${errorText}`);
-    }
-
-    const responseData = await response.json();
-    
-    console.log("TTS response received:", response.status);
-    
-    // Process the response
-    console.log("Response data:", JSON.stringify(responseData).substring(0, 100));
-    console.log("Full response:", responseData);
-    
-    if (responseData && responseData.audio) {
-      console.log('%c 🎵 AUDIO DATA RECEIVED FROM API', 'background: #00ff00; color: black; font-size: 20px; padding: 8px;');
-      
-      // Store this for debugging
-      if (!window.audioAPIResponses) window.audioAPIResponses = [];
-      window.audioAPIResponses.push({
-        timestamp: new Date().toISOString(),
-        hasAudio: !!responseData.audio,
-        audioType: typeof responseData.audio,
-        audioLength: typeof responseData.audio === 'string' ? responseData.audio.length : 'unknown'
-      });
-      
-      console.log("Audio data received in response");
-      
-      try {
-        // For the Zonos API, we need to handle the response differently
-        // Check if we got any usable audio data
-        if (responseData.audio === null) {
-          console.warn("Audio data is null, using fallback audio");
-          return createFallbackAudio();
-        }
-        
-        // Check if the audio data is already a data URL
-        if (typeof responseData.audio === 'string' && responseData.audio.startsWith('data:audio/')) {
-          console.log("Audio data is already a data URL, using directly");
-          return responseData.audio;
-        }
-        
-        // Handle base64 format
-        console.log("Converting audio data to blob URL");
-        
-        // The Zonos API response seems to include audio data as base64
-        // Let's convert it to a Blob and create a URL
-        try {
-          // If it's a base64 string without the data URL prefix
-          if (typeof responseData.audio === 'string') {
-            console.log('%c 🔊 RETURNING AUDIO URL', 'background: purple; color: white; font-size: 20px; padding: 8px;');
-            
-            // Store in a global variable for debugging
-            window.lastGeneratedAudioURL = responseData.audio.substring(0, 100) + '...';
-            
-            // If it's already a data URL, just return it directly
-            if (responseData.audio.startsWith('data:audio')) {
-              console.log('%c RETURNING DATA URL DIRECTLY', 'background: purple; color: white;');
-              return responseData.audio;
-            }
-            
-            // Extract just the base64 part if it's a data URL
-            const base64Data = responseData.audio.includes('base64,') 
-              ? responseData.audio.split('base64,')[1] 
-              : responseData.audio;
-              
-            // Convert to blob
-            const byteCharacters = atob(base64Data);
-            const byteArrays = [];
-            
-            for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-              const slice = byteCharacters.slice(offset, offset + 512);
-              
-              const byteNumbers = new Array(slice.length);
-              for (let i = 0; i < slice.length; i++) {
-                byteNumbers[i] = slice.charCodeAt(i);
-              }
-              
-              const byteArray = new Uint8Array(byteNumbers);
-              byteArrays.push(byteArray);
-            }
-            
-            const blob = new Blob(byteArrays, { type: 'audio/mp3' });
-            const url = URL.createObjectURL(blob);
-            console.log('%c RETURNING BLOB URL', 'background: purple; color: white;', url);
-            return url;
-          }
-        } catch (e) {
-          console.error("Error converting base64 to blob:", e);
-        }
-      } catch (error) {
-        console.error("Error processing audio data:", error);
-        
-        // Fall back to using the fallback audio
-        console.log("Using fallback audio due to error");
-        return createFallbackAudio();
-      }
-    }
-    
-    // If we get here, we didn't get usable audio data
-    console.error("No audio data in the response:", responseData);
-    
-    // Fall back to using the fallback audio rather than throwing an error
-    console.log("Using fallback audio instead of throwing error");
+  if (!clippedText.trim()) {
     return createFallbackAudio();
-  } catch (error) {
-    console.error("Error in speech generation:", error);
-    
-    // For demo purposes, provide a simple message
-    if (error.response && error.response.status === 405) {
-      console.warn("API endpoint does not accept this method. Using fallback audio.");
+  }
+
+  try {
+    if (config.providerId === 'local') {
+      return await generateLocalSpeech(clippedText, resolvedVoiceId, config);
     }
-    
-    // Instead of throwing, return fallback audio
-    console.log("API call failed. Using fallback audio.");
+
+    return await generateDeepInfraSpeech(clippedText, resolvedVoiceId, config);
+  } catch (error) {
+    window.lastTTSError = error.message || String(error);
+    console.error('[TTS] Speech generation failed:', error);
     return createFallbackAudio();
   }
 };
 
 /**
- * Generate TTS audio for multiple text chunks in parallel
+ * Generate TTS audio for multiple text chunks.
  * @param {Array<string>} textChunks - Array of text chunks to convert to speech
  * @param {string} voiceId - Voice ID to use for TTS
  * @returns {Promise<Array<string>>} Array of audio URLs
  */
 export const generateSpeechChunks = async (textChunks, voiceId) => {
-  console.log(`[AUDIO-API] Generating speech for ${textChunks.length} chunks in parallel`);
-  
-  // Handle case with empty chunks array
-  if (!textChunks || textChunks.length === 0) {
-    console.warn(`[AUDIO-API] No text chunks provided to generateSpeechChunks`);
-    return [];
+  const chunks = (textChunks || []).filter(Boolean);
+  if (chunks.length === 0) return [];
+
+  const urls = [];
+  for (const chunk of chunks) {
+    urls.push(await generateSpeech(chunk, voiceId));
   }
-  
-  // Handle case with single chunk - ensure we still return an array
-  if (textChunks.length === 1) {
-    console.log(`[AUDIO-API] Only one chunk, processing directly`);
-    try {
-      const url = await generateSpeech(textChunks[0], voiceId);
-      console.log(`[AUDIO-API] Generated single audio chunk`);
-      console.log(`[AUDIO-API] Single chunk URL: ${url ? url.substring(0, 50) + '...' : 'undefined'}`);
-      
-      // Always return an array even for a single item
-      const result = [url];
-      console.log(`[AUDIO-API] Returning array with single URL, length: ${result.length}`);
-      console.log(`[AUDIO-API] Array content:`, JSON.stringify(result));
-      return result;
-    } catch (err) {
-      console.error(`[AUDIO-API] Failed to generate single audio chunk:`, err);
-      const fallback = await createFallbackAudio();
-      return [fallback];
-    }
-  }
-  
-  try {
-    // Very direct debug
-    console.log(`%c 🔊 GENERATING SPEECH FOR ${textChunks.length} CHUNKS`, 'background: #00ff00; color: black; font-size: 16px');
-    console.log(`%c First chunk:`, 'background: #00ff00; color: black', textChunks[0]);
-    
-    // Add to window for debugging
-    window.lastAudioGeneration = {
-      timestamp: new Date().toISOString(),
-      textChunks: [...textChunks],
-      voiceId,
-      chunkCount: textChunks.length
-    };
-    
-    // Create an array of promises, each generating speech for one chunk
-    const promises = textChunks.map((chunk, i) => {
-      console.log(`%c [AUDIO-API] Starting request for chunk ${i + 1}/${textChunks.length}`, 'background: #00ff00; color: black');
-      return generateSpeech(chunk, voiceId)
-        .then(url => {
-          console.log(`%c [AUDIO-API] Generated audio for chunk ${i + 1}/${textChunks.length}`, 'background: #00ff00; color: black');
-          console.log(`%c URL for chunk ${i+1}:`, 'background: #00ff00; color: black', url?.substring(0, 50) + '...');
-          
-          // Store this URL in the window debug object
-          if (!window.lastAudioGeneration.urls) window.lastAudioGeneration.urls = [];
-          window.lastAudioGeneration.urls[i] = url;
-          
-          return url;
-        })
-        .catch(err => {
-          console.error(`%c [AUDIO-API] Failed to generate audio for chunk ${i + 1}:`, 'background: #ff0000; color: white', err);
-          return createFallbackAudio();
-        });
-    });
-    
-    // Wait for all promises to resolve
-    const audioUrls = await Promise.all(promises);
-    
-    // SUPER DIRECT DEBUG - Make it impossible to miss
-    console.log(`%c !!! AUDIO URLS CREATED !!!`, 'background: #ff00ff; color: white; font-size: 24px; padding: 10px;');
-    console.log(`%c Array length: ${audioUrls.length}`, 'background: #ff00ff; color: white; font-size: 18px;');
-    
-    // Store in a global variable for debugging
-    window.lastGeneratedAudioUrls = [...audioUrls];
-    
-    // Log each URL individually with distinct styling
-    audioUrls.forEach((url, idx) => {
-      console.log(`%c URL[${idx}]`, 'background: #ff00ff; color: white; font-weight: bold;', 
-        url ? url.substring(0, 50) + '...' : 'null/undefined');
-    });
-    
-    console.log(`[AUDIO-API] Successfully generated ${audioUrls.length} audio chunks`);
-    
-    // Log the full audio URLs array to help with debugging
-    console.log('[AUDIO-API] FULL AUDIO ARRAY:', JSON.stringify(audioUrls));
-    // Force logging of array length and first item
-    console.log(`[AUDIO-API] ARRAY LENGTH: ${audioUrls.length}, FIRST ITEM: ${audioUrls[0] ? audioUrls[0].substring(0, 50) + '...' : 'undefined'}`);
-    console.table(audioUrls);
-    
-    // Log the audio URLs in a more reliable way
-    console.log(`[AUDIO-API] Audio URL summary:`);
-    audioUrls.forEach((url, i) => {
-      if (!url) {
-        console.log(`[AUDIO-API] Chunk ${i+1}: null or undefined URL`);
-      } else if (typeof url !== 'string') {
-        console.log(`[AUDIO-API] Chunk ${i+1}: non-string URL type: ${typeof url}`);
-      } else if (url.startsWith('blob:')) {
-        console.log(`[AUDIO-API] Chunk ${i+1}: Blob URL (length: ${url.length})`);
-      } else if (url.startsWith('data:audio')) {
-        console.log(`[AUDIO-API] Chunk ${i+1}: Data URL (length: ${url.length})`);
-      } else {
-        console.log(`[AUDIO-API] Chunk ${i+1}: Other URL type (length: ${url.length})`);
-      }
-    });
-    
-    return audioUrls;
-  } catch (error) {
-    console.error("[AUDIO-API] Error generating speech chunks:", error);
-    // Return at least one fallback audio URL
-    return [await createFallbackAudio()];
-  }
+  return urls;
 };
 
 /**
- * Get a static voice sample for fallback when API fails
- */
-const getStaticVoiceSample = (voiceId) => {
-  // Create a simple beep audio as fallback
-  return createFallbackAudio();
-};
-
-/**
- * Create a fallback audio for demo/development
+ * Create a fallback audio for demo/development.
  * @returns {Promise<string>} URL to fallback audio blob
  */
-const createFallbackAudio = () => {
+export const createFallbackAudio = () => {
   return new Promise((resolve) => {
-    // For simplicity, we'll just use a pre-defined base64 WAV
-    // This is a simple beep sound encoded as a WAV file in base64
-    const base64Audio = "UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Dal9ZYnBwdGxeWV1qaXN5fXtpU05XZnF8gIB0XlNTWWdyfYiMioJwX1BLTlVkcIeNlI+DdGhgYGVrdn6Bg4B5cW1qaWxxeYGHioqEeW5mYmNnb3h/hYiJhHpvZmFhZGx0e4GFiYmFfnZubGtrdXh8gISEg4B8enl3dnp9gIKEhYOAfXp5eHd6fICDhISCgH57ent8fX+Bg4OEgoB9e3p5e3x+gIKDg4KAf317e3t8fX+Bg4OCgYB+fHt7fH1/gIKDg4KBf317e3x8fn+BgoOCgYF/fXx8fH1+gIGCg4KBgH58fHx8fX+AgYKDgoGAfnx8fH1+f4CBgoKCgYB+fX19fn+AgIGBgYGAfn19fX1+f4CBgYGBgIB+fn19fn5/gIGBgYGAgH5+fn5+f3+AgYGBgYCAf35+fn5/f4CBgYGBgIB/fn5+fn+AgICBgYGAgH9+fn5+f4CAgICBgYCAf35+fn9/gICAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgICAf39/f3+AgICAgICAgIB/f39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/gICAgICAgICAf39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/gICAgICAgICAf39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/gICAgICAgICAf39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/f4CAgICAgICAgH9/f39/gICAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgIB/f39/f3+AgICAgICAgH9/f39/f4CAgICAgICAf39/f3+AgICAgICAgIB/f39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/gICAgICAgICAf39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/gICAgICAgICAf39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/gICAgICAgICAf39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/gICAgICAgICAf39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f3+AgICAgICAgICAf39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/gICAgICAgICAf39/f4CAgICAgICAgH9/f3+AgICAgICAgIB/f39/gICAgICAgICAf39/f4CAgICAgA==";
-    
+    const base64Audio = 'UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
     try {
-      // Convert base64 to Blob and create a URL
-      const byteCharacters = atob(base64Audio);
-      const byteNumbers = new Array(byteCharacters.length);
-      
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'audio/wav' });
-      const url = URL.createObjectURL(blob);
-      
-      console.log("Created fallback audio blob URL");
-      resolve(url);
-    } catch (e) {
-      console.error("Error creating fallback audio:", e);
-      // Return a simple data URL as absolute last resort
-      resolve("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+      resolve(createObjectURLFromBase64(base64Audio, 'audio/wav'));
+    } catch (error) {
+      console.error('Error creating fallback audio:', error);
+      resolve(`data:audio/wav;base64,${base64Audio}`);
     }
   });
-};
-
-// Helper to convert AudioBuffer to WAV format
-function bufferToWave(abuffer, offset, len) {
-  const numOfChan = abuffer.numberOfChannels;
-  const length = len * numOfChan * 2 + 44;
-  const buffer = new ArrayBuffer(length);
-  const view = new DataView(buffer);
-  const channels = [];
-  let sample, pos = 0;
-
-  // Write WAVE header
-  setUint32(0x46464952); // "RIFF"
-  setUint32(length - 8); // file length - 8
-  setUint32(0x45564157); // "WAVE"
-  setUint32(0x20746d66); // "fmt " chunk
-  setUint32(16); // length = 16
-  setUint16(1); // PCM
-  setUint16(numOfChan);
-  setUint32(abuffer.sampleRate);
-  setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
-  setUint16(numOfChan * 2); // block align
-  setUint16(16); // 16-bit
-  setUint32(0x61746164); // "data" chunk
-  setUint32(length - pos - 4); // chunk length
-
-  // Write audio data
-  for (let i = 0; i < abuffer.numberOfChannels; i++) {
-    channels.push(abuffer.getChannelData(i));
-  }
-
-  while (pos < length) {
-    for (let i = 0; i < numOfChan; i++) {
-      // interleave channels
-      if (offset >= len) {
-        // Prevent out of bounds
-        sample = 0;
-      } else {
-        // Get channel data
-        const channelData = channels[i];
-        if (channelData && offset < channelData.length) {
-          sample = Math.max(-1, Math.min(1, channelData[offset])); // clamp
-        } else {
-          sample = 0;
-        }
-      }
-      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0; // scale to 16-bit signed int
-      view.setInt16(pos, sample, true); // write 16-bit sample
-      pos += 2;
-    }
-    offset++; // next source sample
-    
-    // Safety check
-    if (pos >= length) break;
-  }
-
-  function setUint16(data) {
-    view.setUint16(pos, data, true);
-    pos += 2;
-  }
-
-  function setUint32(data) {
-    view.setUint32(pos, data, true);
-    pos += 4;
-  }
-
-  return new Blob([buffer], { type: "audio/wav" });
-}
-
-/**
- * Convert data to Blob
- * @param {string|object} data - Data to convert (base64 string, binary data, or other format)
- * @param {string} mimeType - MIME type of the data
- * @returns {Blob} Blob object
- */
-const base64ToBlob = (data, mimeType) => {
-  // Check if data is already a Blob
-  if (data instanceof Blob) {
-    return data;
-  }
-  
-  // Handle different data formats
-  try {
-    if (typeof data === 'string') {
-      // Try to decode as base64
-      try {
-        // Check if it's a valid base64 string
-        const validBase64 = data.match(/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$/);
-        
-        if (validBase64) {
-          // It's a valid base64 string, decode it
-          const byteCharacters = atob(data);
-          const byteArrays = [];
-
-          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-            const slice = byteCharacters.slice(offset, offset + 512);
-            
-            const byteNumbers = new Array(slice.length);
-            for (let i = 0; i < slice.length; i++) {
-              byteNumbers[i] = slice.charCodeAt(i);
-            }
-            
-            const byteArray = new Uint8Array(byteNumbers);
-            byteArrays.push(byteArray);
-          }
-          
-          return new Blob(byteArrays, { type: mimeType });
-        }
-      } catch (e) {
-        console.warn("Not a valid base64 string:", e.message);
-      }
-      
-      // If it's not a valid base64 string, create a Blob from the string directly
-      return new Blob([data], { type: mimeType });
-    } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-      // Handle ArrayBuffer or TypedArray
-      return new Blob([data], { type: mimeType });
-    } else if (typeof data === 'object') {
-      // For other object types, try to stringify
-      return new Blob([JSON.stringify(data)], { type: mimeType });
-    }
-  } catch (error) {
-    console.error("Error converting data to Blob:", error);
-  }
-  
-  // If all else fails, return an empty Blob
-  return new Blob([], { type: mimeType });
 };

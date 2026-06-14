@@ -213,10 +213,93 @@ export const IMAGE_PROVIDER_DEFINITIONS = {
   }
 };
 
+export const TTS_PROVIDER_DEFINITIONS = {
+  deepinfra: {
+    id: 'deepinfra',
+    name: 'DeepInfra',
+    apiType: 'deepinfra-tts',
+    baseURL: 'https://api.deepinfra.com/v1/inference',
+    needsBaseUrlInput: false,
+    apiKeyStorageKey: 'gaia_provider_apikey_deepinfra',
+    ttsModels: {
+      ZONOS: 'Zyphra/Zonos-v0.1-hybrid',
+      KOKORO: 'hexgrad/Kokoro-82M'
+    },
+    defaultModel: 'Zyphra/Zonos-v0.1-hybrid',
+    voices: [
+      { id: 'american_female', name: 'American Female', model: 'Zyphra/Zonos-v0.1-hybrid' },
+      { id: 'american_male', name: 'American Male', model: 'Zyphra/Zonos-v0.1-hybrid' },
+      { id: 'british_female', name: 'British Female', model: 'Zyphra/Zonos-v0.1-hybrid' },
+      { id: 'british_male', name: 'British Male', model: 'Zyphra/Zonos-v0.1-hybrid' },
+      { id: 'random', name: 'Random', model: 'Zyphra/Zonos-v0.1-hybrid' },
+      { id: 'af_bella', name: 'Bella', model: 'hexgrad/Kokoro-82M' },
+      { id: 'af_nova', name: 'Nova', model: 'hexgrad/Kokoro-82M' },
+      { id: 'af_nicole', name: 'Nicole', model: 'hexgrad/Kokoro-82M' },
+      { id: 'am_adam', name: 'Adam', model: 'hexgrad/Kokoro-82M' },
+      { id: 'am_michael', name: 'Michael', model: 'hexgrad/Kokoro-82M' },
+      { id: 'bf_emma', name: 'Emma', model: 'hexgrad/Kokoro-82M' },
+      { id: 'bm_daniel', name: 'Daniel', model: 'hexgrad/Kokoro-82M' },
+      { id: 'bm_george', name: 'George', model: 'hexgrad/Kokoro-82M' }
+    ]
+  },
+  local: {
+    id: 'local',
+    name: 'Local',
+    apiType: 'local-tts',
+    baseURL: 'http://127.0.0.1:7860',
+    needsBaseUrlInput: true,
+    apiKeyStorageKey: 'gaia_provider_apikey_local',
+    ttsModels: {
+      QWEN3_CUSTOM_17B: '1.7B 8-bit',
+      QWEN3_CUSTOM_06B: '0.6B 8-bit',
+      KOKORO: 'kokoro',
+      SPARK_TTS: 'spark-tts',
+      GENERIC: 'default',
+      DOTS_TTS_MLX: 'dots-tts-mlx'
+    },
+    defaultModel: '1.7B 8-bit',
+    adapters: {
+      GRADIO_QWEN3: 'gradio-qwen3',
+      OPENAI_AUDIO: 'openai-audio',
+      GENERIC_JSON: 'generic-json',
+      DEEPINFRA_COMPAT: 'deepinfra-compatible'
+    },
+    defaultAdapter: 'gradio-qwen3',
+    voices: [
+      { id: 'Ryan', name: 'Ryan', model: '1.7B 8-bit' },
+      { id: 'Aiden', name: 'Aiden', model: '1.7B 8-bit' },
+      { id: 'Vivian', name: 'Vivian', model: '1.7B 8-bit' },
+      { id: 'Serena', name: 'Serena', model: '1.7B 8-bit' },
+      { id: 'Uncle_Fu', name: 'Uncle Fu', model: '1.7B 8-bit' },
+      { id: 'Dylan', name: 'Dylan', model: '1.7B 8-bit' },
+      { id: 'Eric', name: 'Eric', model: '1.7B 8-bit' },
+      { id: 'Ono_Anna', name: 'Ono Anna', model: '1.7B 8-bit' },
+      { id: 'Sohee', name: 'Sohee', model: '1.7B 8-bit' },
+      { id: 'af_bella', name: 'Kokoro Bella', model: 'kokoro' },
+      { id: 'af_nova', name: 'Kokoro Nova', model: 'kokoro' },
+      { id: 'default', name: 'Default', model: 'default' },
+      { id: 'alloy', name: 'Alloy', model: 'dots-tts-mlx' },
+      { id: 'echo', name: 'Echo', model: 'dots-tts-mlx' },
+      { id: 'fable', name: 'Fable', model: 'dots-tts-mlx' },
+      { id: 'onyx', name: 'Onyx', model: 'dots-tts-mlx' },
+      { id: 'nova', name: 'Nova', model: 'dots-tts-mlx' },
+      { id: 'shimmer', name: 'Shimmer', model: 'dots-tts-mlx' }
+    ]
+  }
+};
+
 export const DEFAULT_IMAGE_PROVIDER = 'deepinfra';
 export const IMAGE_PROVIDER_STORAGE_KEY = 'gaia_image_provider';
 export const IMAGE_PROVIDER_MODEL_PREFIX = 'gaia_image_model_';
 export const IMAGE_LOCAL_BASE_URL_KEY = 'gaia_image_local_base_url';
+
+export const DEFAULT_TTS_PROVIDER = 'deepinfra';
+export const TTS_PROVIDER_STORAGE_KEY = 'gaia_tts_provider';
+export const TTS_PROVIDER_MODEL_PREFIX = 'gaia_tts_model_';
+export const TTS_LOCAL_BASE_URL_KEY = 'gaia_tts_local_base_url';
+export const TTS_LOCAL_ADAPTER_KEY = 'gaia_tts_local_adapter';
+export const TTS_LOCAL_LANGUAGE_KEY = 'gaia_tts_local_language';
+export const TTS_LOCAL_STYLE_KEY = 'gaia_tts_local_style';
 
 export const DEFAULT_PROVIDER = 'deepinfra';
 export const PROVIDER_STORAGE_KEY = 'gaia_selected_provider';
@@ -242,9 +325,21 @@ export function getImageProviderDefinition(imageProviderId = DEFAULT_IMAGE_PROVI
   return IMAGE_PROVIDER_DEFINITIONS[imageProviderId] || IMAGE_PROVIDER_DEFINITIONS[DEFAULT_IMAGE_PROVIDER];
 }
 
+export function getTTSProviderDefinition(ttsProviderId = DEFAULT_TTS_PROVIDER) {
+  return TTS_PROVIDER_DEFINITIONS[ttsProviderId] || TTS_PROVIDER_DEFINITIONS[DEFAULT_TTS_PROVIDER];
+}
+
 export function getImageProviderModelOptions(imageProviderId = DEFAULT_IMAGE_PROVIDER) {
   const ip = getImageProviderDefinition(imageProviderId);
   return Object.entries(ip.imageModels || {}).map(([label, id]) => ({
+    label,
+    id
+  }));
+}
+
+export function getTTSProviderModelOptions(ttsProviderId = DEFAULT_TTS_PROVIDER) {
+  const provider = getTTSProviderDefinition(ttsProviderId);
+  return Object.entries(provider.ttsModels || {}).map(([label, id]) => ({
     label,
     id
   }));
