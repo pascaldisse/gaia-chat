@@ -229,9 +229,9 @@ export function createPersonaTools(chatComponent, persona) {
         // Add message to chat before generating
         addToolUsageMessage("Image Generation", prompt, "Generating image...");
         
+        // Let imageService resolve the model from the active image provider config
         const result = await chatComponent.generateImage({
           prompt,
-          model: chatComponent.imageModel,
           style: chatComponent.selectedStyle
         });
         

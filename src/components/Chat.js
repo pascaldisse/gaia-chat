@@ -11,7 +11,7 @@ import { chatDB, knowledgeDB, userDB } from '../services/db';
 import { parseFileContent } from '../utils/FileParser';
 import { createPersonaTools } from "../services/tools";
 import { isDiceRollCommand, extractDiceParams, formatDiceNotation } from "../utils/ToolUtilities";
-import { getImageProviderConfig, resolveModelForProvider } from '../services/providerService';
+import { getImageProviderConfig, getImageProviderId, resolveModelForProvider } from '../services/providerService';
 import { streamChatCompletion } from '../services/llmService';
 import { generateImage as generateImageService } from '../services/imageService';
 
@@ -186,7 +186,56 @@ const Chat = ({
   };
 
   // We now use imported utility functions for dice roll detection and parameter extraction
-  
+
+  // Build tool instructions to inject into the persona's system prompt
+  const getToolInstructions = (persona) => {
+    const tc = persona?.agentSettings?.toolConfig || {};
+    const enabled = [];
+    if (tc.imageGeneration) enabled.push('generate_image(description) — Generate an image');
+    if (tc.diceRoll) enabled.push('dice_roll(notation) — Roll dice (e.g. "2d6")');
+    if (tc.duckDuckGoSearch) enabled.push('duckduckgo_search(query) — Search the web');
+    if (tc.tavilySearch) enabled.push('tavily_search(query) — Search the web');
+    if (enabled.length === 0) return '';
+    return `\nYou have access to tools. To use a tool, emit a <function> tag with the call inside.\n${enabled.map(t => `- ${t}`).join('\n')}\nWhen asked to generate an image, roll dice, or search, you MUST use the tool instead of describing. Wrap exactly one call per <function> tag.\n`;
+  };
+
+  // Parse <function> tags from a persona response and execute matching tools
+  const processFunctionCalls = async (persona, responseText, messageId) => {
+    const funcRegex = /<function>([\s\S]*?)<\/function>/gi;
+    const matches = [...responseText.matchAll(funcRegex)];
+    if (matches.length === 0) return responseText;
+
+    const componentRef = { knowledgeDB, generateImage, imageModel, selectedStyle, setCurrentChat };
+    const tools = createPersonaTools(componentRef, persona);
+
+    let cleaned = responseText;
+    // Process in reverse so index offsets stay valid
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const match = matches[i];
+      const fullTag = match[0];
+      const inner = match[1].trim();
+      const parenIdx = inner.indexOf('(');
+      const toolName = parenIdx > 0 ? inner.substring(0, parenIdx).trim() : inner;
+      let arg = '';
+      if (parenIdx > 0) {
+        const closeParen = inner.lastIndexOf(')');
+        if (closeParen > parenIdx) {
+          arg = inner.substring(parenIdx + 1, closeParen).trim().replace(/^["']|["']$/g, '');
+        }
+      }
+      const tool = tools.find(t => t.name === toolName);
+      if (tool) {
+        try {
+          await tool.func(arg || undefined);
+        } catch (e) {
+          console.error(`Tool ${toolName} execution failed:`, e);
+        }
+      }
+      cleaned = cleaned.substring(0, match.index) + cleaned.substring(match.index + fullTag.length);
+    }
+    return cleaned.trim();
+  };
+
   const generatePersonaResponse = async (persona, triggerMessage, outcome) => {
     let messageId = Date.now();
     try {
@@ -248,7 +297,7 @@ const Chat = ({
         personaId: persona.id
       }]);
       const modulatedPrompt = `${persona.systemPrompt}
-${generateRpgInstructions(outcome)}
+${getToolInstructions(persona)}${generateRpgInstructions(outcome)}
 
 Recent conversation:
 ${recentMessages}
@@ -257,7 +306,7 @@ ${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
-      await streamChatCompletion({
+      const finalText = await streamChatCompletion({
         model: resolveModelForProvider(persona.model),
         messages: [
           { role: "system", content: modulatedPrompt },
@@ -275,6 +324,18 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           );
         }
       });
+
+      // Dispatch any <function> tags the persona emitted
+      const cleanedText = await processFunctionCalls(persona, finalText, messageId);
+      if (cleanedText !== finalText) {
+        setCurrentChat(prev => 
+          prev.map(msg => 
+            msg.id === messageId 
+              ? { ...msg, content: cleanedText }
+              : msg
+          )
+        );
+      }
 
       // Check if markActive method exists before calling it
       if (typeof persona.markActive === 'function') {
@@ -614,7 +675,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
           }
 
           const modulatedPrompt = `${persona.systemPrompt}
-${generateRpgInstructions(outcome)}
+${getToolInstructions(persona)}${generateRpgInstructions(outcome)}
 
 Recent conversation:
 ${recentMessages}
@@ -623,7 +684,7 @@ ${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
-          await streamChatCompletion({
+          const finalText = await streamChatCompletion({
             model: resolveModelForProvider(persona.model),
             messages: [
               { role: "system", content: modulatedPrompt },
@@ -641,6 +702,19 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
               );
             }
           });
+
+          // Dispatch any <function> tags the persona emitted
+          const cleanedText = await processFunctionCalls(persona, finalText, messageId);
+          if (cleanedText !== finalText) {
+            setCurrentChat(prev => 
+              prev.map(msg => 
+                msg.id === messageId 
+                  ? { ...msg, content: cleanedText }
+                  : msg
+              )
+            );
+          }
+
           // Check if markActive exists before calling it
           if (typeof persona.markActive === 'function') {
             try {
@@ -1380,8 +1454,9 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
 };
 
 const ImageModal = ({ onClose, onGenerate, initialPrompt }) => {
-  const imageModelOptions = getImageProviderModelOptions();
-  const defaultImgModel = imageModelOptions[0]?.id || '';
+  const imageModelOptions = getImageProviderModelOptions(getImageProviderId());
+  const providerCfg = getImageProviderConfig();
+  const defaultImgModel = providerCfg.model || imageModelOptions[0]?.id || '';
   const [prompt, setPrompt] = useState(initialPrompt);
   const [style, setStyle] = useState('realistic');
   const [enhancement, setEnhancement] = useState(true);

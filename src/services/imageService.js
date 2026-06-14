@@ -44,22 +44,32 @@ export async function generateImage({
   model
 }) {
   const config = getImageProviderConfig();
-  const resolvedModel = model || config.model;
+
+  // Validate model belongs to this provider; fall back to the configured default
+  const validModels = new Set(Object.values(config.imageModels || {}));
+  let resolvedModel = model;
+  if (!resolvedModel || !validModels.has(resolvedModel)) {
+    resolvedModel = config.model;
+  }
+
   const apiKey = config.apiKey;
+  // Normalise baseURL to never end with / so concatenation never double-slashes
+  const baseURL = String(config.baseURL || '').replace(/\/+$/, '');
+  const patchedConfig = { ...config, baseURL };
 
-  if (config.apiType === 'deepinfra-inference') {
-    return deepinfraGenerate({ config, resolvedModel, prompt, negativePrompt, width, height, steps, guidanceScale, apiKey });
+  if (patchedConfig.apiType === 'deepinfra-inference') {
+    return deepinfraGenerate({ config: patchedConfig, resolvedModel, prompt, negativePrompt, width, height, steps, guidanceScale, apiKey });
   }
 
-  if (config.apiType === 'openai-images') {
-    return openaiGenerate({ config, resolvedModel, prompt, width, height, apiKey });
+  if (patchedConfig.apiType === 'openai-images') {
+    return openaiGenerate({ config: patchedConfig, resolvedModel, prompt, width, height, apiKey });
   }
 
-  if (config.apiType === 'bfl') {
-    return bflGenerate({ config, resolvedModel, prompt, width, height, apiKey });
+  if (patchedConfig.apiType === 'bfl') {
+    return bflGenerate({ config: patchedConfig, resolvedModel, prompt, width, height, apiKey });
   }
 
-  throw new Error(`Unknown image API type: ${config.apiType}`);
+  throw new Error(`Unknown image API type: ${patchedConfig.apiType}`);
 }
 
 /* ---- DeepInfra inference ---- */

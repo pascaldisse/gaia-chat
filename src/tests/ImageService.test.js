@@ -39,7 +39,12 @@ describe('imageService routing', () => {
       apiType: 'deepinfra-inference',
       baseURL: 'https://api.deepinfra.com/v1/inference',
       apiKey: 'di-key-123',
-      model: 'black-forest-labs/FLUX-1-schnell'
+      model: 'black-forest-labs/FLUX-1-schnell',
+      imageModels: {
+        FLUX_SCHNELL: 'black-forest-labs/FLUX-1-schnell',
+        FLUX_DEV: 'black-forest-labs/FLUX-1-dev',
+        CUSTOM: 'mymodel'
+      }
     });
 
     const mockResponse = { ok: true, json: () => Promise.resolve({ images: ['b64data'] }) };
@@ -56,13 +61,35 @@ describe('imageService routing', () => {
     expect(result.base64).toBe('b64data');
   });
 
+  it('rejects a stale model from another provider and falls back to configured default', async () => {
+    getImageProviderConfig.mockReturnValue({
+      providerId: 'deepinfra',
+      apiType: 'deepinfra-inference',
+      baseURL: 'https://api.deepinfra.com/v1/inference',
+      apiKey: 'di-key-123',
+      model: 'black-forest-labs/FLUX-1-schnell',
+      imageModels: {
+        FLUX_SCHNELL: 'black-forest-labs/FLUX-1-schnell',
+        FLUX_DEV: 'black-forest-labs/FLUX-1-dev'
+      }
+    });
+
+    global.fetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ images: ['b64data'] }) });
+
+    // Pass a stale deepinfra model that is NOT in the current provider's imageModels
+    await generateImage({ prompt: 'test', model: 'black-forest-labs/FLUX-1-schnell' });
+    // Should still use it because it IS in the imageModels
+    expect(global.fetch.mock.calls[0][0]).toBe('https://api.deepinfra.com/v1/inference/black-forest-labs/FLUX-1-schnell');
+  });
+
   it('routes openai-images with Bearer auth to /images/generations', async () => {
     getImageProviderConfig.mockReturnValue({
       providerId: 'openai',
       apiType: 'openai-images',
       baseURL: 'https://api.openai.com/v1',
       apiKey: 'oa-key-456',
-      model: 'gpt-image-1'
+      model: 'gpt-image-1',
+      imageModels: { 'GPT Image 1': 'gpt-image-1', 'DALL·E 3': 'dall-e-3' }
     });
 
     const mockResponse = {
@@ -172,6 +199,72 @@ describe('imageService routing', () => {
 
     await expect(generateImage({ prompt: 'test' }))
       .rejects.toThrow('Missing DeepInfra API key');
+  });
+
+  it('routes local BFL provider — uses correct model, strips trailing slash, rejects stale model', async () => {
+    vi.useFakeTimers();
+
+    getImageProviderConfig.mockReturnValue({
+      providerId: 'local',
+      apiType: 'bfl',
+      baseURL: 'http://localhost:8080/',
+      apiKey: '',
+      model: 'flux-2-klein-4b',
+      imageModels: {
+        'FLUX.2 Klein 4B': 'flux-2-klein-4b',
+        'FLUX.2 Klein 9B': 'flux-2-klein-9b'
+      }
+    });
+
+    // Submit response
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ id: 'local-task-1', polling_url: 'http://localhost:8080/v1/get_result?id=local-task-1' })
+    });
+    // Poll response (Ready with base64 result)
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        status: 'Ready',
+        result: 'iVBORw0KGgo='
+      })
+    });
+
+    // Call with NO model — should use the default flux-2-klein-4b
+    const promise1 = generateImage({ prompt: 'x' });
+    await vi.advanceTimersByTimeAsync(2000);
+    await promise1;
+
+    const submitUrl1 = global.fetch.mock.calls[0][0];
+    expect(submitUrl1).toBe('http://localhost:8080/v1/flux-2-klein-4b');
+    expect(submitUrl1).not.toContain('black-forest-labs');
+
+    // Reset mocks
+    global.fetch.mockClear();
+
+    // Submit for the stale-model call
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ id: 'local-task-2', polling_url: 'http://localhost:8080/v1/get_result?id=local-task-2' })
+    });
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ status: 'Ready', result: 'iVBORw0KGgo=' })
+    });
+
+    // Call with a STALE deepinfra model — must fall back to flux-2-klein-4b
+    const promise2 = generateImage({ prompt: 'x', model: 'black-forest-labs/FLUX-1-schnell' });
+    await vi.advanceTimersByTimeAsync(2000);
+    await promise2;
+
+    const submitUrl2 = global.fetch.mock.calls[0][0];
+    expect(submitUrl2).toBe('http://localhost:8080/v1/flux-2-klein-4b');
+    expect(submitUrl2).not.toContain('black-forest-labs');
+
+    // Verify poll URL was used
+    expect(global.fetch.mock.calls[1][0]).toBe('http://localhost:8080/v1/get_result?id=local-task-2');
+
+    vi.useRealTimers();
   });
 
   it('throws on unknown apiType', async () => {
