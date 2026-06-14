@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import GaiaHiveSimple from './GaiaHiveSimple';
-import { MODELS } from '../../config';
+import { useProvider } from '../../context/ProviderContext';
 import './GaiaHive.css';
 
 const GaiaHiveDemo = () => {
@@ -9,15 +9,18 @@ const GaiaHiveDemo = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [conversation, setConversation] = useState([]);
   
-  // Available models from config.js
-  const availableModels = Object.entries(MODELS).map(([key, value]) => ({
-    id: value,
-    name: key.replace(/_/g, ' ').toLowerCase(),
-    displayName: key.replace(/_/g, ' ')
-  }));
-  
-  // Default model
-  const defaultModel = availableModels[0].id;
+  const { provider, providerId, getDefaultModel } = useProvider();
+
+  // Available models from the currently selected provider
+  const availableModels = useMemo(() =>
+    Object.entries(provider.models || {}).map(([key, value]) => ({
+      id: value,
+      name: key.replace(/_/g, ' ').toLowerCase(),
+      displayName: key.replace(/_/g, ' ')
+    })), [provider.models]);
+
+  // Default model from the selected provider
+  const defaultModel = getDefaultModel();
   
   // Define some custom attributes for the demo with added model selection
   const [attributeSettings, setAttributeSettings] = useState({
@@ -57,6 +60,8 @@ const GaiaHiveDemo = () => {
   const [visibleMessages, setVisibleMessages] = useState([]);
   // Store timestamp for each message
   const [messageTimes, setMessageTimes] = useState({});
+  const messageTimesRef = useRef(messageTimes);
+  messageTimesRef.current = messageTimes;
   
   useEffect(() => {
     // Animate attribute messages appearing one by one
@@ -127,7 +132,7 @@ const GaiaHiveDemo = () => {
     }, 10);
   };
   
-  const handleResponse = (result, conversationHistory) => {
+  const handleResponse = useCallback((result, conversationHistory) => {
     console.log('GAIA HIVE DEMO: Received response from GaiaHive:', result);
     console.log('GAIA HIVE DEMO: Conversation history:', conversationHistory);
     
@@ -146,7 +151,7 @@ const GaiaHiveDemo = () => {
     // Update conversation history if provided
     if (conversationHistory && conversationHistory.length > 0) {
       // Update timestamps for all responses that have content
-      const timestamps = { ...messageTimes };
+      const timestamps = { ...messageTimesRef.current };
       conversationHistory.forEach(msg => {
         // Only update timestamp if the message actually has content
         // or if it doesn't already have a timestamp
@@ -178,8 +183,25 @@ const GaiaHiveDemo = () => {
       // Make sure all attribute IDs are in visible messages
       setVisibleMessages(conversationHistory.map(msg => msg.agent));
     }
-  };
+  }, []);
   
+  // When provider changes, reset any attribute models that aren't valid for the new provider
+  useEffect(() => {
+    const validModelIds = new Set(Object.values(provider.models || {}));
+    setAttributeSettings(prev => {
+      let needsUpdate = false;
+      const updated = { ...prev };
+      for (const [key, attr] of Object.entries(updated)) {
+        if (!validModelIds.has(attr.model)) {
+          updated[key] = { ...attr, model: defaultModel };
+          needsUpdate = true;
+        }
+      }
+      return needsUpdate ? updated : prev;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [providerId]);
+
   // Handle model change for an attribute
   const handleModelChange = (attributeKey, modelId) => {
     setAttributeSettings(prev => ({
