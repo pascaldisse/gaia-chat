@@ -1,5 +1,4 @@
 import React from 'react';
-import { MODELS } from '../config';
 import '../styles/Sidebar.css';
 import { DEFAULT_PERSONA_ID } from '../config/defaultPersona';
 import UserButton from './auth/UserButton';
@@ -15,7 +14,8 @@ const Sidebar = ({
   setSelectedChatId,
   createNewChat,
   onEditPersona,
-  onDeletePersona
+  onDeletePersona,
+  onOpenSettings
 }) => {
   const getChatTitle = (chat) => {
     const firstMessage = chat.messages[0]?.content;
@@ -94,9 +94,15 @@ const Sidebar = ({
           </div>
         ))}
       </div>
+
+      <button 
+        className="sidebar-settings-btn"
+        onClick={onOpenSettings}
+      >
+        ⚙️ Settings
+      </button>
     </div>
   );
 };
 
 export default Sidebar;
-

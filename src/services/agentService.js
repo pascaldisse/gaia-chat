@@ -1,8 +1,8 @@
-import { ChatDeepInfra } from "@langchain/community/chat_models/deepinfra";
+import { ChatOpenAI } from "@langchain/openai";
 import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { API_KEY } from "../config";
+import { getCurrentProviderConfig } from "./providerService";
 
 export class PersonaAgent {
   static async create(persona, tools, callbacks) {
@@ -19,6 +19,11 @@ export class PersonaAgent {
   }
 
   async createExecutor() {
+    const provider = getCurrentProviderConfig();
+    if (!provider.apiKey) {
+      throw new Error(`Missing API key for ${provider.providerName}. Add it in Settings.`);
+    }
+
     // Create a more explicit prompt that encourages tool usage
     const prompt = ChatPromptTemplate.fromMessages([
       ["system", `You are {persona_name}. {system_prompt}
@@ -40,12 +45,15 @@ Current conversation:
       ["human", "{input}"]
     ]);
 
-    const chat = new ChatDeepInfra({
-      apiKey: API_KEY,
+    const chat = new ChatOpenAI({
+      apiKey: provider.apiKey,
       modelName: this.persona.model,
       temperature: this.persona.creativity / 10,
       maxTokens: 1000,
       streaming: true,
+      configuration: {
+        baseURL: provider.baseURL
+      },
       callbacks: this.providedCallbacks?.handleNewToken ? [{
         handleLLMNewToken: this.providedCallbacks.handleNewToken
       }] : undefined

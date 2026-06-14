@@ -1,6 +1,14 @@
-import { ChatDeepInfra } from "@langchain/community/chat_models/deepinfra";
+import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { API_KEY } from "../config";
+import { getCurrentProviderConfig } from "./providerService";
+
+function getLLMConfig() {
+  const provider = getCurrentProviderConfig();
+  if (!provider.apiKey) {
+    throw new Error(`Missing API key for ${provider.providerName}. Add it in Settings.`);
+  }
+  return provider;
+}
 
 // Service for Gaia Hive Mind attribute agents
 export class AttributeAgent {
@@ -18,12 +26,14 @@ export class AttributeAgent {
   async generateResponse(query, conversationHistory = [], onUpdate = null) {
     try {
       // Create the chat model with streaming enabled
-      const chat = new ChatDeepInfra({
-        apiKey: API_KEY,
+      const { apiKey, baseURL } = getLLMConfig();
+      const chat = new ChatOpenAI({
+        apiKey,
         modelName: this.modelId,
         temperature: 0.7,
         maxTokens: 500,
-        streaming: true // Enable streaming
+        streaming: true,
+        configuration: { baseURL }
       });
 
       // Build a prompt template for this attribute agent
@@ -116,12 +126,14 @@ export class HiveMindSummary {
   async generateSummary(query, attributeResponses, summaryModel, onUpdate = null) {
     try {
       // Create the chat model for summary with streaming enabled
-      const chat = new ChatDeepInfra({
-        apiKey: API_KEY,
+      const { apiKey: sumApiKey, baseURL: sumBaseURL } = getLLMConfig();
+      const chat = new ChatOpenAI({
+        apiKey: sumApiKey,
         modelName: summaryModel,
         temperature: 0.7,
         maxTokens: 800,
-        streaming: true // Enable streaming
+        streaming: true,
+        configuration: { baseURL: sumBaseURL }
       });
 
       // Format the attribute responses for the summary prompt

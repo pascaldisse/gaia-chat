@@ -1,13 +1,21 @@
-import { ChatDeepInfra } from "@langchain/community/chat_models/deepinfra";
+import { ChatOpenAI } from "@langchain/openai";
 import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
 import { SequentialChain, SimpleSequentialChain } from "langchain/chains";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { DynamicTool } from "@langchain/core/tools";
 import { RPGSystem } from "../../utils/RPGSystem";
-import { API_KEY } from "../../config";
-
+import { getCurrentProviderConfig } from "../providerService";
 import { workflowDB, templateDB } from '../db';
+
+// Helper: get current provider config
+function getLLMConfig() {
+  const provider = getCurrentProviderConfig();
+  if (!provider.apiKey) {
+    throw new Error(`Missing API key for ${provider.providerName}. Add it in Settings.`);
+  }
+  return provider;
+}
 
 // Workflow database service - now using IndexedDB
 export const saveWorkflow = async (workflow) => {
@@ -163,12 +171,14 @@ ${toolStrings}
   ]);
   
   // Create LLM instance with fallback to a default model if not specified
-  const llm = new ChatDeepInfra({
-    apiKey: API_KEY,
-    modelName: personaData.model || "deepinfra/mixtral-8x7b-instruct",
+  const { apiKey, baseURL } = getLLMConfig();
+  const llm = new ChatOpenAI({
+    apiKey,
+    modelName: personaData.model || "meta-llama/Meta-Llama-3-70B-Instruct",
     temperature: (personaData.creativity || 5) / 10,
     maxTokens: 1000,
     streaming: true,
+    configuration: { baseURL }
   });
   
   try {
@@ -906,12 +916,14 @@ export const createTeamAgent = async (teamNode, agents = [], tools = []) => {
   }
   
   // Create LLM with team-appropriate settings
-  const llm = new ChatDeepInfra({
-    apiKey: API_KEY,
-    modelName: "deepinfra/mixtral-8x7b-instruct",
+  const { apiKey: teamApiKey, baseURL: teamBaseURL } = getLLMConfig();
+  const llm = new ChatOpenAI({
+    apiKey: teamApiKey,
+    modelName: "meta-llama/Meta-Llama-3-70B-Instruct",
     temperature: 0.7,
     maxTokens: 1500,
     streaming: true,
+    configuration: { baseURL: teamBaseURL }
   });
   
   // Create a prompt template for the team agent
@@ -1272,208 +1284,116 @@ const executeNode = async (nodeId, nodesMap, edges, input, memory = {}, onUpdate
                   };
                 }
                 
-                // Execute operation
-                switch(operation.toLowerCase()) {
-                  case 'read':
-                    // Record memory access
-                    memory.sharedMemory[memoryId].accessLog.push({
-                      nodeId,
-                      operation: 'read',
-                      timestamp: Date.now()
-                    });
-                    
-                    // Get memory data
-                    const readData = memory.sharedMemory[memoryId].data;
-                    
-                    // Format based on memory type
-                    if (targetNode.data.memoryType === 'vector' && readData && readData.texts) {
-                      // For vector memory, return all stored texts or a specific one if index provided
-                      if (data && !isNaN(parseInt(data))) {
-                        // Return specific index if provided
-                        const index = parseInt(data);
+                const memoryEntry = memory.sharedMemory[memoryId];
+                const operationName = operation.toLowerCase();
+                memoryEntry.accessLog.push({
+                  nodeId,
+                  operation: operationName,
+                  timestamp: Date.now()
+                });
+
+                switch(operationName) {
+                  case 'read': {
+                    const readData = memoryEntry.data;
+
+                    if (targetNode.data.memoryType === 'vector' && readData?.texts) {
+                      if (data && !isNaN(parseInt(data, 10))) {
+                        const index = parseInt(data, 10);
                         if (index >= 0 && index < readData.texts.length) {
                           return readData.texts[index];
-                        } else {
-                          return `Index ${index} out of range. Available indices: 0-${readData.texts.length - 1}`;
                         }
-                      } else {
-                        // Return all memories
-                        return readData.texts.map((text, i) => `[${i}] ${text}`).join('\n\n');
+                        return `Index ${index} out of range. Available indices: 0-${readData.texts.length - 1}`;
                       }
-                    } else if (typeof readData === 'object') {
-                      return JSON.stringify(readData, null, 2);
-                    } else {
-                      return String(readData || "Memory is empty");
+
+                      return readData.texts.map((text, i) => `[${i}] ${text}`).join('\n\n') || "Memory is empty";
                     }
-                    
-                  case 'write':
+
+                    if (readData && typeof readData === 'object') {
+                      return JSON.stringify(readData, null, 2);
+                    }
+
+                    return String(readData || "Memory is empty");
+                  }
+
+                  case 'write': {
                     if (!data) {
                       return "No data provided for write operation.";
                     }
-                    
-                    // Record memory access
-                    memory.sharedMemory[memoryId].accessLog.push({
-                      nodeId,
-                      operation: 'write',
-                      timestamp: Date.now()
-                    });
-                    break;
-                    
-                  case 'search':
-                    if (targetNode.data.memoryType === 'vector') {
-                      // Ensure we have vector data to search
-                      if (!memory.sharedMemory[memoryId].data || 
-                          !memory.sharedMemory[memoryId].data.vectors || 
-                          !memory.sharedMemory[memoryId].data.texts ||
-                          memory.sharedMemory[memoryId].data.vectors.length === 0) {
-                        return "Vector memory is empty. Nothing to search.";
-                      }
-                      
-                      if (!data) {
-                        return "No search query provided. Please provide text to search for.";
-                      }
-                      
-                      // Record memory access
-                      memory.sharedMemory[memoryId].accessLog.push({
-                        nodeId,
-                        operation: 'search',
-                        timestamp: Date.now()
-                      });
-                      
-                      try {
-                        // In a real implementation, we would:
-                        // 1. Convert the search query to a vector embedding using the same model
-                        // 2. Calculate similarity scores with all vectors in memory
-                        // 3. Return the top matches
-                        
-                        // For our demo implementation, we'll do a simple keyword search
-                        const query = data.toLowerCase();
-                        const matches = [];
-                        
-                        memory.sharedMemory[memoryId].data.texts.forEach((text, index) => {
-                          if (text.toLowerCase().includes(query)) {
-                            matches.push({
-                              index,
-                              text,
-                              score: 0.5 + Math.random() * 0.5 // Mock score between 0.5-1.0
-                            });
-                          }
-                        });
-                        
-                        // Sort by "similarity" score
-                        matches.sort((a, b) => b.score - a.score);
-                        
-                        // Return top matches
-                        if (matches.length === 0) {
-                          return `No matches found for query: "${data}"`;
-                        }
-                        
-                        return `Found ${matches.length} matches for query: "${data}"\n\n` +
-                          matches.map(m => `[${m.index}] (Score: ${m.score.toFixed(2)}) ${m.text.substring(0, 100)}${m.text.length > 100 ? '...' : ''}`).join('\n\n');
-                      } catch (error) {
-                        console.error("Error searching vector memory:", error);
-                        return `Error searching: ${error.message}`;
-                      }
-                    } else {
-                      return "Search operation is only available for vector memory type.";
-                    }
-                    
-                    // Update memory data based on memory type
+
                     if (targetNode.data.memoryType === 'structured') {
                       try {
-                        // Try to parse as JSON
-                        memory.sharedMemory[memoryId].data = JSON.parse(data);
+                        memoryEntry.data = JSON.parse(data);
                       } catch (e) {
-                        // Fallback to string if not valid JSON
-                        memory.sharedMemory[memoryId].data = data;
+                        memoryEntry.data = data;
                       }
                     } else if (targetNode.data.memoryType === 'vector') {
+                      let textData = data;
+                      let embedding = null;
+
                       try {
-                        // For vector memory, we store both the text and the vector representation
-                        // First, check if data is already structured with embedding
-                        let textData;
-                        let embedding = null;
-                        
-                        try {
-                          const parsed = JSON.parse(data);
-                          if (parsed && typeof parsed === 'object' && parsed.text) {
-                            textData = parsed.text;
-                            embedding = parsed.embedding || null;
-                          } else {
-                            textData = data;
-                          }
-                        } catch (e) {
-                          // Not JSON, just use as text
-                          textData = data;
+                        const parsed = JSON.parse(data);
+                        if (parsed && typeof parsed === 'object' && parsed.text) {
+                          textData = parsed.text;
+                          embedding = parsed.embedding || null;
                         }
-                        
-                        // If no embedding provided, generate one
-                        if (!embedding) {
-                          try {
-                            // In a production implementation, this would call an embedding API
-                            // For now, we'll just create a simple mock embedding
-                            const mockEmbedding = new Array(5).fill(0).map(() => Math.random());
-                            embedding = mockEmbedding;
-                          } catch (embeddingError) {
-                            console.error("Error generating embedding:", embeddingError);
-                          }
-                        }
-                        
-                        // Initialize vector memory structure if needed
-                        if (!memory.sharedMemory[memoryId].data.vectors) {
-                          memory.sharedMemory[memoryId].data = {
-                            vectors: [],
-                            texts: []
-                          };
-                        }
-                        
-                        // Add new vector and text
-                        memory.sharedMemory[memoryId].data.vectors.push(embedding);
-                        memory.sharedMemory[memoryId].data.texts.push(textData);
-                        
-                        // Track this entry in the vector index
-                        const entryIndex = memory.sharedMemory[memoryId].data.texts.length - 1;
-                        memory.sharedMemory[memoryId].vectorIndices = 
-                          memory.sharedMemory[memoryId].vectorIndices || [];
-                        memory.sharedMemory[memoryId].vectorIndices.push(entryIndex);
-                        
-                      } catch (vectorError) {
-                        console.error("Error handling vector memory:", vectorError);
-                        memory.sharedMemory[memoryId].data = data;
+                      } catch (e) {
+                        // Plain text is valid vector memory input.
                       }
-                    } else if (targetNode.data.memoryType === 'persistent') {
-                      // For persistent memory, store in memory and also persist to database
-                      memory.sharedMemory[memoryId].data = data;
-                      
-                      // Mark for persistence
-                      memory.sharedMemory[memoryId].isPersistent = true;
-                      
-                      // Save to database in the background
-                      try {
-                        // This would be async and not block execution
-                        (async () => {
-                          const { workflowDB } = await import('../db');
-                          await workflowDB.savePersistentMemory({
-                            id: memoryId,
-                            name: memory.sharedMemory[memoryId].name,
-                            data: data
-                          });
-                          console.log(`Persistent memory saved: ${memory.sharedMemory[memoryId].name}`);
-                        })();
-                      } catch (persistError) {
-                        console.error("Error persisting memory:", persistError);
+
+                      if (!embedding) {
+                        embedding = new Array(5).fill(0).map(() => Math.random());
                       }
+
+                      if (!memoryEntry.data?.vectors || !memoryEntry.data?.texts) {
+                        memoryEntry.data = { vectors: [], texts: [] };
+                      }
+
+                      memoryEntry.data.vectors.push(embedding);
+                      memoryEntry.data.texts.push(textData);
+                      memoryEntry.vectorIndices = memoryEntry.vectorIndices || [];
+                      memoryEntry.vectorIndices.push(memoryEntry.data.texts.length - 1);
                     } else {
-                      // Simple memory type - just store as is
-                      memory.sharedMemory[memoryId].data = data;
+                      memoryEntry.data = data;
+                      memoryEntry.isPersistent = targetNode.data.memoryType === 'persistent';
                     }
-                    
-                    memory.sharedMemory[memoryId].timestamp = Date.now();
-                    
+
+                    memoryEntry.timestamp = Date.now();
                     return `Successfully wrote to memory '${targetNode.data.memoryName}'.`;
-                    
+                  }
+
+                  case 'search': {
+                    if (targetNode.data.memoryType !== 'vector') {
+                      return "Search operation is only available for vector memory type.";
+                    }
+
+                    if (!memoryEntry.data?.vectors || !memoryEntry.data?.texts || memoryEntry.data.vectors.length === 0) {
+                      return "Vector memory is empty. Nothing to search.";
+                    }
+
+                    if (!data) {
+                      return "No search query provided. Please provide text to search for.";
+                    }
+
+                    const query = data.toLowerCase();
+                    const matches = memoryEntry.data.texts
+                      .map((text, index) => ({ index, text }))
+                      .filter(({ text }) => text.toLowerCase().includes(query))
+                      .map(match => ({
+                        ...match,
+                        score: 0.5 + Math.random() * 0.5
+                      }))
+                      .sort((a, b) => b.score - a.score);
+
+                    if (matches.length === 0) {
+                      return `No matches found for query: "${data}"`;
+                    }
+
+                    return `Found ${matches.length} matches for query: "${data}"\n\n` +
+                      matches.map(m => `[${m.index}] (Score: ${m.score.toFixed(2)}) ${m.text.substring(0, 100)}${m.text.length > 100 ? '...' : ''}`).join('\n\n');
+                  }
+
                   default:
-                    return `Unknown operation: ${operation}. Use 'read' or 'write'.`;
+                    return `Unknown operation: ${operation}. Use 'read', 'write', or 'search'.`;
                 }
               } catch (error) {
                 console.error("Error in memory tool:", error);

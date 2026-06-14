@@ -81,6 +81,36 @@
   transform: translateX(-100%);
 }
 
+/* Settings Gear Button */
+.settings-gear-btn {
+  position: fixed;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  z-index: var(--z-index-fixed);
+  width: var(--touch-target-size);
+  height: var(--touch-target-size);
+  border-radius: 50%;
+  background-color: #5865f2;
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  transition: background-color var(--transition-short) ease, transform var(--transition-short) ease;
+  font-size: 20px;
+}
+
+.settings-gear-btn:hover {
+  background-color: #4752c4;
+  transform: scale(1.08);
+}
+
+.settings-gear-btn:focus-visible {
+  box-shadow: var(--focus-ring), 0 2px 8px rgba(0,0,0,0.4);
+}
+
 /* Hamburger Menu Button */
 .hamburger-menu {
   position: fixed;

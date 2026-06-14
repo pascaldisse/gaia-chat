@@ -819,9 +819,19 @@ const Message = ({ message, onRegenerate, personas }) => {
       );
     }
     
-    // Handle image content
-    if (message.isCommand && message.content.includes('<img')) {
-      return <div dangerouslySetInnerHTML={{ __html: message.content }} />;
+    // Handle generated image content
+    if (message.imageSrc || message.imageData) {
+      const src = message.imageSrc || `data:image/png;base64,${message.imageData}`;
+      return (
+        <div className="generated-image-message">
+          {message.content && <div className="generated-image-prompt">{message.content}</div>}
+          <img
+            src={src}
+            alt={message.imageAlt || message.content || 'Generated image'}
+            className="generated-image"
+          />
+        </div>
+      );
     }
     
     // Handle tool usage display

@@ -11,11 +11,68 @@ function exists(relativePath) {
   return fs.existsSync(path.join(root, relativePath));
 }
 
+function readAllSourceFiles() {
+  const sourceRoot = path.join(root, 'src');
+  const files = [];
+
+  function walk(directory) {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+      } else if (/\.(js|jsx|ts|tsx|css|md)$/.test(entry.name)) {
+        files.push(fullPath);
+      }
+    }
+  }
+
+  walk(sourceRoot);
+  return files.map(file => fs.readFileSync(file, 'utf8')).join('\n');
+}
+
+const source = readAllSourceFiles();
+
 const checks = [
   {
     name: 'GaiaScript artifacts are removed',
     run() {
       return !exists('chat.gaia') && !exists('build-chat.sh');
+    }
+  },
+  {
+    name: 'No checked-in DeepInfra bearer token',
+    run() {
+      return !source.includes('u5q1opMM9uw9x84EJLtxqaQ6HcnXbUAq');
+    }
+  },
+  {
+    name: 'Generated messages do not use raw HTML injection',
+    run() {
+      return !source.includes('dangerouslySetInnerHTML');
+    }
+  },
+  {
+    name: 'Web search state is not stored on window',
+    run() {
+      return !source.includes('window.webSearchEnabled');
+    }
+  },
+  {
+    name: 'Removed stale SDXL image model reference',
+    run() {
+      return !source.includes('IMAGE_MODELS.SDXL');
+    }
+  },
+  {
+    name: 'Workflow memory tool does not call missing persistence API',
+    run() {
+      return !source.includes('savePersistentMemory');
+    }
+  },
+  {
+    name: 'RPG dice helper exists',
+    run() {
+      return read('src/utils/RPGSystem.js').includes('static rollDice');
     }
   }
 ];

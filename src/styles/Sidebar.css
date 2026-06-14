@@ -307,6 +307,31 @@
   border-color: var(--discord-accent-hover);
 }
 
+/* Sidebar Settings Button */
+.sidebar-settings-btn {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: transparent;
+  color: var(--interactive-normal);
+  border: 1px solid var(--discord-tertiary);
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  transition: all var(--transition-short) ease;
+}
+
+.sidebar-settings-btn:hover {
+  background-color: var(--discord-tertiary);
+  color: var(--interactive-hover);
+  border-color: var(--interactive-muted);
+}
+
 /* Mobile styles */
 @media (max-width: 768px) {
   .persona-list {

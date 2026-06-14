@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Message from './Message';
-import { API_KEY, MODELS, IMAGE_MODELS } from '../config';
+import { MODELS, IMAGE_MODELS } from '../config';
 import '../styles/Chat.css';
 import ChatInput from './ChatInput';
 import { RPGSystem } from '../utils/RPGSystem';
@@ -12,6 +12,7 @@ import { parseFileContent } from '../utils/FileParser';
 import { PersonaAgent } from "../services/agentService";
 import { createPersonaTools } from "../services/tools";
 import { isDiceRollCommand, extractDiceParams, formatDiceNotation } from "../utils/ToolUtilities";
+import { getCurrentProviderConfig, getImageProviderConfig } from '../services/providerService';
 
 const Chat = ({ 
   currentChat, 
@@ -42,9 +43,10 @@ const Chat = ({
   const [selectedModel, setSelectedModel] = useState('flux_schnell');
   const [selectedStyle, setSelectedStyle] = useState('realistic');
   const [useEnhancement, setUseEnhancement] = useState(true);
-  const [imageModel, setImageModel] = useState(IMAGE_MODELS.SDXL);
+  const [imageModel, setImageModel] = useState(getImageProviderConfig().imageModel || IMAGE_MODELS.FLUX_SCHNELL);
   const [chatKnowledgeFiles, setChatKnowledgeFiles] = useState([]);
   const [filesUpdated, setFilesUpdated] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
   // Create a ref for the AbortController
   const controllerRef = useRef(null);
@@ -384,11 +386,16 @@ ${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
-        const response = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
+        const providerConfig = getCurrentProviderConfig();
+        if (!providerConfig.apiKey) {
+          throw new Error(`Missing API key for ${providerConfig.providerName}. Open Settings to add one.`);
+        }
+
+        const response = await fetch(`${providerConfig.baseURL}/chat/completions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`
+            'Authorization': `Bearer ${providerConfig.apiKey}`
           },
           body: JSON.stringify({
             model: persona.model,
@@ -506,7 +513,7 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
     }
     
     // Check if web search is enabled
-    if (window.webSearchEnabled) {
+    if (webSearchEnabled) {
       console.log('Web search is enabled, checking for search persona');
       
       // Find or enable a persona with search capability
@@ -788,11 +795,16 @@ ${knowledgeContent ? `Knowledge Base:\n${knowledgeContent}\n` : ""}
 
 You are ${persona.name}. Respond naturally to the most recent message.`;
 
-          const response = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
+          const providerConfig = getCurrentProviderConfig();
+          if (!providerConfig.apiKey) {
+            throw new Error(`Missing API key for ${providerConfig.providerName}. Open Settings to add one.`);
+          }
+
+          const response = await fetch(`${providerConfig.baseURL}/chat/completions`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${API_KEY}`
+              'Authorization': `Bearer ${providerConfig.apiKey}`
             },
             body: JSON.stringify({
               model: persona.model,
@@ -1027,10 +1039,15 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         guidance_scale: 7.5
       };
 
-      const response = await fetch(`https://api.deepinfra.com/v1/inference/${options.model}`, {
+      const imageProvider = getImageProviderConfig();
+      if (!imageProvider.apiKey) {
+        throw new Error('Missing DeepInfra API key. Image generation currently requires a DeepInfra key in Settings.');
+      }
+
+      const response = await fetch(`${imageProvider.inferenceBaseURL}/${options.model}`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${API_KEY}`,
+          "Authorization": `Bearer ${imageProvider.apiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify(requestBody)
@@ -1054,15 +1071,17 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
         ? imageBase64 
         : `data:image/png;base64,${imageBase64}`;
       
-      setCurrentChat(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { 
-              ...msg, 
-              content: `<img src="${imageSource}" alt="${options.prompt}" class="generated-image"/>`,
-              imageData: imageBase64
-            }
-          : msg
-      ));
+	      setCurrentChat(prev => prev.map(msg => 
+	        msg.id === messageId 
+	          ? { 
+	              ...msg, 
+	              content: options.prompt,
+	              imageData: imageBase64,
+	              imageSrc: imageSource,
+	              imageAlt: options.prompt
+	            }
+	          : msg
+	      ));
 
     } catch (error) {
       console.error("Image generation failed:", error);
@@ -1565,7 +1584,8 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
             controllerRef.current.abort();
           }
         }}
-        onToggleSearch={(enabled) => {
+	        onToggleSearch={(enabled) => {
+          setWebSearchEnabled(enabled);
           // Add a notification to the chat
           setCurrentChat(prev => [...prev, {
             id: Date.now(),
@@ -1575,10 +1595,11 @@ You are ${persona.name}. Respond naturally to the most recent message.`;
             isUser: false,
             isCommand: true,
             // Use the default persona for system messages if available
-            personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
-          }]);
-        }}
-      />
+	            personaId: activePersonas.find(p => p.isDefault)?.id || activePersonas[0]?.id
+	          }]);
+	        }}
+        webSearchEnabled={webSearchEnabled}
+	      />
 
       {showImageModal && (
         <ImageModal
@@ -1666,6 +1687,5 @@ const ImageModal = ({ onClose, onGenerate, initialPrompt }) => {
 };
 
 export default Chat;
-
 
 

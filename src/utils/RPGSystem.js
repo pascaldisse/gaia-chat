@@ -6,6 +6,20 @@ export class RPGSystem {
     static rollD20() {
       return Math.floor(Math.random() * 20) + 1;
     }
+
+    static rollDice(sides = 20, count = 1) {
+      const safeSides = Math.max(1, Number.parseInt(sides, 10) || 20);
+      const safeCount = Math.max(1, Number.parseInt(count, 10) || 1);
+      const rolls = Array.from(
+        { length: safeCount },
+        () => Math.floor(Math.random() * safeSides) + 1
+      );
+
+      return {
+        rolls,
+        total: rolls.reduce((sum, roll) => sum + roll, 0)
+      };
+    }
   
     static calculateOutcome(persona, context) {
       if (!persona) {

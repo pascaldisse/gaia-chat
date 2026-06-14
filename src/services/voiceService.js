@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { getProviderApiKey } from './providerService';
 
 // Add a debug utility function that can be called from the console
 window.debugGaiaAudio = function() {
@@ -143,8 +143,9 @@ const TTS_ENDPOINTS = {
   kokoro: "https://api.deepinfra.com/v1/inference/hexgrad/Kokoro-82M"
 };
 
-// API Key - in a real application, this should be stored securely
-const API_KEY = "Bearer u5q1opMM9uw9x84EJLtxqaQ6HcnXbUAq";
+function getDeepInfraApiKey() {
+  return getProviderApiKey('deepinfra');
+}
 
 // Get current TTS engine preference from localStorage, default to zonos
 export const getTTSEngine = () => {
@@ -349,31 +350,44 @@ export const generateSpeech = async (text, voiceId) => {
       console.log(`Making TTS API request to Kokoro TTS endpoint`);
     }
     
+    const apiKey = getDeepInfraApiKey();
+    if (!apiKey) {
+      throw new Error("Missing DeepInfra API key. Add it in Settings to use voice generation.");
+    }
+
     // Make the request to the selected endpoint
-    const response = await axios.post(endpoint, requestData, {
+    const response = await fetch(endpoint, {
+      method: 'POST',
       headers: {
-        "Authorization": API_KEY,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
-      timeout: 30000 // 30 second timeout
+      body: JSON.stringify(requestData)
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`TTS request failed (${response.status}): ${errorText}`);
+    }
+
+    const responseData = await response.json();
     
     console.log("TTS response received:", response.status);
     
     // Process the response
-    console.log("Response data:", JSON.stringify(response.data).substring(0, 100));
-    console.log("Full response:", response.data);
+    console.log("Response data:", JSON.stringify(responseData).substring(0, 100));
+    console.log("Full response:", responseData);
     
-    if (response.data && response.data.audio) {
+    if (responseData && responseData.audio) {
       console.log('%c 🎵 AUDIO DATA RECEIVED FROM API', 'background: #00ff00; color: black; font-size: 20px; padding: 8px;');
       
       // Store this for debugging
       if (!window.audioAPIResponses) window.audioAPIResponses = [];
       window.audioAPIResponses.push({
         timestamp: new Date().toISOString(),
-        hasAudio: !!response.data.audio,
-        audioType: typeof response.data.audio,
-        audioLength: typeof response.data.audio === 'string' ? response.data.audio.length : 'unknown'
+        hasAudio: !!responseData.audio,
+        audioType: typeof responseData.audio,
+        audioLength: typeof responseData.audio === 'string' ? responseData.audio.length : 'unknown'
       });
       
       console.log("Audio data received in response");
@@ -381,15 +395,15 @@ export const generateSpeech = async (text, voiceId) => {
       try {
         // For the Zonos API, we need to handle the response differently
         // Check if we got any usable audio data
-        if (response.data.audio === null) {
+        if (responseData.audio === null) {
           console.warn("Audio data is null, using fallback audio");
           return createFallbackAudio();
         }
         
         // Check if the audio data is already a data URL
-        if (typeof response.data.audio === 'string' && response.data.audio.startsWith('data:audio/')) {
+        if (typeof responseData.audio === 'string' && responseData.audio.startsWith('data:audio/')) {
           console.log("Audio data is already a data URL, using directly");
-          return response.data.audio;
+          return responseData.audio;
         }
         
         // Handle base64 format
@@ -399,22 +413,22 @@ export const generateSpeech = async (text, voiceId) => {
         // Let's convert it to a Blob and create a URL
         try {
           // If it's a base64 string without the data URL prefix
-          if (typeof response.data.audio === 'string') {
+          if (typeof responseData.audio === 'string') {
             console.log('%c 🔊 RETURNING AUDIO URL', 'background: purple; color: white; font-size: 20px; padding: 8px;');
             
             // Store in a global variable for debugging
-            window.lastGeneratedAudioURL = response.data.audio.substring(0, 100) + '...';
+            window.lastGeneratedAudioURL = responseData.audio.substring(0, 100) + '...';
             
             // If it's already a data URL, just return it directly
-            if (response.data.audio.startsWith('data:audio')) {
+            if (responseData.audio.startsWith('data:audio')) {
               console.log('%c RETURNING DATA URL DIRECTLY', 'background: purple; color: white;');
-              return response.data.audio;
+              return responseData.audio;
             }
             
             // Extract just the base64 part if it's a data URL
-            const base64Data = response.data.audio.includes('base64,') 
-              ? response.data.audio.split('base64,')[1] 
-              : response.data.audio;
+            const base64Data = responseData.audio.includes('base64,') 
+              ? responseData.audio.split('base64,')[1] 
+              : responseData.audio;
               
             // Convert to blob
             const byteCharacters = atob(base64Data);
@@ -450,7 +464,7 @@ export const generateSpeech = async (text, voiceId) => {
     }
     
     // If we get here, we didn't get usable audio data
-    console.error("No audio data in the response:", response.data);
+    console.error("No audio data in the response:", responseData);
     
     // Fall back to using the fallback audio rather than throwing an error
     console.log("Using fallback audio instead of throwing error");

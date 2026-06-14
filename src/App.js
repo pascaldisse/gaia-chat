@@ -8,19 +8,21 @@ import './styles/theme.css';
 import './styles/Sidebar.css';
 import './App.css';
 import './styles/Chat.css';
-import { MODELS } from './config';
 import { personaDB } from './services/db';
 import Persona from './models/Persona';
 import PersonaManager from './components/personas/PersonaManager';
 import PersonaStore from './components/personas/PersonaStore';
 import AdminDashboard from './components/admin/AdminDashboard';
+import Settings from './components/Settings';
 import { GAIA_CONFIG, DEFAULT_PERSONA_ID } from './config/defaultPersona';
 import { UserProvider, useUser } from './contexts/UserContext';
+import { ProviderProvider, useProvider } from './context/ProviderContext';
 
 function AppContent() {
   const { user: currentUser } = useUser();
+  const { selectedModel, getDefaultModel } = useProvider();
   const [currentChat, setCurrentChat] = useState([]);
-  const [model, setModel] = useState(MODELS.LLAMA3_70B);
+  const [model, setModel] = useState(getDefaultModel());
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
   const [chatHistory, setChatHistory] = useState([]);
   const [selectedChatId, setSelectedChatId] = useState(null);
@@ -32,6 +34,10 @@ function AppContent() {
   const [activeUsers, setActiveUsers] = useState([]);
   const [viewMode, setViewMode] = useState('chat'); // 'chat', 'agentflow', 'store', 'admin', 'hivemind'
   const [sidebarVisible, setSidebarVisible] = useState(false); // Control sidebar visibility
+
+  useEffect(() => {
+    setModel(selectedModel);
+  }, [selectedModel]);
 
   // Load chat history from database
   useEffect(() => {
@@ -236,7 +242,7 @@ function AppContent() {
     const newPersona = new Persona({
       name: 'New Persona',
       systemPrompt: 'You are a helpful assistant',
-      model: MODELS.LLAMA3_70B,
+      model: getDefaultModel(),
       userId: currentUser ? currentUser.id : undefined // Associate with user if logged in
     });
     
@@ -325,8 +331,21 @@ function AppContent() {
     }
   };
 
+  const [showSettings, setShowSettings] = useState(false);
+
   return (
     <div className="app">
+      {/* Settings gear button */}
+      <button
+        className="settings-gear-btn"
+        onClick={() => setShowSettings(true)}
+        title="Settings"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 9.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+        </svg>
+      </button>
+
       {/* Hamburger menu toggle button */}
       <button 
         className="hamburger-menu" 
@@ -351,6 +370,11 @@ function AppContent() {
           setSelectedPersonaId={setSelectedPersonaId}
           createNewPersona={createNewPersona}
           onEditPersona={setEditingPersona}
+          onDeletePersona={handleDeletePersona}
+          onOpenSettings={() => {
+            setShowSettings(true);
+            setSidebarVisible(false);
+          }}
         />
         {/* Close button for mobile */}
         <button 
@@ -411,6 +435,13 @@ function AppContent() {
             <span>Admin</span>
           </button>
         )}
+        <button
+          className="view-toggle-settings"
+          onClick={() => setShowSettings(true)}
+          title="Settings"
+        >
+          ⚙️ <span>Settings</span>
+        </button>
       </div>
       
       {viewMode === 'chat' ? (
@@ -448,6 +479,10 @@ function AppContent() {
           onClose={() => setEditingPersona(null)}
         />
       )}
+
+      {showSettings && (
+        <Settings onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 }
@@ -455,10 +490,11 @@ function AppContent() {
 function App() {
   return (
     <UserProvider>
-      <AppContent />
+      <ProviderProvider>
+        <AppContent />
+      </ProviderProvider>
     </UserProvider>
   );
 }
 
 export default App;
-

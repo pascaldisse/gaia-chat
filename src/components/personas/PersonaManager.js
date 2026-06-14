@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MODELS } from '../../config';
 import Persona from '../../models/Persona';
+import { useProvider } from '../../context/ProviderContext';
 import { personaDB } from '../../services/db';
 import PersonaAttributesEditor from './PersonaAttributesEditor';
 import '../../styles/personas/PersonaManager.css';
@@ -41,11 +41,15 @@ const defaultAgentSettings = {
 };
 
 const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
+  const { provider, getDefaultModel } = useProvider();
+  const providerModels = provider?.models || {};
+  const defaultModel = getDefaultModel();
+
   const [currentPersona, setCurrentPersona] = useState(() => {
     const initialPersona = persona || new Persona({ 
       name: '', 
       systemPrompt: '', 
-      model: MODELS.LLAMA3_70B
+      model: defaultModel || Object.values(providerModels)[0] || ''
     });
 
     // Ensure agentSettings and toolConfig exist
@@ -284,8 +288,8 @@ const PersonaManager = ({ persona, onPersonaUpdate, onDelete, onClose }) => {
               value={currentPersona.model}
               onChange={(e) => setCurrentPersona(prev => ({...prev, model: e.target.value}))}
             >
-              {Object.entries(MODELS).map(([key, value]) => (
-                <option key={key} value={value}>{key}</option>
+              {Object.entries(providerModels).map(([key, value]) => (
+                <option key={key} value={value}>{key.replace(/_/g, ' ')}</option>
               ))}
             </select>
             <div className="system-prompt-section">
