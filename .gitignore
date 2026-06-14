@@ -47,3 +47,4 @@ logs/
 
 # Pi orchestration scratch dir
 .pi/
+outputs/

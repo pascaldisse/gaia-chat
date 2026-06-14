@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import '../../styles/personas/PersonaAttributesEditor.css';
 import ToolsPopup from './ToolsPopup';
 import FormatRuleEditor from './FormatRuleEditor';
+import { useProvider } from '../../context/ProviderContext';
+import { getTTSProviderConfig } from '../../services/providerService';
+import { getVoiceOptions } from '../../services/voiceService';
 
 const PersonaAttributesEditor = ({ persona, onChange }) => {
   // Prevent event propagation to parent containers
@@ -13,6 +16,9 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
   const [showToolsPopup, setShowToolsPopup] = useState(false);
   const [formattingExpanded, setFormattingExpanded] = useState(false);
   const [customFormattingExpanded, setCustomFormattingExpanded] = useState(false);
+  const { ttsProviderId, ttsModel } = useProvider();
+  const ttsConfig = getTTSProviderConfig();
+  const voiceOptions = getVoiceOptions();
   
   // Debug helper to track modal clicks
   useEffect(() => {
@@ -196,19 +202,10 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
         
         <div className="voice-settings">
           <div className="voice-engine-selector">
-            <label htmlFor="tts-engine">TTS Engine</label>
-            <select 
-              id="tts-engine"
-              value={localStorage.getItem('tts_engine') || 'zonos'} 
-              onChange={(e) => {
-                localStorage.setItem('tts_engine', e.target.value);
-                // Force re-render to update available voices
-                onChange({...persona});
-              }}
-            >
-              <option value="zonos">Zonos (High Quality)</option>
-              <option value="kokoro">Kokoro (Fast)</option>
-            </select>
+            <label>TTS Provider</label>
+            <div className="voice-note">
+              {ttsConfig.providerName} / {ttsModel}
+            </div>
           </div>
           
           <div className="voice-id-selector">
@@ -224,27 +221,17 @@ const PersonaAttributesEditor = ({ persona, onChange }) => {
               }}
             >
               <option value="">Default Voice</option>
-              {localStorage.getItem('tts_engine') === 'zonos' ? (
-                <>
-                  <option value="american_female">American Female</option>
-                  <option value="american_male">American Male</option>
-                  <option value="british_female">British Female</option>
-                  <option value="british_male">British Male</option>
-                  <option value="random">Random</option>
-                </>
-              ) : (
-                <>
-                  <option value="af_bella">Bella (Female)</option>
-                  <option value="af_nova">Nova (Female)</option>
-                  <option value="af_nicole">Nicole (Female)</option>
-                  <option value="am_adam">Adam (Male)</option>
-                  <option value="am_michael">Michael (Male)</option>
-                  <option value="bf_emma">Emma (British Female)</option>
-                  <option value="bm_daniel">Daniel (British Male)</option>
-                  <option value="bm_george">George (British Male)</option>
-                </>
-              )}
+              {voiceOptions.map((voice) => (
+                <option key={`${ttsProviderId}-${ttsModel}-${voice.id}`} value={voice.id}>
+                  {voice.name}
+                </option>
+              ))}
             </select>
+            {persona.voiceId && !voiceOptions.some((voice) => voice.id === persona.voiceId) && (
+              <p className="voice-note">
+                Saved voice "{persona.voiceId}" belongs to a different TTS model/provider.
+              </p>
+            )}
           </div>
         </div>
       </div>

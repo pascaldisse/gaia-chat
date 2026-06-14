@@ -250,6 +250,15 @@
   border-color: var(--status-yellow);
 }
 
+.audio-error {
+  color: var(--status-red);
+  font-size: 0.75rem;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Media queries for messages on mobile */
 @media (max-width: 768px) {
   .message {

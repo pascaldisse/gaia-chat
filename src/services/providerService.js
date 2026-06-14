@@ -1,5 +1,6 @@
 import {
   DEFAULT_IMAGE_PROVIDER,
+  DEFAULT_TTS_PROVIDER,
   DEFAULT_PROVIDER,
   IMAGE_LOCAL_BASE_URL_KEY,
   IMAGE_PROVIDER_DEFINITIONS,
@@ -10,10 +11,18 @@ import {
   PROVIDER_DEFINITIONS,
   PROVIDER_MODEL_PREFIX,
   PROVIDER_STORAGE_KEY,
+  TTS_LOCAL_ADAPTER_KEY,
+  TTS_LOCAL_BASE_URL_KEY,
+  TTS_LOCAL_LANGUAGE_KEY,
+  TTS_LOCAL_STYLE_KEY,
+  TTS_PROVIDER_DEFINITIONS,
+  TTS_PROVIDER_MODEL_PREFIX,
+  TTS_PROVIDER_STORAGE_KEY,
   getDefaultImageModel,
   getDefaultModel,
   getImageProviderDefinition,
-  getProviderDefinition
+  getProviderDefinition,
+  getTTSProviderDefinition
 } from '../config/providers';
 
 function hasStorage() {
@@ -221,6 +230,137 @@ export function getImageProviderConfig() {
     model,
     needsBaseUrlInput: Boolean(ip.needsBaseUrlInput),
     imageModels: ip.imageModels
+  };
+}
+
+/* ---- TTS provider helpers ---- */
+
+function migrateLegacyTTSEngine() {
+  const legacyEngine = readStorage('tts_engine');
+  if (!legacyEngine) return;
+
+  writeStorage(TTS_PROVIDER_STORAGE_KEY, 'deepinfra');
+  const legacyModel = legacyEngine === 'kokoro'
+    ? 'hexgrad/Kokoro-82M'
+    : 'Zyphra/Zonos-v0.1-hybrid';
+  writeStorage(TTS_PROVIDER_MODEL_PREFIX + 'deepinfra', legacyModel);
+  removeStorage('tts_engine');
+}
+
+export function getTTSProviderId() {
+  migrateLegacyTTSEngine();
+  const stored = readStorage(TTS_PROVIDER_STORAGE_KEY);
+  return TTS_PROVIDER_DEFINITIONS[stored] ? stored : DEFAULT_TTS_PROVIDER;
+}
+
+export function setTTSProviderId(id) {
+  if (!TTS_PROVIDER_DEFINITIONS[id]) {
+    throw new Error(`Unknown TTS provider: ${id}`);
+  }
+  writeStorage(TTS_PROVIDER_STORAGE_KEY, id);
+  return id;
+}
+
+export function getSelectedTTSModel(ttsProviderId = getTTSProviderId()) {
+  const provider = getTTSProviderDefinition(ttsProviderId);
+  const stored = readStorage(TTS_PROVIDER_MODEL_PREFIX + ttsProviderId);
+  const supported = new Set(Object.values(provider.ttsModels || {}));
+  if (supported.has(stored)) return stored;
+  return provider.defaultModel || Object.values(provider.ttsModels || {})[0] || '';
+}
+
+export function setSelectedTTSModel(ttsProviderId, model) {
+  const provider = getTTSProviderDefinition(ttsProviderId);
+  const supported = new Set(Object.values(provider.ttsModels || {}));
+  if (!supported.has(model)) {
+    throw new Error(`TTS model ${model} is not available for ${provider.name}`);
+  }
+  writeStorage(TTS_PROVIDER_MODEL_PREFIX + ttsProviderId, model);
+  return model;
+}
+
+export function getTTSLocalBaseURL() {
+  return readStorage(TTS_LOCAL_BASE_URL_KEY) || getTTSProviderDefinition('local').baseURL;
+}
+
+export function setTTSLocalBaseURL(url) {
+  if (url && url.trim()) {
+    writeStorage(TTS_LOCAL_BASE_URL_KEY, url.trim().replace(/\/+$/, ''));
+  } else {
+    removeStorage(TTS_LOCAL_BASE_URL_KEY);
+  }
+}
+
+export function getTTSLocalAdapter() {
+  const provider = getTTSProviderDefinition('local');
+  const stored = readStorage(TTS_LOCAL_ADAPTER_KEY);
+  return Object.values(provider.adapters || {}).includes(stored) ? stored : provider.defaultAdapter;
+}
+
+export function setTTSLocalAdapter(adapter) {
+  const provider = getTTSProviderDefinition('local');
+  if (!Object.values(provider.adapters || {}).includes(adapter)) {
+    throw new Error(`Unknown local TTS adapter: ${adapter}`);
+  }
+  writeStorage(TTS_LOCAL_ADAPTER_KEY, adapter);
+  return adapter;
+}
+
+export function getTTSLocalLanguage() {
+  return readStorage(TTS_LOCAL_LANGUAGE_KEY) || 'English';
+}
+
+export function setTTSLocalLanguage(language) {
+  if (language && language.trim()) {
+    writeStorage(TTS_LOCAL_LANGUAGE_KEY, language.trim());
+  } else {
+    removeStorage(TTS_LOCAL_LANGUAGE_KEY);
+  }
+}
+
+export function getTTSLocalStyle() {
+  return readStorage(TTS_LOCAL_STYLE_KEY) || '';
+}
+
+export function setTTSLocalStyle(style) {
+  if (style && style.trim()) {
+    writeStorage(TTS_LOCAL_STYLE_KEY, style.trim());
+  } else {
+    removeStorage(TTS_LOCAL_STYLE_KEY);
+  }
+}
+
+export function getTTSProviderConfig() {
+  const ttsProviderId = getTTSProviderId();
+  const provider = getTTSProviderDefinition(ttsProviderId);
+  const model = getSelectedTTSModel(ttsProviderId);
+  const apiKey = readStorage(provider.apiKeyStorageKey) || '';
+
+  let baseURL = provider.baseURL;
+  let adapter = provider.defaultAdapter;
+  let language = 'English';
+  let style = '';
+
+  if (provider.needsBaseUrlInput) {
+    baseURL = getTTSLocalBaseURL();
+    adapter = getTTSLocalAdapter();
+    language = getTTSLocalLanguage();
+    style = getTTSLocalStyle();
+  }
+
+  return {
+    providerId: provider.id,
+    providerName: provider.name,
+    apiType: provider.apiType,
+    baseURL,
+    apiKey,
+    model,
+    adapter,
+    language,
+    style,
+    ttsModels: provider.ttsModels || {},
+    voices: provider.voices || [],
+    needsBaseUrlInput: Boolean(provider.needsBaseUrlInput)
   };
 }
 
