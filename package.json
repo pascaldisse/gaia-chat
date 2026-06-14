@@ -29,6 +29,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "smoke": "node scripts/static-smoke-checks.js",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
